@@ -14687,6 +14687,86 @@ class L10nEn extends L10n {
   String get searchKwRemoteCompactHistory => 'compact slim lite history tools transfer bandwidth remote';
 
   @override
+  String get remoteDirectSection => 'Direct servers';
+
+  @override
+  String get remoteDirectSectionHint => 'Server URL + access token (nginx reverse proxy)';
+
+  @override
+  String get remoteDirectAdd => 'Add a direct server';
+
+  @override
+  String get remoteDirectEmpty => 'No direct servers yet';
+
+  @override
+  String get remoteDirectName => 'Connection name';
+
+  @override
+  String get remoteDirectNameHint => 'Home computer';
+
+  @override
+  String get remoteDirectUrl => 'Server URL';
+
+  @override
+  String get remoteDirectUrlHint => 'https://dsh.example.com';
+
+  @override
+  String get remoteDirectUrlNote => 'https:// or wss://';
+
+  @override
+  String get remoteDirectUrlInvalid => 'That server URL is not usable';
+
+  @override
+  String get remoteDirectToken => 'Access token';
+
+  @override
+  String get remoteDirectTokenHint => 'Paste the access token';
+
+  @override
+  String get remoteDirectPaste => 'Paste from clipboard';
+
+  @override
+  String get remoteDirectTokenRequired => 'Enter the access token';
+
+  @override
+  String get remoteDirectShowToken => 'Show token';
+
+  @override
+  String get remoteDirectHideToken => 'Hide token';
+
+  @override
+  String get remoteDirectEdit => 'Edit direct server';
+
+  @override
+  String get remoteDirectDelete => 'Delete connection';
+
+  @override
+  String remoteDirectDeleteBody(String name) {
+    return 'Delete \"$name\"? Its saved token and login cookie are removed too.';
+  }
+
+  @override
+  String get remoteDirectTesting => 'Testing the connection';
+
+  @override
+  String remoteDirectTestOk(int ms) {
+    return 'Connected · $ms ms';
+  }
+
+  @override
+  String get remoteDirectTestFail => 'Connection failed';
+
+  @override
+  String get remoteDirectSaved => 'Saved';
+
+  @override
+  String get remoteDirectHelp =>
+      'Run dsh web on the server, point nginx at 127.0.0.1:3080 over 443, and enter the domain plus the access token dsh web printed.';
+
+  @override
+  String get webDirectUnavailable => 'Use chat and files for a direct server';
+
+  @override
   String get stateWorkspaceFilesHint => 'Files uploaded to the current workspace:';
 
   @override
@@ -17601,6 +17681,14 @@ class L10nEn extends L10n {
 
   @override
   String get statePasteFailed => 'Could not read the clipboard. Try again or enter the text manually.';
+
+  @override
+  String get stateDirectHost => 'Direct server';
+
+  @override
+  String stateHostDirectLabel(String name) {
+    return '$name · Direct';
+  }
 
   @override
   String get systemActionsTitle => 'System actions';

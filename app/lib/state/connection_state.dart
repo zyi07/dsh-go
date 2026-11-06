@@ -4,6 +4,7 @@ import 'package:dsh_client/dsh_client.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../l10n/l10n.dart';
+import '../remote/direct/direct_link.dart';
 import '../remote/link_status.dart';
 import '../remote/network_watch.dart';
 import '../remote/relay/relay_backend.dart';
@@ -17,7 +18,8 @@ import 'provider_backend.dart';
 import 'provider_keys.dart';
 import 'settings_state.dart';
 
-/// A connected DSH host: the on-device engine, an SSH host or a relay device.
+/// A connected DSH host: the on-device engine, an SSH host, a relay device or a
+/// direct host (URL + token).
 class HostConnection {
   const HostConnection({
     required this.client,
@@ -177,6 +179,22 @@ final sshLinkFactoryProvider = Provider<SshLinkFactory>(
   },
 );
 
+/// Builds the link for one saved direct host, with its stored token and cookie
+/// wired in.
+typedef DirectLinkFactory = DirectHostLink Function(Ref ref, DirectHostConfig config);
+
+final directLinkFactoryProvider = Provider<DirectLinkFactory>(
+  (ref) => (ref, config) {
+    final hosts = ref.read(hostsProvider.notifier);
+    return DirectHostLink(
+      baseUri: config.baseUri,
+      loadSecrets: () => hosts.loadDirectSecrets(config.id),
+      saveCookie: (cookie) => hosts.saveDirectCookie(config.id, cookie),
+      kicks: ref.read(networkKicksProvider),
+    );
+  },
+);
+
 /// The live link to a remote host; null for 本机 or an unknown host. Kept while
 /// something watches it (the active connection, a status row); closed after.
 final hostLinkProvider = Provider.autoDispose.family<HostLink?, HostRef>((ref, host) {
@@ -194,6 +212,12 @@ final hostLinkProvider = Provider.autoDispose.family<HostLink?, HostRef>((ref, h
       ref.listen(hostsProvider.select((s) => s.sshById(host.id)), (_, next) {
         if (next != null && next.connectionKey == link.config.connectionKey) link.updateConfig(next);
       });
+      ref.onDispose(() => unawaited(link.close()));
+      return link;
+    case HostKind.direct:
+      final config = ref.watch(hostsProvider.select((s) => s.directById(host.id)));
+      if (config == null) return null;
+      final link = ref.read(directLinkFactoryProvider)(ref, config);
       ref.onDispose(() => unawaited(link.close()));
       return link;
     case HostKind.relay:
@@ -242,6 +266,7 @@ final hostNameProvider = Provider.autoDispose.family<String?, HostRef>((ref, hos
     HostKind.local => appL10n.commonThisPhone,
     HostKind.ssh => ref.watch(hostsProvider.select((s) => s.sshById(host.id)?.name)),
     HostKind.relay => ref.watch(relayAccountProvider.select((a) => a.value?.hostById(host.id)?.name)) ?? host.name,
+    HostKind.direct => ref.watch(hostsProvider.select((s) => s.directById(host.id)?.name)) ?? host.name,
   };
 });
 
@@ -417,6 +442,12 @@ AsyncValue<HostConnection?> _connectionForHost(Ref ref, HostRef host) {
       return ref.watch(localConnectionProvider);
     case HostKind.ssh:
       final known = ref.watch(hostsProvider.select((s) => !s.loaded || s.sshById(host.id) != null));
+      if (!known) return ref.watch(localConnectionProvider);
+      final loaded = ref.watch(hostsProvider.select((s) => s.loaded));
+      if (!loaded) return const AsyncLoading();
+      return ref.watch(remoteConnectionProvider(host));
+    case HostKind.direct:
+      final known = ref.watch(hostsProvider.select((s) => !s.loaded || s.directById(host.id) != null));
       if (!known) return ref.watch(localConnectionProvider);
       final loaded = ref.watch(hostsProvider.select((s) => s.loaded));
       if (!loaded) return const AsyncLoading();

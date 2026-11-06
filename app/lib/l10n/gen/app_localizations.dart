@@ -25568,6 +25568,156 @@ abstract class L10n {
   /// **'精简 简洁 历史 工具 传输 流量 远程 compact slim lite'**
   String get searchKwRemoteCompactHistory;
 
+  /// No description provided for @remoteDirectSection.
+  ///
+  /// In zh, this message translates to:
+  /// **'直连服务器'**
+  String get remoteDirectSection;
+
+  /// No description provided for @remoteDirectSectionHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'服务器地址 + 访问 Token（nginx 反向代理）'**
+  String get remoteDirectSectionHint;
+
+  /// No description provided for @remoteDirectAdd.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加直连服务器'**
+  String get remoteDirectAdd;
+
+  /// No description provided for @remoteDirectEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有直连服务器'**
+  String get remoteDirectEmpty;
+
+  /// No description provided for @remoteDirectName.
+  ///
+  /// In zh, this message translates to:
+  /// **'连接名称'**
+  String get remoteDirectName;
+
+  /// No description provided for @remoteDirectNameHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'家里的电脑'**
+  String get remoteDirectNameHint;
+
+  /// No description provided for @remoteDirectUrl.
+  ///
+  /// In zh, this message translates to:
+  /// **'服务器地址'**
+  String get remoteDirectUrl;
+
+  /// No description provided for @remoteDirectUrlHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'https://dsh.example.com'**
+  String get remoteDirectUrlHint;
+
+  /// No description provided for @remoteDirectUrlNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'支持 https:// 或 wss://'**
+  String get remoteDirectUrlNote;
+
+  /// No description provided for @remoteDirectUrlInvalid.
+  ///
+  /// In zh, this message translates to:
+  /// **'服务器地址无效'**
+  String get remoteDirectUrlInvalid;
+
+  /// No description provided for @remoteDirectToken.
+  ///
+  /// In zh, this message translates to:
+  /// **'访问 Token'**
+  String get remoteDirectToken;
+
+  /// No description provided for @remoteDirectTokenHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'粘贴访问 Token'**
+  String get remoteDirectTokenHint;
+
+  /// No description provided for @remoteDirectPaste.
+  ///
+  /// In zh, this message translates to:
+  /// **'从剪贴板粘贴'**
+  String get remoteDirectPaste;
+
+  /// No description provided for @remoteDirectTokenRequired.
+  ///
+  /// In zh, this message translates to:
+  /// **'请填写访问 Token'**
+  String get remoteDirectTokenRequired;
+
+  /// No description provided for @remoteDirectShowToken.
+  ///
+  /// In zh, this message translates to:
+  /// **'显示 Token'**
+  String get remoteDirectShowToken;
+
+  /// No description provided for @remoteDirectHideToken.
+  ///
+  /// In zh, this message translates to:
+  /// **'隐藏 Token'**
+  String get remoteDirectHideToken;
+
+  /// No description provided for @remoteDirectEdit.
+  ///
+  /// In zh, this message translates to:
+  /// **'编辑直连服务器'**
+  String get remoteDirectEdit;
+
+  /// No description provided for @remoteDirectDelete.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除连接'**
+  String get remoteDirectDelete;
+
+  /// No description provided for @remoteDirectDeleteBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除「{name}」？已保存的 Token 和登录凭据也会删除。'**
+  String remoteDirectDeleteBody(String name);
+
+  /// No description provided for @remoteDirectTesting.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在测试连接'**
+  String get remoteDirectTesting;
+
+  /// No description provided for @remoteDirectTestOk.
+  ///
+  /// In zh, this message translates to:
+  /// **'连接成功 · {ms} ms'**
+  String remoteDirectTestOk(int ms);
+
+  /// No description provided for @remoteDirectTestFail.
+  ///
+  /// In zh, this message translates to:
+  /// **'连接失败'**
+  String get remoteDirectTestFail;
+
+  /// No description provided for @remoteDirectSaved.
+  ///
+  /// In zh, this message translates to:
+  /// **'已保存'**
+  String get remoteDirectSaved;
+
+  /// No description provided for @remoteDirectHelp.
+  ///
+  /// In zh, this message translates to:
+  /// **'在服务器上运行 dsh web，用 nginx 把公网 443 反代到 127.0.0.1:3080，再把域名和 dsh web 打印的访问 Token 填在这里。'**
+  String get remoteDirectHelp;
+
+  /// No description provided for @webDirectUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'直连服务器请在对话和文件页里使用'**
+  String get webDirectUnavailable;
+
   /// No description provided for @stateWorkspaceFilesHint.
   ///
   /// In zh, this message translates to:
@@ -30565,6 +30715,18 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'无法读取剪贴板，请重试或手动输入。'**
   String get statePasteFailed;
+
+  /// No description provided for @stateDirectHost.
+  ///
+  /// In zh, this message translates to:
+  /// **'直连服务器'**
+  String get stateDirectHost;
+
+  /// No description provided for @stateHostDirectLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'{name} · 直连'**
+  String stateHostDirectLabel(String name);
 
   /// No description provided for @systemActionsTitle.
   ///
