@@ -445,5 +445,44 @@
   "remoteCompactHistory": "Compact history",
   "remoteErrHistoryModeChanged": "The Host no longer supports compact history. Switch to another host and back, or restart the app, to reload history.",
   "remoteCompactHistoryHint": "Reduces historical tool details on supporting DSH Remote Hosts; live replies and approvals stay unchanged. Switch hosts or restart the app to apply. Older Hosts keep full history.",
-  "searchKwRemoteCompactHistory": "compact slim lite history tools transfer bandwidth remote"
+  "searchKwRemoteCompactHistory": "compact slim lite history tools transfer bandwidth remote",
+  "remoteDirectSection": "Direct servers",
+  "remoteDirectSectionHint": "Server URL + access token (nginx reverse proxy)",
+  "remoteDirectAdd": "Add a direct server",
+  "remoteDirectEmpty": "No direct servers yet",
+  "remoteDirectName": "Connection name",
+  "remoteDirectNameHint": "Home computer",
+  "remoteDirectUrl": "Server URL",
+  "remoteDirectUrlHint": "https://dsh.example.com",
+  "remoteDirectUrlNote": "https:// or wss://",
+  "remoteDirectUrlInvalid": "That server URL is not usable",
+  "remoteDirectToken": "Access token",
+  "remoteDirectTokenHint": "Paste the access token",
+  "remoteDirectPaste": "Paste from clipboard",
+  "remoteDirectTokenRequired": "Enter the access token",
+  "remoteDirectShowToken": "Show token",
+  "remoteDirectHideToken": "Hide token",
+  "remoteDirectEdit": "Edit direct server",
+  "remoteDirectDelete": "Delete connection",
+  "remoteDirectDeleteBody": "Delete \"{name}\"? Its saved token and login cookie are removed too.",
+  "@remoteDirectDeleteBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "remoteDirectTesting": "Testing the connection",
+  "remoteDirectTestOk": "Connected · {ms} ms",
+  "@remoteDirectTestOk": {
+    "placeholders": {
+      "ms": {
+        "type": "int"
+      }
+    }
+  },
+  "remoteDirectTestFail": "Connection failed",
+  "remoteDirectSaved": "Saved",
+  "remoteDirectHelp": "Run dsh web on the server, point nginx at 127.0.0.1:3080 over 443, and enter the domain plus the access token dsh web printed.",
+  "webDirectUnavailable": "Use chat and files for a direct server"
 }

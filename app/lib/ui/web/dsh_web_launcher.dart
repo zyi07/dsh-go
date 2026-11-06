@@ -58,6 +58,10 @@ final dshWebAccessProvider = Provider.autoDispose<DshWebAccess>((ref) {
         return NoDshWeb(appL10n.webConnectHostFirst(name));
       }
       return SshDshWeb(localWebUri('http://127.0.0.1:$port', token), name);
+    case HostKind.direct:
+      // The engine's launch token is not ours to know; the Web console cannot
+      // be opened with the stored cookie, so send people to chat and files.
+      return NoDshWeb(appL10n.webDirectUnavailable);
   }
 });
 

@@ -20,6 +20,7 @@ import '../shell/page_frame.dart';
 import '../theme/app_icons.dart';
 import '../theme/theme.dart';
 import '../web/web_view_page.dart';
+import 'direct_host_form.dart';
 import 'host_key_dialog.dart';
 import 'host_status.dart';
 import 'link_progress.dart';
@@ -83,10 +84,45 @@ class RemoteScreen extends ConsumerWidget {
     if (nothingHere && ref.read(activeHostProvider).isLocal) await _use(context, ref, HostRef.ssh(saved.id));
   }
 
+  Future<void> _addDirect(BuildContext context, WidgetRef ref) async {
+    final saved = await Navigator.of(context)
+        .push<DirectHostConfig>(MaterialPageRoute(builder: (_) => const DirectHostFormPage()));
+    if (saved == null || !context.mounted) return;
+    final nothingHere = ref.read(localRuntimeProvider).status.runtimeMissing;
+    if (nothingHere && ref.read(activeHostProvider).isLocal) {
+      await _use(context, ref, HostRef.direct(saved.id, name: saved.name));
+    }
+  }
+
+  /// Long-press on a direct row: forget it (and its token/cookie).
+  Future<void> _deleteDirect(BuildContext context, WidgetRef ref, DirectHostConfig config) async {
+    final l10n = context.l10n;
+    final ok = await showAppDialog<bool>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: Text(l10n.remoteDirectDelete),
+        content: Text(l10n.remoteDirectDeleteBody(config.name)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialog, false), child: Text(l10n.commonCancel)),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: DshColors.of(dialog).danger,
+              foregroundColor: DshColors.of(dialog).onDanger,
+            ),
+            onPressed: () => Navigator.pop(dialog, true),
+            child: Text(l10n.commonDelete),
+          ),
+        ],
+      ),
+    );
+    if (ok == true) await ref.read(hostsProvider.notifier).removeDirect(config.id);
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
     final ssh = ref.watch(hostsProvider.select((s) => s.ssh));
+    final direct = ref.watch(hostsProvider.select((s) => s.direct));
     final active = ref.watch(activeHostProvider);
     final signedIn = ref.watch(relayAccountProvider.select((a) => a.value?.signedIn ?? false));
     void push(Widget page) => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
@@ -130,6 +166,27 @@ class RemoteScreen extends ConsumerWidget {
           ],
         ),
         SettingsSection(
+          title: l10n.remoteDirectSection,
+          footer: Text(l10n.remoteDirectSectionHint),
+          children: [
+            for (final h in direct)
+              _DirectRow(
+                config: h,
+                active: active == HostRef.direct(h.id),
+                onTap: () => _use(context, ref, HostRef.direct(h.id, name: h.name)),
+                onEdit: () => push(DirectHostFormPage(existing: h)),
+                onDelete: () => unawaited(_deleteDirect(context, ref, h)),
+              ),
+            SettingsTile(
+              icon: AppIcons.add,
+              tinted: false,
+              title: l10n.remoteDirectAdd,
+              subtitle: direct.isEmpty ? l10n.remoteDirectEmpty : null,
+              onTap: () => unawaited(_addDirect(context, ref)),
+            ),
+          ],
+        ),
+        SettingsSection(
           title: l10n.remoteOtherMethods,
           children: [
             SettingsTile(
@@ -142,7 +199,7 @@ class RemoteScreen extends ConsumerWidget {
           ],
         ),
         // Only meaningful once there is a host to come back to.
-        if (ssh.isNotEmpty || signedIn)
+        if (ssh.isNotEmpty || direct.isNotEmpty || signedIn)
           SettingsSection(
             title: l10n.remoteStartupSection,
             children: [
@@ -366,6 +423,50 @@ class _SshRow extends ConsumerWidget {
           icon: const Icon(AppIcons.configure, size: 20),
           tooltip: l10n.commonEdit,
           onPressed: onEdit,
+        ),
+      ),
+    );
+  }
+}
+
+/// One saved direct host (URL + token), with its live state when it is active.
+/// Long-press forgets it, like the delete button in its form.
+class _DirectRow extends ConsumerWidget {
+  const _DirectRow({
+    required this.config,
+    required this.active,
+    required this.onTap,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  final DirectHostConfig config;
+  final bool active;
+  final VoidCallback onTap;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final view = active ? watchHostStatus(ref, HostRef.direct(config.id)) : null;
+    return Semantics(
+      selected: active,
+      inMutuallyExclusiveGroup: true,
+      child: GestureDetector(
+        onLongPress: onDelete,
+        child: SettingsTile(
+          icon: hostKindIcon(HostKind.direct),
+          tinted: false,
+          title: config.name,
+          subtitle: config.baseUrl,
+          onTap: onTap,
+          value: view == null ? null : _HostState(view),
+          trailing: _EdgeIconButton(
+            icon: const Icon(AppIcons.configure, size: 20),
+            tooltip: l10n.commonEdit,
+            onPressed: onEdit,
+          ),
         ),
       ),
     );
