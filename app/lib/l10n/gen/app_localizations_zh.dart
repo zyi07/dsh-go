@@ -14221,6 +14221,85 @@ class L10nZh extends L10n {
   String get searchKwRemoteCompactHistory => '精简 简洁 历史 工具 传输 流量 远程 compact slim lite';
 
   @override
+  String get remoteDirectSection => '直连服务器';
+
+  @override
+  String get remoteDirectSectionHint => '服务器地址 + 访问 Token（nginx 反向代理）';
+
+  @override
+  String get remoteDirectAdd => '添加直连服务器';
+
+  @override
+  String get remoteDirectEmpty => '还没有直连服务器';
+
+  @override
+  String get remoteDirectName => '连接名称';
+
+  @override
+  String get remoteDirectNameHint => '家里的电脑';
+
+  @override
+  String get remoteDirectUrl => '服务器地址';
+
+  @override
+  String get remoteDirectUrlHint => 'https://dsh.example.com';
+
+  @override
+  String get remoteDirectUrlNote => '支持 https:// 或 wss://';
+
+  @override
+  String get remoteDirectUrlInvalid => '服务器地址无效';
+
+  @override
+  String get remoteDirectToken => '访问 Token';
+
+  @override
+  String get remoteDirectTokenHint => '粘贴访问 Token';
+
+  @override
+  String get remoteDirectPaste => '从剪贴板粘贴';
+
+  @override
+  String get remoteDirectTokenRequired => '请填写访问 Token';
+
+  @override
+  String get remoteDirectShowToken => '显示 Token';
+
+  @override
+  String get remoteDirectHideToken => '隐藏 Token';
+
+  @override
+  String get remoteDirectEdit => '编辑直连服务器';
+
+  @override
+  String get remoteDirectDelete => '删除连接';
+
+  @override
+  String remoteDirectDeleteBody(String name) {
+    return '删除「$name」？已保存的 Token 和登录凭据也会删除。';
+  }
+
+  @override
+  String get remoteDirectTesting => '正在测试连接';
+
+  @override
+  String remoteDirectTestOk(int ms) {
+    return '连接成功 · $ms ms';
+  }
+
+  @override
+  String get remoteDirectTestFail => '连接失败';
+
+  @override
+  String get remoteDirectSaved => '已保存';
+
+  @override
+  String get remoteDirectHelp => '在服务器上运行 dsh web，用 nginx 把公网 443 反代到 127.0.0.1:3080，再把域名和 dsh web 打印的访问 Token 填在这里。';
+
+  @override
+  String get webDirectUnavailable => '直连服务器请在对话和文件页里使用';
+
+  @override
   String get stateWorkspaceFilesHint => '已上传到当前工作区的文件：';
 
   @override
@@ -14605,6 +14684,9 @@ class L10nZh extends L10n {
 
   @override
   String get searchKwAddSshHost => 'SSH,添加主机,连接电脑';
+
+  @override
+  String get searchKwAddDirectHost => '直连,直连服务器,HTTPS,令牌';
 
   @override
   String get searchKwRemoteAutoConnect => '自动连接,启动时连接';
@@ -16955,6 +17037,14 @@ class L10nZh extends L10n {
 
   @override
   String get appSlogan => '随时随刻，想go就Go！';
+
+  @override
+  String get stateDirectHost => '直连服务器';
+
+  @override
+  String stateHostDirectLabel(String name) {
+    return '$name · 直连';
+  }
 
   @override
   String get updateCheck => '检查更新';

@@ -8899,6 +8899,45 @@
   "remoteErrHistoryModeChanged": "主机已不支持精简历史，请切换到其他主机后再连回来，或重启 App，重新加载历史",
   "remoteCompactHistoryHint": "支持的 DSH Remote 主机会精简历史工具详情，实时回复和审批不变。切换主机或重启 App 后生效；旧主机仍传输完整历史。",
   "searchKwRemoteCompactHistory": "精简 简洁 历史 工具 传输 流量 远程 compact slim lite",
+  "remoteDirectSection": "直连服务器",
+  "remoteDirectSectionHint": "服务器地址 + 访问 Token（nginx 反向代理）",
+  "remoteDirectAdd": "添加直连服务器",
+  "remoteDirectEmpty": "还没有直连服务器",
+  "remoteDirectName": "连接名称",
+  "remoteDirectNameHint": "家里的电脑",
+  "remoteDirectUrl": "服务器地址",
+  "remoteDirectUrlHint": "https://dsh.example.com",
+  "remoteDirectUrlNote": "支持 https:// 或 wss://",
+  "remoteDirectUrlInvalid": "服务器地址无效",
+  "remoteDirectToken": "访问 Token",
+  "remoteDirectTokenHint": "粘贴访问 Token",
+  "remoteDirectPaste": "从剪贴板粘贴",
+  "remoteDirectTokenRequired": "请填写访问 Token",
+  "remoteDirectShowToken": "显示 Token",
+  "remoteDirectHideToken": "隐藏 Token",
+  "remoteDirectEdit": "编辑直连服务器",
+  "remoteDirectDelete": "删除连接",
+  "remoteDirectDeleteBody": "删除「{name}」？已保存的 Token 和登录凭据也会删除。",
+  "@remoteDirectDeleteBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "remoteDirectTesting": "正在测试连接",
+  "remoteDirectTestOk": "连接成功 · {ms} ms",
+  "@remoteDirectTestOk": {
+    "placeholders": {
+      "ms": {
+        "type": "int"
+      }
+    }
+  },
+  "remoteDirectTestFail": "连接失败",
+  "remoteDirectSaved": "已保存",
+  "remoteDirectHelp": "在服务器上运行 dsh web，用 nginx 把公网 443 反代到 127.0.0.1:3080，再把域名和 dsh web 打印的访问 Token 填在这里。",
+  "webDirectUnavailable": "直连服务器请在对话和文件页里使用",
   "stateWorkspaceFilesHint": "已上传到当前工作区的文件：",
   "stateRemoteUploadNameInvalid": "文件名不受主机支持，请去掉特殊字符或缩短后再试",
   "stateRemoteUploadWorkspaceUnavailable": "当前对话没有可写的工作目录",
@@ -9053,6 +9092,7 @@
   "searchKwWebSearchKey": "搜索 Key,联网 Key",
   "searchKwChatLogUpload": "隐私,日志,上传日志,对话日志",
   "searchKwAddSshHost": "SSH,添加主机,连接电脑",
+  "searchKwAddDirectHost": "直连,直连服务器,HTTPS,令牌",
   "searchKwRemoteAutoConnect": "自动连接,启动时连接",
   "searchKwPermissionCurrent": "本对话都允许,这个对话,当前权限",
   "searchKwPermissionDefault": "默认权限,只读,工作区内修改,完全权限,自动执行命令,别问我",
@@ -10575,6 +10615,15 @@
   },
   "stateProviderTokenCountInvalid": "填写数字，如 128K",
   "appSlogan": "随时随刻，想go就Go！",
+  "stateDirectHost": "直连服务器",
+  "stateHostDirectLabel": "{name} · 直连",
+  "@stateHostDirectLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "updateCheck": "检查更新",
   "updateAutoCheck": "自动检查更新",
   "updateAutoCheckDaily": "每天检查一次",

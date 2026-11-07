@@ -72,6 +72,19 @@ The host needs SSH enabled and DSH installed (`npm i -g @deepseek-ai/dsh`).
 
 Testing starts DSH on the host, and it keeps running afterwards. To change or delete a host, tap **Edit** next to it to open **Edit host**; **Delete this host** is at the bottom. Deleting removes only the settings, password and key saved on this phone; DSH and chats on the host stay.
 
+## Direct server
+
+When `dsh web` runs on a server behind nginx on port 443 (proxied to `127.0.0.1:3080`), the phone can reach it with just the domain and an access token — no SSH access and no DSH Remote account.
+
+1. In nginx, proxy `location /` to `http://127.0.0.1:3080/`, keep the `Upgrade` / `Connection` headers, and use a valid HTTPS certificate.
+2. On the remote hosts page, tap **Add a direct server**.
+3. Enter the **Server URL** (`https://dsh.example.com`; `wss://` works too, and it must be the domain root, not a subpath) and the **Access token** (`dsh web` prints it on startup). **Paste from clipboard** fills it, and the eye button toggles visibility.
+4. Tap **Test connection** to check the URL, certificate and token, then **Save**.
+
+After the first sign-in the app stores the credential DSH issues (30 days by default, bound to that domain) on this phone only, so later launches don't need the token. When it expires or the domain changes, paste a fresh token once. Tokens and credentials never go into ordinary settings and are removed together with the connection.
+
+Over a direct server: DSH Web and plugin islands don't open in the app, and reminders arrive only while the app is running and connected, same as DSH Remote.
+
 ## DSH Remote
 
 No network setup, end-to-end encrypted. Good for computers on another network.

@@ -782,5 +782,14 @@
     }
   },
   "stateProviderTokenCountInvalid": "填写数字，如 128K",
-  "appSlogan": "随时随刻，想go就Go！"
+  "appSlogan": "随时随刻，想go就Go！",
+  "stateDirectHost": "直连服务器",
+  "stateHostDirectLabel": "{name} · 直连",
+  "@stateHostDirectLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  }
 }
