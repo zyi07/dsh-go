@@ -48,9 +48,7 @@ abstract final class SafeModeActions {
         context: context,
         builder: (dialog) => AlertDialog(
           title: Text(l10n.harmonySafeEnterTitle),
-          content: Text([l10n.harmonySafeEnterBody, ?note].join('
-
-')),
+          content: Text([l10n.harmonySafeEnterBody, ?note].join('\n\n')),
           actions: [
             TextButton(onPressed: () => Navigator.pop(dialog, false), child: Text(l10n.commonCancel)),
             FilledButton(onPressed: () => Navigator.pop(dialog, true), child: Text(l10n.phoneFailureEnterSafe)),
@@ -133,9 +131,7 @@ abstract final class SafeModeActions {
       context: context,
       builder: (dialog) => AlertDialog(
         title: Text(l10n.phoneSafeRestoreTitle),
-        content: SingleChildScrollView(child: Text([describeRestore(lkg), ?note].join('
-
-'))),
+        content: SingleChildScrollView(child: Text([describeRestore(lkg), ?note].join('\n\n'))),
         actions: [
           TextButton(onPressed: () => Navigator.pop(dialog, false), child: Text(l10n.commonCancel)),
           FilledButton(onPressed: () => Navigator.pop(dialog, true), child: Text(l10n.phoneSafeRestoreStart)),
@@ -186,9 +182,7 @@ abstract final class SafeModeActions {
       context: context,
       builder: (dialog) => AlertDialog(
         title: Text(l10n.phoneSafeLeaveTitle),
-        content: Text([l10n.phoneSafeLeaveBody, ?note].join('
-
-')),
+        content: Text([l10n.phoneSafeLeaveBody, ?note].join('\n\n')),
         actions: [
           TextButton(onPressed: () => Navigator.pop(dialog, false), child: Text(l10n.commonCancel)),
           FilledButton(onPressed: () => Navigator.pop(dialog, true), child: Text(l10n.phoneSafeLeave)),

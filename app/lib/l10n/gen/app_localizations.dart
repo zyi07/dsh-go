@@ -27776,6 +27776,12 @@ abstract class L10n {
   /// **'SSH,添加主机,连接电脑'**
   String get searchKwAddSshHost;
 
+  /// No description provided for @searchKwAddDirectHost.
+  ///
+  /// In zh, this message translates to:
+  /// **'直连,直连服务器,HTTPS,令牌'**
+  String get searchKwAddDirectHost;
+
   /// No description provided for @searchKwRemoteAutoConnect.
   ///
   /// In zh, this message translates to:

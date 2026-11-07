@@ -15861,6 +15861,9 @@ class L10nEn extends L10n {
   String get searchKwAddSshHost => 'ssh,add host,connect computer';
 
   @override
+  String get searchKwAddDirectHost => 'direct,direct server,https,token';
+
+  @override
   String get searchKwRemoteAutoConnect => 'auto connect,on launch';
 
   @override

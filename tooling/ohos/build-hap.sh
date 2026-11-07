@@ -8,8 +8,9 @@
 #
 # The OHOS plugin overrides apply only for this run: pubspec_overrides.yaml and
 # the lock file it changes are put back on exit, so the Android graph stays as it
-# was. The host needs oh-flutter's AOT tools, published for macOS arm64 only so far
-# (see app/ohos/README.md), plus hvigor and ohpm from HarmonyOS Command Line Tools.
+# was. The host needs oh-flutter's AOT tools (macOS arm64 works; the Windows x64
+# gen_snapshot published for 3.47.9 is Dart 3.12.2 and cannot read its 3.13.3
+# kernel, so release AOT fails there) plus hvigor and ohpm (DevEco Studio 26 bundles them).
 #
 # The Node-side native libraries come from runtime/ohos/native/build-hap-libs.py and are placed only for this run.
 # The runtime is one Stored dsh-runtime/runtime.zip, which the app streams from rawfile; it is never expanded here.

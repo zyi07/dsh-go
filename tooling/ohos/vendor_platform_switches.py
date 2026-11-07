@@ -36,7 +36,7 @@ def patch(source):
 
 
 def package_roots():
-    config = json.loads((APP / '.dart_tool' / 'package_config.json').read_text())
+    config = json.loads((APP / '.dart_tool' / 'package_config.json').read_text(encoding='utf-8'))
     return {p['name']: pathlib.Path(url2pathname(urlparse(p['rootUri']).path)) for p in config['packages']}
 
 
@@ -49,9 +49,9 @@ def main():
         shutil.copytree(roots[name], target, ignore=shutil.ignore_patterns('example', 'test', '.dart_tool'))
         total = 0
         for path in (target / 'lib').rglob('*.dart'):
-            source, count = patch(path.read_text())
+            source, count = patch(path.read_text(encoding='utf-8'))
             if count:
-                path.write_text(source)
+                path.write_text(source, encoding='utf-8')
                 total += count
         print(f'{name}: {total} patterns')
         entries.append(f'  {name}:\n    path: ohos/.vendor/{name}\n')

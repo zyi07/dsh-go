@@ -135,14 +135,14 @@ def main():
                                '--libnode', str(out / 'libnode.so'),
                                '--readelf', str(args.sdk / 'native/llvm/bin/llvm-readelf'),
                                '--role', 'ark', '--consumer', str(out / 'libdsh_host.so'),
-                               '--report', str(isolation)], capture_output=True, text=True)
+                               '--report', str(isolation)], capture_output=True, text=True, encoding='utf-8')
         if gate.returncode != 0:
             problems.append(f'libdsh_host.so from the HAP fails the N-API gate: {gate.stderr.strip() or gate.stdout.strip()}')
         report['hostGate'] = json.loads(isolation.read_text()) if isolation.exists() else gate.stderr
 
         # What restool made of the resources, by id.
         dump = subprocess.run([str(args.sdk / 'toolchains/restool'), 'dump', str(args.hap)],
-                              capture_output=True, text=True, check=True).stdout
+                              capture_output=True, text=True, encoding='utf-8', check=True).stdout
     resources = {item['id']: item for item in json.loads(dump)['resource']}
 
     module = json.loads(read('module.json'))

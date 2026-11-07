@@ -180,6 +180,7 @@ class RemoteScreen extends ConsumerWidget {
             SettingsTile(
               icon: AppIcons.add,
               tinted: false,
+              spot: Spots.addDirectHost,
               title: l10n.remoteDirectAdd,
               subtitle: direct.isEmpty ? l10n.remoteDirectEmpty : null,
               onTap: () => unawaited(_addDirect(context, ref)),

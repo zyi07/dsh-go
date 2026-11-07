@@ -27,13 +27,16 @@ DSH_NODE_HEADERS=/path/to/node-v24.22.1/src \
 
 ## 宿主
 
-| 步骤 | Linux | macOS arm64 |
-|---|---|---|
-| `flutter create` / `pub get` / `analyze` / `test` | 可以（要先去掉 pub 缓存里 `fluttertpc_dart_native` 对 `Abi.ohos*` 的引用：官方 Dart 没有这些成员，定制 Dart 没发 Linux 版） | 可以 |
-| `flutter build hap` | 不行：3.47 配套的 `gen_snapshot`、`frontend_server` 只发布了 macOS 版，OBS 上的 Linux 版还是 Dart 3.12.2，快照格式对不上 | 可以 |
-| `hdc install`、真机调试 | 可以 | 可以 |
+| 步骤 | Linux | macOS arm64 | Windows x64 |
+|---|---|---|---|
+| `flutter create` / `pub get` / `analyze` / `test` | 可以（要先去掉 pub 缓存里 `fluttertpc_dart_native` 对 `Abi.ohos*` 的引用：官方 Dart 没有这些成员，定制 Dart 没发 Linux 版） | 可以 | `pub get` 可以（git 要开 `core.longpaths`，否则 fork 的长路径检出失败）；`analyze` / `test` 未验证 |
+| `flutter build hap --debug` | 未验证（debug 不需要 AOT 工具） | 可以 | 可以：`--no-codesign` 能打出未签名 debug HAP（2026-11-07 实测，见下） |
+| `flutter build hap --release` | 不行：OBS 上的 Linux `gen_snapshot` 还是 Dart 3.12.2，快照格式对不上 | 可以 | 不行：Windows x64 的 `gen_snapshot.exe` 确实发布了，但同样是 Dart 3.12.2，读不了 3.13.3 前端产出的 kernel 138（`expected 130, found 138`） |
+| `hdc install`、真机调试 | 可以 | 可以 | 未验证（无签名 profile、无设备） |
 
-`hvigor`、`ohpm` 来自 HarmonyOS Command Line Tools（要登录华为账号下载），版本跟 DevEco 26.0.0。OpenHarmony 公开 SDK 只够编原生库，打不了能装到华为手机的 HAP。
+macOS 列由 `ohos-compile.yml` 的 macos-latest 任务支撑。Windows 列来自一次实际构建：oh-flutter 3.47.9-ohos-1.0.0 + DevEco Studio 26 自带 SDK/hvigor/ohpm，产物 208,398,210 B 未签名 HAP，ArkTS 0 error。Windows 上 release/profile 只差 oh-flutter 补发用 Dart 3.13.3 编的 windows-x64 `gen_snapshot`；要把这个 HAP 装到手机上，还缺 `libnode.so` 等原生库与签名 profile。
+
+`hvigor`、`ohpm` 不必另外安装 HarmonyOS Command Line Tools：DevEco Studio 26 自带的 `tools/hvigor`、`tools/ohpm` 和 `sdk/default` 足以把 `runtimeOS: "HarmonyOS"` 的工程编成未签名 HAP。要装到华为手机上仍需要签名 profile / 证书；DevEco 的自动签名走 AGC 登录，命令行构建要先配好 `signingConfigs`（本仓库让签名材料走 `DSH_OHOS_SIGN_*`、在 hvigor 之外签）。
 
 ## ArkTS 检查
 

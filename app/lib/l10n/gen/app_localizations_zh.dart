@@ -15096,6 +15096,9 @@ class L10nZh extends L10n {
   String get searchKwAddSshHost => 'SSH,添加主机,连接电脑';
 
   @override
+  String get searchKwAddDirectHost => '直连,直连服务器,HTTPS,令牌';
+
+  @override
   String get searchKwRemoteAutoConnect => '自动连接,启动时连接';
 
   @override

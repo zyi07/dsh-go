@@ -23,7 +23,10 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 version: 1.0.12+1
 
 environment:
-  sdk: ^3.13.4
+  # 3.13.3, not 3.13.4: oh-flutter's 3.47.9-ohos SDK carries Dart 3.13.3 and the
+  # HAP build reads this floor. Stable/CI Flutter 3.47.7 ships 3.13.5, so the
+  # Android line is unaffected.
+  sdk: ^3.13.3
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions

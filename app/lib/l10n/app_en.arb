@@ -4614,6 +4614,7 @@
   "searchKwWebSearchKey": "search key,web search key",
   "searchKwChatLogUpload": "privacy,logs,upload logs,telemetry",
   "searchKwAddSshHost": "ssh,add host,connect computer",
+  "searchKwAddDirectHost": "direct,direct server,https,token",
   "searchKwRemoteAutoConnect": "auto connect,on launch",
   "searchKwPermissionCurrent": "allow for this chat,this chat",
   "searchKwPermissionDefault": "default permission,read only,workspace,full access,auto-run commands,don't ask",
