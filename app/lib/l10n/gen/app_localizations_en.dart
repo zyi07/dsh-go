@@ -11075,6 +11075,14 @@ class L10nEn extends L10n {
   String get phoneSafeRestoreFailed => 'Couldn’t restore';
 
   @override
+  String get phoneSafeStopIncomplete =>
+      'Could not confirm that the engine has stopped. Configuration was not changed. Check the engine logs before trying again.';
+
+  @override
+  String get phoneSafeRestartIncomplete =>
+      'The configuration operation finished, but the engine has not stopped or restarted. Wait for it to stop before starting it again.';
+
+  @override
   String get phoneSafeRestoreIntro => 'DSH will restore the last working configuration:';
 
   @override
@@ -15829,6 +15837,9 @@ class L10nEn extends L10n {
   String get searchKwEngineUninstall => 'uninstall,remove,free space';
 
   @override
+  String get searchKwWorkspaceRecovery => 'workspace,index,recovery,rescue,missing chats,chats won\'t open';
+
+  @override
   String get searchKwAddProvider => 'add model,new provider,custom model,base url';
 
   @override
@@ -17075,6 +17086,22 @@ class L10nEn extends L10n {
   String get starSettingsTitle => 'Star DSH Go on GitHub';
 
   @override
+  String get phoneStartupFailureStopping => 'Startup failed; stopping';
+
+  @override
+  String phoneStartupFailureStoppingDetail(String reason) {
+    return 'Startup failed; stopping. $reason';
+  }
+
+  @override
+  String get phoneStartupTokenTimeout =>
+      'Startup timed out: no startup token arrived within 180 seconds. Check the logs.';
+
+  @override
+  String get phoneStartupPortNotReady =>
+      'The startup token arrived, but the local service port did not become ready. Check the logs.';
+
+  @override
   String get stateDiagnosticsSubject => 'DSH Go diagnostics bundle';
 
   @override
@@ -17585,6 +17612,14 @@ class L10nEn extends L10n {
 
   @override
   String get stateEngineUnsupported => 'Not supported by this engine version';
+
+  @override
+  String get stateEngineServiceUnavailable =>
+      'The required engine service is not ready. Check the engine logs or export diagnostics.';
+
+  @override
+  String get stateEngineOperationUnavailable =>
+      'The engine cannot run this operation right now. Check the engine logs.';
 
   @override
   String get stateSettingsRefreshed => 'Changed elsewhere. Refreshed.';
@@ -20768,4 +20803,54 @@ class L10nEn extends L10n {
   String webConnectHostFirst(String name) {
     return 'Connect to “$name” to open DSH Web';
   }
+
+  @override
+  String get workspaceRecoveryTitle => 'Workspace index recovery';
+
+  @override
+  String get workspaceRecoveryEnable => 'Use a recovery workspace index';
+
+  @override
+  String get workspaceRecoveryDisable => 'Use the original index again';
+
+  @override
+  String get workspaceRecoveryHint =>
+      'This phone only: use a separate index to access readable conversations when the original workspace index fails.';
+
+  @override
+  String get workspaceRecoveryActive =>
+      'The separate recovery index is selected. Both the original and recovery indexes are retained.';
+
+  @override
+  String get workspaceRecoveryWorking => 'Working…';
+
+  @override
+  String get workspaceRecoveryEnableBody =>
+      'The local engine will stop, switch to a separate recovery index, and start again. The original workspace index stays untouched. Conversation files, plugins, and credentials are not deleted.\n\nOn first use, the new index is built from readable conversations whose folders still exist. Old workspace names, order, defaults, archived state, and pins are not inherited automatically. Empty workspaces and conversations with missing folders may not appear. Original local grouping and pin preferences are retained.\n\nThe recovery index is retained and reused the next time you enable it. This bypasses the original index failure; it does not repair the original index.';
+
+  @override
+  String get workspaceRecoveryDisableBody =>
+      'The local engine will stop, switch back to the original workspace index, and start again. The original failure may return.\n\nConversation files created during recovery and the recovery index are both retained. Workspace membership and order do not sync between the two indexes. Some conversations created during recovery may not appear with the original index. Enable the recovery index again to continue using it.';
+
+  @override
+  String get workspaceRecoveryEnableStart => 'Enable and restart';
+
+  @override
+  String get workspaceRecoveryDisableStart => 'Use original and restart';
+
+  @override
+  String get workspaceRecoveryUnavailable =>
+      'This version does not support workspace index recovery. Check the local engine status and update the app.';
+
+  @override
+  String get workspaceRecoveryRestartIncomplete =>
+      'The index mode changed, but the engine has not been confirmed stopped or restarted. Wait for it to stop before starting it again.';
+
+  @override
+  String get workspaceRecoverySaveFailed =>
+      'The index mode could not be saved. No new start was requested. Check the local engine status and logs.';
+
+  @override
+  String get workspaceRecoveryFailed =>
+      'The operation did not finish. Check the local engine status and logs. This page shows whether the index mode changed.';
 }

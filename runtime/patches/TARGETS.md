@@ -2,7 +2,7 @@
 
 ## 目的与边界
 
-Android 构建只应用 `targetSets.android` 里的公共补丁，现在是上游 1.0.12 基线（main `d5ad25c5`）的 105 个，公共 diff 和各版本 pin 对象保持 main 原字节与数值。OHOS 的 136 项先应用这 105 个公共补丁，再应用 31 个 OHOS 专用补丁；平台判断为 false 并不等于 JavaScript 文件字节没有变化，因此不能把所有 diff 一起打进 Android 再依赖运行时判断。
+Android 构建只应用 `targetSets.android` 里的公共补丁，现在是上游 1.0.13 基线（main `3a91fab9`）的 113 个，公共 diff 和各版本 pin 对象保持 main 原字节与数值。OHOS 的 144 项先应用这 113 个公共补丁，再应用 31 个 OHOS 专用补丁；平台判断为 false 并不等于 JavaScript 文件字节没有变化，因此不能把所有 diff 一起打进 Android 再依赖运行时判断。
 
 本次恢复的是 **DSH npm 前缀树的文件字节**。构建工具自身、构建报告、时间戳或压缩器可能改变完整 runtime / APK 的字节；本包没有执行 Android APK、arm64 原生 runtime 或 HAP 构建，也不宣称这些整体产物与旧版完全相同。
 
@@ -26,6 +26,12 @@ Android 构建只应用 `targetSets.android` 里的公共补丁，现在是上�
 `--target` 必须显式指定为 `android` 或 `ohos`，没有默认值（M5-1）。遗漏目标、缺少目标值或填写其他值时，参数解析直接以 exit 2 结束，尚未读取 pins 或修改前缀、pins、输出报告；`--record` 也必须指定目标。正式 `build-runtime.sh` 已显式传 `--target android`，OHOS 的 `measure.sh` 已显式传 `--target ohos`，新增构建/测试脚本必须同样声明目标。历史对照工具运行的是 `afb5cdd` 的旧 patcher 时，保留旧版不支持 `--target` 的调用；这不构成当前 patcher 的默认值。
 
 schema 1 不再用于新的补丁应用或记录。迁移前先为每个现有 diff 明确登记目标；不能通过改默认目标或跳过未登记检查继续执行。新增已审 O4 / 后续 OHOS diff 时，也要同步将其名字加入 OHOS 集合，并更新对应版本 pins；本包的集成附属差分绑定具体已审基底。
+
+## 合并上游 1.0.13 后的状态（merge/ohos-upstream）
+
+- main 在这一段窗口新增 8 个公共补丁：`cordis-effect-dispose-completion`、`preset-legacy-delegation`、`plugin-operations-log-utf8`、`plan-pending-restore`、`plan-failed-command-pending`、`workspace-recovery-index`、`storage-json-postpublish`、`piai-credential-wait-cancel`。按文件名进入公共链后，`targetSets.android` 由 105 增到 113，`targetSets.ohos` 由 136 增到 144（完整公共链 113 个 + 31 个 OH 覆盖，顺序不变）。
+- recorder 在干净的 `npm ci` 0.2.2-rc.1 前缀上重录：113 个公共补丁的 pins 与 main `3a91fab9` 的原值逐字节相同；31 个 OH 覆盖的 pins 一个都没变（新公共补丁不触碰它们覆盖的文件）。
+- 0.2.1-rc.4 链仍是 fork 点之前就存在的历史问题，保持原样，不伪造。
 
 ## 合并上游 1.0.12 后的状态（merge/ohos-main）
 

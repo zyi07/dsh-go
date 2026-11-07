@@ -10536,6 +10536,12 @@ class L10nZh extends L10n {
   String get phoneSafeRestoreFailed => '没能恢复';
 
   @override
+  String get phoneSafeStopIncomplete => '还无法确认引擎已停止，未更改配置。请查看引擎日志后重试。';
+
+  @override
+  String get phoneSafeRestartIncomplete => '配置操作已完成，但引擎还未停止，暂未重启。请等待停止完成后再启动。';
+
+  @override
   String get phoneSafeRestoreIntro => 'DSH 会回到上次正常运行时的配置：';
 
   @override
@@ -15066,6 +15072,9 @@ class L10nZh extends L10n {
   String get searchKwEngineUninstall => '卸载,删除运行环境,释放空间';
 
   @override
+  String get searchKwWorkspaceRecovery => '工作区,索引,救援,对话打不开,对话不见了,恢复对话';
+
+  @override
   String get searchKwAddProvider => '添加模型,新渠道,自定义模型,Base URL';
 
   @override
@@ -16195,6 +16204,20 @@ class L10nZh extends L10n {
   String get starSettingsTitle => '给 DSH Go 点个 star';
 
   @override
+  String get phoneStartupFailureStopping => '启动失败，正在停止';
+
+  @override
+  String phoneStartupFailureStoppingDetail(String reason) {
+    return '启动失败，正在停止。$reason';
+  }
+
+  @override
+  String get phoneStartupTokenTimeout => '启动等待已超时（180 秒内未收到启动标记），请查看日志';
+
+  @override
+  String get phoneStartupPortNotReady => '已收到启动标记，但本机服务端口尚未就绪，请查看日志';
+
+  @override
   String get stateDiagnosticsSubject => 'DSH Go 诊断包';
 
   @override
@@ -16703,6 +16726,12 @@ class L10nZh extends L10n {
 
   @override
   String get stateEngineUnsupported => '当前引擎版本不支持';
+
+  @override
+  String get stateEngineServiceUnavailable => '所需的引擎服务未就绪，请查看引擎日志或导出诊断包';
+
+  @override
+  String get stateEngineOperationUnavailable => '引擎当前无法执行此操作，请查看引擎日志';
 
   @override
   String get stateSettingsRefreshed => '刚在别处改过，已刷新';
@@ -19688,4 +19717,48 @@ class L10nZh extends L10n {
   String webConnectHostFirst(String name) {
     return '还没连上「$name」，连上后再打开网页版';
   }
+
+  @override
+  String get workspaceRecoveryTitle => '工作区索引救援';
+
+  @override
+  String get workspaceRecoveryEnable => '启用工作区索引救援';
+
+  @override
+  String get workspaceRecoveryDisable => '恢复使用原索引';
+
+  @override
+  String get workspaceRecoveryHint => '仅本机：原工作区索引异常时，使用另一份索引访问可读取的对话。';
+
+  @override
+  String get workspaceRecoveryActive => '已选择独立救援索引；原索引和救援索引都会保留。';
+
+  @override
+  String get workspaceRecoveryWorking => '处理中…';
+
+  @override
+  String get workspaceRecoveryEnableBody =>
+      '将停止本机引擎，改用独立救援索引后重新启动。原工作区索引保持不动，对话文件、插件和凭据不删除。\n\n首次启用时，新索引从可读取的会话及其仍存在的目录建立。旧工作区名称、顺序、默认、归档和置顶等设置不会自动继承；空工作区或目录已失效的会话不保证出现在新列表中。本机原有分组和置顶偏好保留。\n\n救援索引会保留，下次启用继续使用。这是绕过原索引故障，未修复原索引。';
+
+  @override
+  String get workspaceRecoveryDisableBody =>
+      '将停止本机引擎，恢复使用原工作区索引后重新启动。原故障可能再次出现。\n\n救援期间产生的对话文件和救援索引都会保留；两个索引的工作区关系和排序不会自动同步。原索引可能不显示救援期间新增的会话，再次启用可继续使用救援索引。';
+
+  @override
+  String get workspaceRecoveryEnableStart => '启用并重启';
+
+  @override
+  String get workspaceRecoveryDisableStart => '使用原索引并重启';
+
+  @override
+  String get workspaceRecoveryUnavailable => '当前版本尚不支持工作区索引救援，请检查本机引擎状态并更新应用。';
+
+  @override
+  String get workspaceRecoveryRestartIncomplete => '索引模式已切换，但还无法确认引擎已停止，未重新启动。请等停止完成后再启动。';
+
+  @override
+  String get workspaceRecoverySaveFailed => '索引模式保存失败，未请求重新启动。请查看本机引擎状态和日志。';
+
+  @override
+  String get workspaceRecoveryFailed => '操作未完成，请查看本机引擎状态和日志。已切换的模式可在本页确认。';
 }

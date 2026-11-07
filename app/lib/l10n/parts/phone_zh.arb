@@ -333,6 +333,8 @@
   "phoneSafeRestoreStart": "恢复并启动",
   "phoneSafeRestoredStarting": "已恢复上次正常的配置，正在启动…",
   "phoneSafeRestoreFailed": "没能恢复",
+  "phoneSafeStopIncomplete": "还无法确认引擎已停止，未更改配置。请查看引擎日志后重试。",
+  "phoneSafeRestartIncomplete": "配置操作已完成，但引擎还未停止，暂未重启。请等待停止完成后再启动。",
   "phoneSafeRestoreIntro": "DSH 会回到上次正常运行时的配置：",
   "phoneSafeRestoreSettings": "• 设置恢复到当时的版本（现在的另存为备份）",
   "phoneSafeRestoreNote": "不会卸载任何插件，也不需要联网。停用的插件以后可以重新打开。",

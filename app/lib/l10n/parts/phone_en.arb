@@ -333,6 +333,8 @@
   "phoneSafeRestoreStart": "Restore and start",
   "phoneSafeRestoredStarting": "Restored the last working configuration. Starting…",
   "phoneSafeRestoreFailed": "Couldn’t restore",
+  "phoneSafeStopIncomplete": "Could not confirm that the engine has stopped. Configuration was not changed. Check the engine logs before trying again.",
+  "phoneSafeRestartIncomplete": "The configuration operation finished, but the engine has not stopped or restarted. Wait for it to stop before starting it again.",
   "phoneSafeRestoreIntro": "DSH will restore the last working configuration:",
   "phoneSafeRestoreSettings": "• Restore settings to that version (save current settings as a backup)",
   "phoneSafeRestoreNote": "No plugins will be uninstalled. No internet needed. You can re-enable disabled plugins later.",
