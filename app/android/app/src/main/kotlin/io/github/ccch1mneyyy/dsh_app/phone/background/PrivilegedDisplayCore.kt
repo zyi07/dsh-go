@@ -302,7 +302,7 @@ class PrivilegedDisplayCore(private val context: Context) {
         val shot = captureResult.getOrNull()
         val label = runCatching { appLabel(pkg) }.getOrNull()
         label?.let { response.putString(Proto.APP_LABEL, it) }
-        val treeResult = runCatching { readTree(id, pkg) }
+        val treeResult = runCatching { readTree(id, pkg, scanOtherWindows = wantImage && shot != null) }
         val failure = treeResult.exceptionOrNull()
         if (failure is InterruptedException || failure is Fault && failure.code == "cancelled") throw failure
         // Pixels alone never identify FLAG_SECURE. Keep an explicit secure failure authoritative.
@@ -449,16 +449,19 @@ class PrivilegedDisplayCore(private val context: Context) {
         var target: AccessibilityNodeInfo? = null
     }
 
-    private fun readTree(displayId: Int, pkg: String): TreeRead {
+    private fun readTree(displayId: Int, pkg: String, scanOtherWindows: Boolean = false): TreeRead {
         val vd = display ?: throw Fault("displayMissing")
         val conn = TreeConnection(context, pkg)
         try {
             val automation = try { conn.open(vd.display) } catch (_: Throwable) { throw Fault("treeUnavailable") }
-            return readTree(automation, displayId, pkg)
+            return readTree(automation, displayId, pkg, scanOtherWindows = scanOtherWindows)
         } finally { conn.close() }
     }
 
-    private fun readTree(automation: UiAutomation, displayId: Int, pkg: String, targetId: Int = 0): TreeRead {
+    private fun readTree(
+        automation: UiAutomation, displayId: Int, pkg: String,
+        targetId: Int = 0, scanOtherWindows: Boolean = false,
+    ): TreeRead {
         runCatching { invoke(automation, "clearCache") }
         @Suppress("UNCHECKED_CAST")
         val all = invoke(automation, "getWindowsOnAllDisplays") as? SparseArray<List<AccessibilityWindowInfo>>
@@ -472,10 +475,22 @@ class PrivilegedDisplayCore(private val context: Context) {
             val selected = BackgroundTree.selectApplicationWindow(roots.map { it?.packageName?.toString() }, pkg)
                 ?: throw Fault(if (roots.firstOrNull() != null) "displayTargetChanged" else "treeUnavailable")
             val tree = TreeRead(targetId)
-            tree.complete = selected.complete
+            if (!scanOtherWindows && roots.size > 1) tree.complete = false
             try {
                 walk(roots[selected.index]!!, tree, 0, 600)
                 assignRegions(tree.elements)
+                if (scanOtherWindows) for (index in selected.scanOrder.drop(1)) {
+                    try {
+                        // Same privacy walk and total budget, but never expose secondary
+                        // elements or let them take ownership of a main-window target id.
+                        walk(roots[index], tree, 0, 600, emitElements = false)
+                    } catch (e: Exception) {
+                        if (e is InterruptedException || e is java.util.concurrent.CancellationException || e is Fault) throw e
+                        // A secondary read failure prevents an image, not the already
+                        // successful main-window text. Primary errors remain outside this catch.
+                        tree.complete = false
+                    }
+                }
                 return tree
             } catch (e: Throwable) {
                 tree.target?.recycle()
@@ -484,27 +499,28 @@ class PrivilegedDisplayCore(private val context: Context) {
         } finally { roots.forEach { it?.recycle() } }
     }
 
-    private fun walk(node: AccessibilityNodeInfo?, tree: TreeRead, indent: Int, budget: Int) {
-        if (node == null) return
+    private fun walk(node: AccessibilityNodeInfo?, tree: TreeRead, indent: Int, budget: Int, emitElements: Boolean = true) {
+        if (node == null) { tree.complete = false; return }
         if (tree.visited >= budget) { tree.complete = false; return }
         tree.visited++
         if (node.isVisibleToUser && isSecret(node)) tree.hasSecrets = true
-        val actionable = node.isClickable || node.isLongClickable || node.isEditable || node.isCheckable || node.isScrollable
-        val text = bestText(node)
-        val emit = actionable || (text.isNotEmpty() && node.isVisibleToUser)
         var childIndent = indent
-        if (emit && node.isVisibleToUser) {
-            val rect = Rect().also { node.getBoundsInScreen(it) }
-            tree.elements.add(toElement(node, text, rect, indent))
-            // Retain the exact node assigned this screen id, not whichever editor has focus.
-            if (tree.elements.size == tree.targetId) tree.target = AccessibilityNodeInfo.obtain(node)
-            if (node.isScrollable) childIndent = indent + 1
+        if (emitElements) {
+            val actionable = node.isClickable || node.isLongClickable || node.isEditable || node.isCheckable || node.isScrollable
+            val text = bestText(node)
+            val emit = actionable || (text.isNotEmpty() && node.isVisibleToUser)
+            if (emit && node.isVisibleToUser) {
+                val rect = Rect().also { node.getBoundsInScreen(it) }
+                tree.elements.add(toElement(node, text, rect, indent))
+                // Retain the exact node assigned this screen id, not whichever editor has focus.
+                if (tree.elements.size == tree.targetId) tree.target = AccessibilityNodeInfo.obtain(node)
+                if (node.isScrollable) childIndent = indent + 1
+            }
         }
         for (i in 0 until node.childCount) {
             if (tree.visited >= budget) { tree.complete = false; break }
             val child = node.getChild(i)
-            if (child == null) tree.complete = false
-            try { walk(child, tree, childIndent, budget) } finally { child?.recycle() }
+            try { walk(child, tree, childIndent, budget, emitElements) } finally { child?.recycle() }
         }
     }
 
