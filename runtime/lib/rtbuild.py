@@ -897,6 +897,16 @@ def install_ca_bundle(entries, report):
                                 "bundleBytes": len(bundle)}
 
 
+def bridge_shared_rows():
+    """The rows of the bridge bundle's cordis.patch.yml that the local overlay also carries."""
+    source = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "bridge", "dsh-go-bridge", "cordis.patch.yml")
+    with open(source, encoding="utf-8") as patch:
+        rows = patch.read().split("    # --- shared rows ---\n", 1)[1]
+    # Local runtimes load the bridge by path; it is not a profile dependency.
+    return rows.replace("name: dsh-go-bridge/companion/full-context",
+                        "name: %s/lib/companion/full-context.js" % DSH_GO_BRIDGE)
+
+
 def overlay_entries(runtime_info, with_python=False, with_pnpm=False, with_bridge=False):
     """Files dsh-app adds to the rootfs. Kept here so the recipe lives in one place."""
     E = {}
@@ -991,6 +1001,7 @@ def overlay_entries(runtime_info, with_python=False, with_pnpm=False, with_bridg
                       "- insert:\n"
                       "    - id: dsh-go-bridge\n"
                       "      name: %s/lib/index.js\n" % DSH_GO_BRIDGE)
+            patch += bridge_shared_rows()
         f(DSH_WEB_PATCH.lstrip("/"), patch)
     d("root/.dsh", 0o700)
     d("root/.l2s", 0o700)          # PROOT_L2S_DIR: hard-link backing files (kept with /root on upgrade)

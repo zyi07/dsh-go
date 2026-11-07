@@ -155,9 +155,13 @@ class PhoneControl private constructor(private val app: Context) : PhoneEnv, Con
 
     fun isEnabled(): Boolean = switchedOn(app)
 
-    /** Off takes effect at once (bridge closed, task stopped); on needs an engine restart (the UI does it). */
+    /** Off closes the bridge and stops the task after any in-flight keeper settings write.
+     * On needs an engine restart (the UI does it); the rebind gap never holds this switch.
+     */
     fun setEnabled(enabled: Boolean): Boolean {
-        prefs.edit().putBoolean(K_ENABLED, enabled).apply()
+        synchronized(keeperSwitchLock) {
+            prefs.edit().putBoolean(K_ENABLED, enabled).apply()
+        }
         if (!enabled) {
             // l10n:keep agent stop reason
             tasks.stop("手机操控已关闭")
@@ -632,6 +636,9 @@ class PhoneControl private constructor(private val app: Context) : PhoneEnv, Con
         const val SERVER_VERSION = "1"
         private const val PREFS = "dsh_phone"
         private const val K_ENABLED = "enabled"
+
+        /** Only master preference publication and the keeper's final settings writes share this lock. */
+        internal val keeperSwitchLock = Any()
         private const val K_POLICIES = "policies"
         private const val K_TCP_FALLBACK = "tcpFallback"
         private const val CHANNEL_FIX = "dsh-phone-fix"

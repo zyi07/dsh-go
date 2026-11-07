@@ -72,6 +72,14 @@
         }
       }
     },
+    "ohos-effect-dispose-completion.diff": {
+      "0.2.2-rc.1": {
+        "node_modules/@deepseek-ai/cordis/lib/index.js": {
+          "after": "b8b87360ebc67df2d0aabea214b8ed30d4bde3767e354ebb1b85fc6c15b45a05",
+          "before": "627409afa06a265f7253200d3bc4648e88805c39fd3768568eb9b9518a31fe8f"
+        }
+      }
+    },
     "ohos-forge-github-unavailable.diff": {
       "0.2.2-rc.1": {
         "node_modules/@deepseek-ai/dsh-experimental-forge-github/lib/index.js": {
@@ -145,6 +153,22 @@
         "node_modules/@deepseek-ai/dsh-plugin-manager/lib/index.js": {
           "after": "8846e689bbf5d1eed7cfcf01b11df5b779c229de167e612eebecc81ed25fb3c5",
           "before": "dc3759d204ac47faa2cacc8e3c380bff552b82208a1c027edee47951f095d6fa"
+        }
+      }
+    },
+    "ohos-plugin-locale-bom.diff": {
+      "0.2.2-rc.1": {
+        "node_modules/@deepseek-ai/dsh-app-boot/lib/index.js": {
+          "after": "55d3674947850069069733aafa2975982c77e0b743dc59527173f382c0ce77db",
+          "before": "8c8c617eec295d60e18189949705e04399cd7b7f4ad027e181c4666c99621a1c"
+        }
+      }
+    },
+    "ohos-plugin-manifest-bom.diff": {
+      "0.2.2-rc.1": {
+        "node_modules/@deepseek-ai/dsh-app-boot/lib/index.js": {
+          "after": "8c8c617eec295d60e18189949705e04399cd7b7f4ad027e181c4666c99621a1c",
+          "before": "30e68c69b8a38d58f3e59fece0dbb63bc4f8e79212df91c25e76358502d2bd47"
         }
       }
     },
@@ -1712,27 +1736,35 @@
         }
       }
     },
-    "ohos-plugin-manifest-bom.diff": {
+    "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz-session-cold-hint-stat.diff": {
       "0.2.2-rc.1": {
-        "node_modules/@deepseek-ai/dsh-app-boot/lib/index.js": {
-          "before": "30e68c69b8a38d58f3e59fece0dbb63bc4f8e79212df91c25e76358502d2bd47",
-          "after": "8c8c617eec295d60e18189949705e04399cd7b7f4ad027e181c4666c99621a1c"
+        "node_modules/@deepseek-ai/dsh-api-session-controller/lib/index.js": {
+          "after": "5661abb18af697db2b18b6cc0cef700af40bf2289a68da73b0b3c817f13bca9c",
+          "before": "491160941daf50c0e8f644466f69a64924622057265c7b38dde3611e5721ea67"
         }
       }
     },
-    "ohos-plugin-locale-bom.diff": {
+    "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz-loader-entry-lifecycle.diff": {
       "0.2.2-rc.1": {
-        "node_modules/@deepseek-ai/dsh-app-boot/lib/index.js": {
-          "before": "8c8c617eec295d60e18189949705e04399cd7b7f4ad027e181c4666c99621a1c",
-          "after": "55d3674947850069069733aafa2975982c77e0b743dc59527173f382c0ce77db"
+        "node_modules/@deepseek-ai/cordis-plugin-loader/lib/index.js": {
+          "after": "c0aa9b24d4d85b311792cb8bb1f43f5e5af767f679abe61b66262bd29017208b",
+          "before": "4f0a93a1ef5bb09bd6e1c64b30df11be25efd46c316b9505c5ddf308974367a6"
         }
       }
     },
-    "ohos-effect-dispose-completion.diff": {
+    "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz-loader-group-own-key.diff": {
       "0.2.2-rc.1": {
-        "node_modules/@deepseek-ai/cordis/lib/index.js": {
-          "before": "627409afa06a265f7253200d3bc4648e88805c39fd3768568eb9b9518a31fe8f",
-          "after": "b8b87360ebc67df2d0aabea214b8ed30d4bde3767e354ebb1b85fc6c15b45a05"
+        "node_modules/@deepseek-ai/cordis-plugin-loader/lib/index.js": {
+          "after": "2d41405fe84c0960bcc1e5b40133526edd38c331790915fcce3c923f1fc3769d",
+          "before": "c0aa9b24d4d85b311792cb8bb1f43f5e5af767f679abe61b66262bd29017208b"
+        }
+      }
+    },
+    "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz-credentials-record-own-key.diff": {
+      "0.2.2-rc.1": {
+        "node_modules/@deepseek-ai/dsh-credentials-local/lib/index.js": {
+          "after": "75668bd81bab207ad782fc6681f14b108268b8ceb512aff23d30721cfeb3c2d8",
+          "before": "46c193e78c39303bfe394e022c3f29d4734887f926682cd5efe9bdc8027cf77e"
         }
       }
     }
@@ -1840,7 +1872,11 @@
       "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz-instruction-encoding-reuse.diff",
       "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz-str-editor-bom.diff",
       "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz-sqlite-document-count.diff",
-      "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz-session-lifecycle-enumeration.diff"
+      "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz-session-lifecycle-enumeration.diff",
+      "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz-session-cold-hint-stat.diff",
+      "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz-loader-entry-lifecycle.diff",
+      "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz-loader-group-own-key.diff",
+      "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz-credentials-record-own-key.diff"
     ],
     "ohos": [
       "credentials-decimal-refs.diff",
@@ -1944,6 +1980,10 @@
       "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz-str-editor-bom.diff",
       "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz-sqlite-document-count.diff",
       "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz-session-lifecycle-enumeration.diff",
+      "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz-session-cold-hint-stat.diff",
+      "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz-loader-entry-lifecycle.diff",
+      "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz-loader-group-own-key.diff",
+      "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz-credentials-record-own-key.diff",
       "ohos-attachment-publication.diff",
       "ohos-discovery-response-cleanup.diff",
       "ohos-attachment-diagnostic.diff",
