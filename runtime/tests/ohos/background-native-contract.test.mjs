@@ -1,3 +1,4 @@
+import { symlinkFixture } from './host-link-fixture.mjs';
 import test, { after, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as fs from 'node:fs/promises';
@@ -25,7 +26,7 @@ const { OhosLifecycleTransport } = await loadHttpTransport(source, modules.direc
 const authInput = require.resolve('@deepseek-ai/dsh-client-connection');
 const authSource = await fs.readFile(authInput, 'utf8');
 assert(!/from\s+['"]\./.test(authSource));
-await fs.symlink(path.join(prefix, 'node_modules'), path.join(modules.directory, 'node_modules'), 'dir');
+await symlinkFixture(path.join(prefix, 'node_modules'), path.join(modules.directory, 'node_modules'), 'dir');
 const authFixture = path.join(modules.directory, 'actual-browser-auth.mjs');
 await fs.writeFile(authFixture, authSource + '\nexport { BrowserAuth };\n');
 const { BrowserAuth, HostConnectionService } = await import(pathToFileURL(authFixture));

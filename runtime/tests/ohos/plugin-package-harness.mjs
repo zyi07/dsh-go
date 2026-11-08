@@ -1,3 +1,5 @@
+import '../../ohos/plugins/preload.mjs';
+import { selectedPackage as readSelectedPackage } from './plugin-selection-fixture.mjs';
 import assert from 'node:assert/strict';
 import { createServer, request } from 'node:http';
 import { Readable } from 'node:stream';
@@ -17,6 +19,14 @@ const { boot, PluginPackages, createRuntimeResolution, loadProfile } = await loa
 const { PluginManager } = await load('dsh-plugin-manager');
 const { TYPERT } = await import(pathToFileURL(join(prefix, 'node_modules/@deepseek-ai/dsh-plugin-manager/lib/typert.host.js')));
 export const name = 'ohos-owned-js-bundle';
+export const selectedPackage = (dir, packageName = name) => readSelectedPackage(dir, packageName);
+export function selectedEntry(dir, packageName = name) {
+  const selected = selectedPackage(dir, packageName);
+  assert.equal(typeof selected, 'string', 'the active manifest must select an installed package');
+  // The linkless layout has no profile/node_modules alias. Observe the actual
+  // selected directory, then let Node resolve its package exports normally.
+  return createRequire(join(selected, 'package.json')).resolve(packageName);
+}
 export async function runInstalledTool(dir, expectedVersion) {
   const [{ Context }, { SystemPrompt }, { ToolRuntime }, native] = await Promise.all([
     'cordis', 'dsh-system-prompt', 'dsh-tools', 'dsh-tool-executor-native',
@@ -24,7 +34,7 @@ export async function runInstalledTool(dir, expectedVersion) {
   const ctx = new Context();
   try {
     await ctx.plugin(SystemPrompt, {}); await ctx.plugin(ToolRuntime, {}); await ctx.plugin(native);
-    const entry = createRequire(join(dir, 'package.json')).resolve(name);
+    const entry = selectedEntry(dir);
     await ctx.plugin(await import(pathToFileURL(entry)));
     const batch = await ctx.tools.execute({ calls: [{ id: 'installed-echo', name: 'ohos_installed_echo',
       arguments: JSON.stringify({ text: '已安装纯JS工具' }) }], signal: new AbortController().signal });
@@ -117,7 +127,7 @@ export async function fixture(t, definitions = {}, { profileName = 'web', requir
     const activeRows = active ? [{ insert: [
       ...['dsh-system-prompt', 'dsh-tools', 'dsh-tool-executor-native'].map((pkg, i) => ({
         id: 'fixture-service-' + i, name: pathToFileURL(join(prefix, 'node_modules/@deepseek-ai', pkg, 'lib/index.js')).href })),
-      { id: 'installed-root', name: pathToFileURL(createRequire(manifestPath).resolve(name)).href },
+      { id: 'installed-root', name },
     ] }] : [];
     const listeners = new Set(); let ready = false;
     const installAnchor = join(prefix, 'node_modules/@deepseek-ai/dsh/package.json');
@@ -157,7 +167,13 @@ export async function fixture(t, definitions = {}, { profileName = 'web', requir
         else result[key] = { sha256: hash(await readFile(full)) };
       }
     }
-    await walk(dir); return result;
+    await walk(dir);
+    if (!includeStore) {
+      const key = '.plugin-manager/ohos/active.json';
+      try { result[key] = { sha256: hash(await readFile(join(dir, key))) }; }
+      catch (error) { if (error.code !== 'ENOENT') throw error; }
+    }
+    return result;
   }
   return { root, home, dir, manifestPath, facts, invoke, snapshot, registry, tarEntered,
     holdTar: version => { heldVersion = version; },

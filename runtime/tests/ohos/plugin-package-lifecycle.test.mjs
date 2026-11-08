@@ -1,10 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createRequire } from 'node:module';
 import { writeFile, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { setImmediate as immediate } from 'node:timers/promises';
-import { fixture, name, hash, runInstalledTool } from './plugin-package-harness.mjs';
+import { fixture, name, hash, runInstalledTool, selectedEntry } from './plugin-package-harness.mjs';
 
 test('real OH PluginManager inspects, installs, updates and removes a registry JS bundle', { timeout: 30000 }, async t => {
   const f = await fixture(t);
@@ -55,7 +54,7 @@ test('failed update preserves old root, package files and enabled selection', { 
   const installed = await f.invoke('installBundle', name + '@1.0.0', { registry: f.registry, enabled: true });
   assert.equal(installed.application, 'restart-required');
   const before = await f.snapshot();
-  const oldEntry = createRequire(f.manifestPath).resolve(name), oldBytes = await readFile(oldEntry);
+  const oldEntry = selectedEntry(f.dir), oldBytes = await readFile(oldEntry);
   f.corruptTar('2.0.0');
   const update = await f.invoke('updateBundle', name, '2.0.0', { registry: f.registry });
   assert.equal(update.result.application, 'failed'); assert.equal(update.result.changed, false);

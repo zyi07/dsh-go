@@ -1,9 +1,11 @@
+import { symlinkFixture } from './host-link-fixture.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import * as promises from 'node:fs/promises';
 import childProcess from 'node:child_process';
 import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 import { Worker } from 'node:worker_threads';
 import { createNodeScriptWorker, nodeScriptAvailable } from '../../ohos/process/node-script.mjs';
 import { assertNodeFsInventory, fsPathTable, promisesPathTable } from '../../ohos/process/node-path-table.mjs';
@@ -14,7 +16,7 @@ const plainCwd = process.cwd, plainRead = fs.readFileSync, plainSpawn = childPro
 const plainChildSpawn = childProcess.ChildProcess.prototype.spawn;
 
 async function fixture(t) {
-  const root = await promises.mkdtemp('/tmp/ohos-node-worker-');
+  const root = await promises.mkdtemp(join(tmpdir(), 'ohos-node-worker-'));
   const workspace = join(root, '工作区'), temporary = join(root, '临时区');
   await promises.mkdir(workspace); await promises.mkdir(temporary);
   const active = new Set(), parentFds = new Set();
@@ -70,8 +72,13 @@ test('every fixed path-table entry executes against real files at the private cw
   const f = await fixture(t);
   const requests = [...Object.entries(fsPathTable).map(([name, value]) => ({ kind: 'fs', name, ...value })),
     ...Object.entries(promisesPathTable).map(([name, value]) => ({ kind: 'promises', name, ...value }))];
+  for (const { kind, name, operation } of requests) if (operation === 'readlink') {
+    const stem = `${kind}-${name}-中文`;
+    await symlinkFixture(`${stem}.txt`, join(f.workspace, `${stem}-dest.txt`));
+  }
   const source = await promises.readFile(new URL('./node-script-api-fixture.mjs', import.meta.url), 'utf8');
-  const result = successful(await (await f.launch(source, { args: [JSON.stringify(requests)] })).done);
+  const mode = process.execArgv.some(value => value.endsWith('/sim/preload.mjs')) ? 'strict' : 'native';
+  const result = successful(await (await f.launch(source, { args: [JSON.stringify(requests), mode] })).done);
   assert.equal(result.status, 'PASS_SCOPED'); assert.equal(result.cwd, f.workspace);
   assert.deepEqual(result.observations.map(row => row.kind + '.' + row.name), requests.map(row => row.kind + '.' + row.name));
   assert.equal(result.nested.length, 3);
@@ -116,11 +123,11 @@ test('two cwd values, process.chdir, path.resolve and Chinese paths stay within 
 test('only this Worker denies child_process, inherited descriptors and paths through an outside symlink', async t => {
   const f = await fixture(t);
   await promises.writeFile(join(f.temporary, 'outside.txt'), 'temporary is not a chdir workspace');
-  await promises.symlink(f.root, join(f.workspace, 'escape'));
+  await symlinkFixture(f.root, join(f.workspace, 'escape'));
   await promises.mkdir(join(f.root, 'outside/deep'), { recursive: true });
   await promises.writeFile(join(f.root, 'outside/secret'), 'OUTSIDE');
   await promises.mkdir(join(f.workspace, 'tricky'));
-  await promises.symlink(join(f.root, 'outside/deep'), join(f.workspace, 'tricky/link'));
+  await symlinkFixture(join(f.root, 'outside/deep'), join(f.workspace, 'tricky/link'));
   const source = `import assert from 'node:assert/strict';import fs from 'node:fs';import cp from 'node:child_process';
     for(const fd of [0,1,2])assert.throws(()=>fs.closeSync(fd),{code:'ERR_OHOS_NODE_FD_UNAVAILABLE'});
     assert.throws(()=>fs.readFileSync(0),{code:'ERR_OHOS_NODE_FD_UNAVAILABLE'});

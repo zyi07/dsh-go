@@ -43,7 +43,8 @@ function hostEdge(name, range, hostPackages) {
   if (!host) return;
   if (!semver.satisfies(host.version, range, { includePrerelease: true }))
     throw registryError(`${name}: incompatible host version ${host.version}`);
-  return { type: 'host', name, version: host.version, packageDir: host.packageDir };
+  return { type: 'host', name, version: host.version, packageDir: host.packageDir,
+    ...(host.declarer === undefined ? {} : { declarer: host.declarer }) };
 }
 
 /** Resolve a complete fixed graph without writing profile files or importing package code. */

@@ -3,10 +3,12 @@ import { pathToFileURL } from 'node:url';
 import { createRegistry, parseRegistrySpec } from './registry.mjs';
 import { runProfileOperation } from './installer.mjs';
 import { beginTransaction, recoverProfile, transactionFor } from './store.mjs';
+import { installPluginResolution } from './resolution.mjs';
 
 const require = createRequire(new URL('../../../package.json', import.meta.url));
 
 export function createPluginBackend({ fetchImpl = globalThis.fetch } = {}) {
+  installPluginResolution();
   return {
     recoverProfile,
     begin(profile) { return beginTransaction(profile.dir); },

@@ -4,7 +4,7 @@ import { readFileSync, writeFileSync, existsSync, readlinkSync } from 'node:fs';
 import { readFile, readdir } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { name } from './plugin-package-harness.mjs';
+import { name, selectedPackage } from './plugin-package-harness.mjs';
 
 const prefix = resolve(process.env.DSH_PREFIX);
 const statePath = process.env.DSH_PLUGIN_CRASH_STATE;
@@ -14,7 +14,7 @@ const bootPath = join(prefix, 'node_modules/@deepseek-ai/dsh-app-boot/lib/index.
 const { loadProfileDirectory, loadProfile } = await import(pathToFileURL(bootPath));
 const anchor = join(prefix, 'node_modules/@deepseek-ai/dsh/package.json');
 const readManifest = dir => JSON.parse(readFileSync(join(dir, 'package.json')));
-const link = dir => readlinkSync(join(dir, 'node_modules', name));
+const link = dir => selectedPackage(dir);
 const journal = dir => join(dir, '.plugin-manager/ohos/transaction.json');
 
 if (mode === 'crash' || mode === 'active-read') {
@@ -71,7 +71,7 @@ if (mode === 'crash' || mode === 'active-read') {
     loadProfileDirectory('dsh', state.dir, anchor);
     assert.equal(readFileSync(join(state.dir, 'package.json'), 'utf8'), fresh);
     assert.equal(readManifest(state.dir).dependencies?.[name], undefined);
-    assert.equal(existsSync(join(state.dir, 'node_modules', name)), false);
+    assert.equal(selectedPackage(state.dir), undefined);
     assert.equal(existsSync(journal(state.dir)), false);
     console.log(JSON.stringify({ mode, explicitResetPreserved: true }));
   } else {

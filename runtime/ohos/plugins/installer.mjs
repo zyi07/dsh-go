@@ -1,5 +1,5 @@
 import { constants } from 'node:fs';
-import { lstat, mkdir, mkdtemp, open, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises';
+import { lstat, mkdir, mkdtemp, open, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises';
 import { dirname, join, relative } from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
 import { createRegistry, parseRegistrySpec, registryError, secureUrl } from './registry.mjs';
@@ -63,10 +63,10 @@ function checkManifest(expected, actual) {
   }
 }
 
-// This tree is owned by this operation. Never follow dependency or host links.
+// This tree is owned by this operation and contains only ordinary files/directories.
 async function syncTree(path, budget, directoriesOnly = false) {
   const info = await lstat(path);
-  if (info.isSymbolicLink()) return;
+  if (info.isSymbolicLink()) throw registryError('Unexpected link in plugin generation');
   if (info.isDirectory()) {
     for (const name of await readdir(path)) await syncTree(join(path, name), budget, directoriesOnly);
   } else if (info.isFile()) {
@@ -133,18 +133,12 @@ export async function runProfileOperation(context, args, options) {
           stagingRoot: generation, name: node.name, version: node.version, signal: options.signal });
         checkManifest(node.manifest, extracted.manifest);
         await rm(archivePath);
-        await syncTree(extracted.directory, budget);
-        directories.set(node.id, extracted.directory);
-      }
-      for (const node of graph.nodes) {
-        const base = directories.get(node.id);
-        const edges = { ...node.dependencies, ...node.peers };
-        for (const [name, edge] of Object.entries(edges)) {
-          const link = join(base, 'node_modules', name);
-          await directory(dirname(link));
-          const target = edge.type === 'host' ? edge.packageDir : directories.get(edge.id);
-          await symlink(relative(dirname(link), target), link, 'dir');
-        }
+        const destination = join(generation, `package-${index}`, 'node_modules', node.name);
+        await directory(dirname(destination));
+        await rename(extracted.directory, destination);
+        await syncTree(destination, budget);
+        node.directory = relative(generation, destination);
+        directories.set(node.id, destination);
       }
       await writeFile(join(generation, 'lock.json'), JSON.stringify(graph, null, 2) + '\n', { flag: 'wx', mode: 0o600 });
       await syncTree(join(generation, 'lock.json'), budget);

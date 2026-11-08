@@ -255,6 +255,9 @@ export class VirtualSubprocessRuntime {
             });
             worker = new Worker(new URL('./worker.mjs', import.meta.url), {
               workerData: {
+                // This fixed provider entry is independent of DSH's plugin
+                // profile. Do not bootstrap that profile in its scrubbed env.
+                dshOhosVirtualProcess: { protocol: 1 },
                 argv: [name, ...argv.slice(1)], cwd, policy,
                 roots,
                 env, stdin: typeof spec.stdio.stdin === 'object' ? spec.stdio.stdin.data : '',

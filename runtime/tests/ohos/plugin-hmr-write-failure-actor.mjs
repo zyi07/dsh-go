@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { fixture, name, executeTool } from './plugin-package-harness.mjs';
+import { fixture, name, executeTool, selectedPackage } from './plugin-package-harness.mjs';
 import { toolSource } from './plugin-package-fixture.mjs';
 
 // A real kernel EFBIG must be observable instead of terminating this fixture.
@@ -53,7 +53,7 @@ try {
       assert.equal(fiber.state, 2);
     }
     const journal = join(f.dir, '.plugin-manager/ohos/transaction.json');
-    const failedGeneration = realpathSync(join(f.dir, 'node_modules', name));
+    const failedGeneration = selectedPackage(f.dir);
     assert.equal(JSON.parse(readFileSync(journal, 'utf8')).phase, 'pending');
     process.send({ stage: 'failed', application: initial.application,
       error: initial.error, toolCode: 'UNKNOWN_TOOL', journalPhase: 'pending' });
@@ -78,7 +78,7 @@ try {
     assert.equal(next.application, 'applied', JSON.stringify(next));
     await executeTool(f.ctx, '2.0.0');
     const row = [...f.ctx.loader.entries()].find(entry => entry.options.id === 'owned-tool');
-    const generation = realpathSync(join(f.dir, 'node_modules', name));
+    const generation = selectedPackage(f.dir);
     assert.equal(row.moduleNamespace.loadedUrl, pathToFileURL(join(generation, 'index.mjs')).href);
     assert.notEqual(generation, failedGeneration);
     assert.equal(existsSync(failedGeneration), false);

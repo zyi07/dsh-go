@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile, lstat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { fixture, name, executeTool } from './plugin-package-harness.mjs';
+import { fixture, name, executeTool, selectedPackage } from './plugin-package-harness.mjs';
 import { toolSource } from './plugin-package-fixture.mjs';
 
 const { Context } = await import(pathToFileURL(join(process.env.DSH_PREFIX,
@@ -125,7 +125,7 @@ for (const reject of [false, true]) {
       assert.deepEqual(observed.trace, ['last-disposer-entered', reject ? 'intentional-rejection' : 'normal-disposer-returned', 'sibling-cleanup-ran']);
       assert.equal(manifest.dependencies?.[name], undefined);
       assert.equal(manifest.dsh.profile.bundles.includes(name), false);
-      await assert.rejects(lstat(join(f.dir, 'node_modules', name)), { code: 'ENOENT' });
+      assert.equal(selectedPackage(f.dir), undefined);
       await assert.rejects(lstat(join(f.dir, '.plugin-manager/ohos/transaction.json')), { code: 'ENOENT' });
       assert.deepEqual(observed.fiber, { uid: null, state: 4 });
       assert.equal(observed.loaderRowPresent, false);

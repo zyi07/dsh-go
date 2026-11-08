@@ -6,7 +6,7 @@ import { npmBomGraphArchive, npmBomDependencyArchive } from './plugin-archive-fi
 import { realpath, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { fixture, name, executeTool } from './plugin-package-harness.mjs';
+import { fixture, name, executeTool, selectedPackage } from './plugin-package-harness.mjs';
 import { toolSource } from './plugin-package-fixture.mjs';
 
 test('OH HMR removal and reinstallation load each new physical generation', { timeout: 30000 }, async t => {
@@ -29,7 +29,7 @@ test('OH HMR removal and reinstallation load each new physical generation', { ti
     assert.ok(row?.moduleNamespace, 'actual Loader entry must expose its loaded namespace');
     const namespace = row.moduleNamespace;
     assert.equal(namespace.PeerContext, HostContext, 'declared core peer must retain the actual Host singleton');
-    const root = await realpath(join(f.dir, 'node_modules', name));
+    const root = selectedPackage(f.dir);
     assert.equal(namespace.loadedUrl, pathToFileURL(join(root, 'index.mjs')).href);
     assert.equal(namespaces.has(namespace), false, 'reinstall must not reuse the removed module namespace');
     assert.equal(urls.has(namespace.loadedUrl), false, 'reinstall must load a new generation URL');
@@ -59,7 +59,7 @@ test('OH installed update keeps old live module and its first late relative impo
   const current = [...f.ctx.loader.entries()].find(entry => entry.options.id === 'owned-tool');
   assert.equal(current.moduleNamespace, oldModule);
   assert.equal(current.fiber, oldRow.fiber);
-  assert.notEqual(pathToFileURL(join(await realpath(join(f.dir, 'node_modules', name)), 'index.mjs')).href, oldModule.loadedUrl);
+  assert.notEqual(pathToFileURL(join(selectedPackage(f.dir), 'index.mjs')).href, oldModule.loadedUrl);
   assert.equal((await oldModule.readLate()).version, '1.0.0', 'first late import after update must still resolve old files');
   await executeTool(f.ctx, '1.0.0');
 });
@@ -86,8 +86,8 @@ test('real npm BOM bundle activates, lists without metadata error and removes', 
   assert.equal(row.enabled, true);
   assert.equal(row.meta?.error, undefined);
   for (const item of row.rows) assert.equal(item.meta?.error, undefined);
-  assert.equal((await readFile(join(f.dir, 'node_modules', name, 'package.json'))).subarray(0, 3).toString('hex'), 'efbbbf');
-  const packageRequire = createRequire(join(f.dir, 'node_modules', name, 'package.json'));
+  assert.equal((await readFile(join(selectedPackage(f.dir), 'package.json'))).subarray(0, 3).toString('hex'), 'efbbbf');
+  const packageRequire = createRequire(join(selectedPackage(f.dir), 'package.json'));
   const dependencyEntry = packageRequire.resolve('fixture-bom-dependency');
   assert.equal((await readFile(join(dependencyEntry, '..', 'package.json'))).subarray(0, 3).toString('hex'), 'efbbbf');
   const removed = await f.invoke('removeBundle', name);

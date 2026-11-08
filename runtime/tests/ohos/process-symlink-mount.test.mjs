@@ -1,9 +1,19 @@
+import { symlinkFixture } from './host-link-fixture.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as fs from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { VirtualSubprocessRuntime } from '../../ohos/process/runtime.mjs';
+
+const strict = process.platform === 'openharmony' && globalThis[Symbol.for('dsh.go.ohos.sim')] === true;
+const creation = strict ? ' (strict: creation is EACCES)' : '';
+async function deniedCreation(f, result, entry = 'alias') {
+  assert.notEqual(result.exitCode, 0, JSON.stringify(result));
+  assert.match(result.stderr, /EACCES/);
+  await assert.rejects(fs.lstat(join(f.work, entry)), { code: 'ENOENT' });
+  assert.equal(await fs.readFile(join(f.work, 'input'), 'utf8'), 'OWN\n');
+}
 
 async function fixture(t) {
   const root = await fs.mkdtemp(join(tmpdir(), 'ohos-symlink-mount-'));
@@ -24,34 +34,38 @@ async function fixture(t) {
   return { root, work, temporary, outside, run };
 }
 
-test('same-mount absolute ln target stays absolute through readlink and is readable', async t => {
+test('same-mount absolute ln target stays absolute through readlink and is readable' + creation, async t => {
   const f = await fixture(t), target = join(f.work, 'input');
   const result = await f.run('ln -s "$TARGET" alias; readlink alias; cat alias', { TARGET: target });
+  if (strict) return deniedCreation(f, result);
   assert.equal(result.exitCode, 0, JSON.stringify(result));
   assert.equal(result.stdout, target + '\nOWN\n');
   assert.equal(await fs.readlink(join(f.work, 'alias')), target);
 });
 
-test('readlink preserves the first absolute hop instead of resolving a link chain', async t => {
+test('readlink preserves the first absolute hop instead of resolving a link chain' + creation, async t => {
   const f = await fixture(t), target = join(f.work, 'first');
-  await fs.symlink(join(f.work, 'input'), target);
+  await symlinkFixture(join(f.work, 'input'), target);
   const result = await f.run('ln -s "$TARGET" alias; readlink alias; cat alias', { TARGET: target });
+  if (strict) return deniedCreation(f, result);
   assert.equal(result.exitCode, 0, JSON.stringify(result));
   assert.equal(result.stdout, target + '\nOWN\n');
   assert.equal(await fs.readlink(join(f.work, 'alias')), target);
 });
 
-test('relative parent target remains relative to link directory, not shell cwd', async t => {
+test('relative parent target remains relative to link directory, not shell cwd' + creation, async t => {
   const f = await fixture(t);
   const result = await f.run('ln -s ../input sub/alias; readlink sub/alias; cat sub/alias');
+  if (strict) return deniedCreation(f, result, 'sub/alias');
   assert.equal(result.exitCode, 0, JSON.stringify(result));
   assert.equal(result.stdout, '../input\nOWN\n');
   assert.equal(await fs.readlink(join(f.work, 'sub/alias')), '../input');
 });
 
-test('nonexistent same-mount absolute target remains an honest dangling link', async t => {
+test('nonexistent same-mount absolute target remains an honest dangling link' + creation, async t => {
   const f = await fixture(t), target = join(f.work, 'later');
   const result = await f.run('ln -s "$TARGET" alias; readlink alias', { TARGET: target });
+  if (strict) return deniedCreation(f, result);
   assert.equal(result.exitCode, 0, JSON.stringify(result));
   assert.equal(result.stdout, target + '\n');
   assert.equal(await fs.readlink(join(f.work, 'alias')), target);

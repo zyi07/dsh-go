@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync, readlinkSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { fixture, name, executeTool } from './plugin-package-harness.mjs';
+import { join, relative } from 'node:path';
+import { fixture, name, executeTool, selectedPackage } from './plugin-package-harness.mjs';
 import { toolSource } from './plugin-package-fixture.mjs';
+import { transactionFor } from '../../ohos/plugins/store.mjs';
 process.on('SIGXFSZ', () => {});
 async function barrier(stage, facts = {}) {
   const acknowledged = new Promise(resolve => process.once('message', resolve));
@@ -24,15 +25,15 @@ try {
   const previous = [...f.ctx.loader.entries()].filter(e => e.options.id !== 'owned-tool' && e.fiber?.state === 2)
     .map(entry => ({ entry, fiber: entry.fiber }));
   const journal = join(f.dir, '.plugin-manager/ohos/transaction.json');
-  const link = join(f.dir, 'node_modules', name);
-  const beforeLink = readlinkSync(link), beforeManifest = readFileSync(f.manifestPath, 'utf8');
+  const selected = () => selectedPackage(f.dir);
+  const beforeLink = selected(), beforeManifest = readFileSync(f.manifestPath, 'utf8');
   let predicted;
   globalThis.__pluginRemoveBarrier = async () => {
     if (!armed) return;
     armed = false;
     const record = JSON.parse(readFileSync(journal, 'utf8'));
     assert.equal(record.phase, 'pending'); assert.deepEqual(record.links, []);
-    record.links.push({ name, before: readlinkSync(link), after: null });
+    record.links.push({ name, before: relative(join(f.dir, '.plugin-manager/ohos/generations'), selected()), after: null });
     predicted = JSON.stringify(record) + '\n';
     const limit = Buffer.byteLength(predicted);
     const committed = JSON.stringify({ ...record, phase: 'committed' }) + '\n';
@@ -50,7 +51,7 @@ try {
     assert.equal(result.application, 'applied', JSON.stringify(result));
     assert.equal(result.packageResult.exitCode, 0);
     assert.equal(f.ctx.tools.get('ohos_installed_echo'), undefined);
-    assert.equal(existsSync(link), false); assert.equal(existsSync(journal), false);
+    assert.equal(selected(), undefined); assert.equal(existsSync(journal), false);
     assert.equal(JSON.parse(readFileSync(f.manifestPath, 'utf8')).dependencies[name], undefined);
     process.send({ stage: 'healthy', result });
   } else {
@@ -61,14 +62,21 @@ try {
       assert.equal(result.packageResult?.exitCode, 0, 'remove publication succeeded before terminal failure');
       assert.equal(result.changed, false);
       assert.equal(existsSync(journal), false);
-      assert.equal(readlinkSync(link), beforeLink);
+      assert.equal(selected(), beforeLink);
       assert.equal(readFileSync(f.manifestPath, 'utf8'), beforeManifest);
       assert.doesNotMatch(result.error.diagnostic, /rollback failed/);
     } else {
-      if (result.error.diagnostic.includes('Disk plugin rollback failed:')) assert.match(result.error.diagnostic, /Disk plugin rollback failed:.*EFBIG/);
-      assert.doesNotMatch(result.error.diagnostic, /Live plugin rollback failed/);
-      assert.equal(JSON.parse(readFileSync(journal, 'utf8')).phase, 'pending');
+      // The ordinary-file transaction already prepared rollback bytes before
+      // RLIMIT_FSIZE became zero. Its rename-based compensation must finish
+      // without writing a replacement journal or discarding the old selection.
+      assert.equal(result.changed, false);
+      assert.doesNotMatch(result.error.diagnostic, /(?:Disk|Live) plugin rollback failed/);
+      assert.equal(existsSync(journal), false, 'completed zero-write rollback has no pending recovery debt');
+      assert.equal(selected(), beforeLink, 'the selected immutable generation is restored while writes remain denied');
+      assert.equal(readFileSync(f.manifestPath, 'utf8'), beforeManifest, 'profile bytes are restored before writes return');
     }
+    assert.throws(() => transactionFor(f.dir), { code: 'ERR_OHOS_PLUGIN_STORE' },
+      'terminal compensation releases the in-process writer even at zero write allowance');
     await executeTool(f.ctx, '1.0.0');
     process.send({ stage: 'failed', result, toolVersion: '1.0.0', journalPending: existsSync(journal) });
     await barrier('restore');
@@ -77,7 +85,7 @@ try {
     assert.equal(retry.error?.code, 'already-installed', JSON.stringify(retry));
     await executeTool(f.ctx, '1.0.0');
     assert.equal(existsSync(journal), false);
-    assert.equal(readlinkSync(link), beforeLink);
+    assert.equal(selected(), beforeLink);
     assert.equal(readFileSync(f.manifestPath, 'utf8'), beforeManifest);
     process.send({ stage: 'recovered', mode, retry, writesRestored: true, journalRemoved: true });
   }

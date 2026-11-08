@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { fixture, name, executeTool } from './plugin-package-harness.mjs';
+import { fixture, name, executeTool, selectedPackage } from './plugin-package-harness.mjs';
 const yaml = JSON.stringify([{ insert: [{ id: 'owned-tool', name }] }]);
 for (const mode of ['bad-archive', 'cancelled', 'success']) test(`real HMR update ${mode} preserves loaded code and transaction contract`, { timeout: 30000 }, async t => {
   const f = await fixture(t, { '1.0.0': { yaml }, '2.0.0': { yaml } }, { hmr: true, profileName: 'hmr-owned' });
@@ -32,7 +32,7 @@ for (const mode of ['bad-archive', 'cancelled', 'success']) test(`real HMR updat
   assert.equal(f.facts.requests.filter(x => x === '/tar/1.0.0').length, oldTarCount, 'never re-download old tar as rollback');
   assert.equal(f.manager.installs.size, 0);
   if (mode !== 'success') assert.deepEqual(await f.snapshot(), before);
-  const manifest = JSON.parse(await readFile(join(f.dir, 'node_modules', name, 'package.json'), 'utf8'));
+  const manifest = JSON.parse(await readFile(join(selectedPackage(f.dir), 'package.json'), 'utf8'));
   assert.equal(manifest.version, mode === 'success' ? '2.0.0' : '1.0.0');
   const row = (await f.manager.listBundles()).find(row => row.name === name);
   assert.equal(row.enabled, true);
@@ -40,12 +40,13 @@ for (const mode of ['bad-archive', 'cancelled', 'success']) test(`real HMR updat
 });
 
 test('real HMR refused unmanaged removal restores the selected live contribution', { timeout: 30000 }, async t => {
-  const { cp, unlink, symlink, realpath, writeFile } = await import('node:fs/promises');
+  const { cp, writeFile } = await import('node:fs/promises');
   const { pathToFileURL } = await import('node:url');
   const f = await fixture(t, {}, { hmr: true, profileName: 'hmr-removal' });
   await f.invoke('installBundle', name + '@1.0.0', { registry: f.registry, enabled: false });
-  const link = join(f.dir, 'node_modules', name), legacy = join(f.root, 'legacy-package');
-  await cp(await realpath(link), legacy, { recursive: true }); await unlink(link); await symlink(legacy, link);
+  const legacy = join(f.dir, 'node_modules', name);
+  await cp(selectedPackage(f.dir), legacy, { recursive: true });
+  await writeFile(join(f.dir, '.plugin-manager/ohos/active.json'), '{"schema":1,"packages":{}}\n');
   const marker = '__ohosContractLive';
   t.after(() => { delete globalThis[marker]; });
   await writeFile(join(legacy, 'index.mjs'), `export function apply(ctx) { globalThis.${marker} = true; ctx.effect(() => () => { globalThis.${marker} = false; }); }\n`);

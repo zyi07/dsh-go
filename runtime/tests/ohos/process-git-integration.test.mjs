@@ -1,6 +1,7 @@
+import { symlinkFixture } from './host-link-fixture.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, readFile, writeFile, rm, readdir, lstat, rename, symlink } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, writeFile, rm, readdir, lstat, rename } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, dirname, resolve } from 'node:path';
 import { createRequire } from 'node:module';
@@ -316,7 +317,7 @@ for (const mutation of ['new-file', 'replace-empty', 'replace-symlink', 'new-dir
       else {
         saved = s.target + '-original'; await rename(s.target, saved);
         if (mutation === 'replace-empty') await mkdir(s.target);
-        else { await writeFile(join(f.outside, 'user.txt'), 'outside-content'); await symlink(f.outside, s.target); }
+        else { await writeFile(join(f.outside, 'user.txt'), 'outside-content'); await symlinkFixture(f.outside, s.target); }
       }
     };
     const result = await f.run(['git', 'clone', s.url, s.target]);

@@ -1,6 +1,7 @@
+import { symlinkFixture } from './host-link-fixture.mjs';
 import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, readFile, rm, stat, symlink, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -129,7 +130,7 @@ test('workspace-write按调用Session根收窄，不能沿内部符号链接写�
   const a = join(work, 'session-a'), b = join(work, 'session-b');
   await Promise.all([mkdir(a), mkdir(b)]);
   await writeFile(join(b, 'secret'), 'unchanged');
-  await symlink(b, join(a, 'escape'));
+  await symlinkFixture(b, join(a, 'escape'));
   const owner = agent(a);
   owner.session.append('sandbox/mode', { mode: 'workspace-write' });
   const success = await execute(owner, 'echo own > own');

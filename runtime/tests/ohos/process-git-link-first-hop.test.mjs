@@ -1,11 +1,12 @@
+import { symlinkFixture } from './host-link-fixture.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdir, writeFile, symlink, readlink } from 'node:fs/promises';
+import { mkdir, writeFile, readlink } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fixture } from './git-owned-fixture.mjs';
 
 async function stagedLink(f, path, target) {
-  await symlink(target, join(f.dir, path));
+  await symlinkFixture(target, join(f.dir, path));
   assert.equal(await readlink(join(f.dir, path)), target);
   await f.run(['add', '--', path]);
   const listing = (await f.run(['ls-files', '--stage'])).stdout;
@@ -18,7 +19,7 @@ async function stagedLink(f, path, target) {
 test('Git preserves relative and absolute first hops through a link chain', async t => {
   const f = await fixture(t); await f.run(['init', '-q']);
   await writeFile(join(f.dir, 'payload'), 'contents\n');
-  await symlink('payload', join(f.dir, 'hop'));
+  await symlinkFixture('payload', join(f.dir, 'hop'));
   await stagedLink(f, 'relative', 'hop');
   await stagedLink(f, 'absolute', join(f.dir, 'hop'));
 });
@@ -38,7 +39,7 @@ test('Git preserves a permitted dangling relative target literally', async t => 
 test('relative first-hop preservation does not expose or read targets outside the mount', async t => {
   const f = await fixture(t); const outside = join(f.root, 'outside'); await mkdir(outside);
   await writeFile(join(outside, 'sentinel'), 'private fixture sentinel');
-  await symlink('../outside/sentinel', join(f.dir, 'outward'));
+  await symlinkFixture('../outside/sentinel', join(f.dir, 'outward'));
   assert.equal(await f.ctx.fs.readlink(join(f.dir, 'outward')), 'sentinel');
   await assert.rejects(f.ctx.fs.readFileBuffer(join(f.dir, 'outward')), /EACCES|ENOENT/);
 });

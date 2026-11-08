@@ -59,8 +59,8 @@
     "ohos-attachment-diagnostic.diff": {
       "0.2.2-rc.1": {
         "node_modules/@deepseek-ai/dsh-llm-pi-ai/lib/index.js": {
-          "after": "ba17be4f1f2a0f33fbb379b1d4b2483c1f54fa3031fa1727848c134c99f9037a",
-          "before": "2d43d15d51b97f6d87eadb15761d2347b4ef42dffa5c16c4b766b79158840d4f"
+          "after": "ee0b7ddccd82e6c21eacd0541085ee5e7b883744c68ea71cd6b76202b2a4f000",
+          "before": "a9a1cd1f4151e7039326a08f1776ead6266716da1d5cc8e32bfbdbf80fb260f3"
         }
       }
     },
@@ -75,16 +75,8 @@
     "ohos-discovery-response-cleanup.diff": {
       "0.2.2-rc.1": {
         "node_modules/@deepseek-ai/dsh-llm-pi-ai/lib/index.js": {
-          "after": "2d43d15d51b97f6d87eadb15761d2347b4ef42dffa5c16c4b766b79158840d4f",
-          "before": "070c839e2c00e2d5f7c5d82307ca3d84dbb2323e46979daf265908751bbe8ae8"
-        }
-      }
-    },
-    "ohos-effect-dispose-completion.diff": {
-      "0.2.2-rc.1": {
-        "node_modules/@deepseek-ai/cordis/lib/index.js": {
-          "after": "b8b87360ebc67df2d0aabea214b8ed30d4bde3767e354ebb1b85fc6c15b45a05",
-          "before": "627409afa06a265f7253200d3bc4648e88805c39fd3768568eb9b9518a31fe8f"
+          "after": "a9a1cd1f4151e7039326a08f1776ead6266716da1d5cc8e32bfbdbf80fb260f3",
+          "before": "0a99a2fc903a4285044b09114b3bd20ee1e612f39aa381e4a71b10d48ee9e9f7"
         }
       }
     },
@@ -161,6 +153,18 @@
         "node_modules/@deepseek-ai/dsh-plugin-manager/lib/index.js": {
           "after": "8846e689bbf5d1eed7cfcf01b11df5b779c229de167e612eebecc81ed25fb3c5",
           "before": "dc3759d204ac47faa2cacc8e3c380bff552b82208a1c027edee47951f095d6fa"
+        }
+      }
+    },
+    "ohos-plugin-linkless.diff": {
+      "0.2.2-rc.1": {
+        "node_modules/@deepseek-ai/dsh-app-boot/lib/index.js": {
+          "after": "4fe63479a0bfa026c578b3e3acc2b775aa3d027b6502a9d72a9135513b3e2cad",
+          "before": "55d3674947850069069733aafa2975982c77e0b743dc59527173f382c0ce77db"
+        },
+        "node_modules/@deepseek-ai/dsh-app-boot/lib/worker/profile-resolution-bootstrap.js": {
+          "after": "82e895216414eaa3a8f29d5d7aad31366272c8a6382e2ab4fe00fe30601e13c4",
+          "before": "4ccdf0cb1177a6fc9442f0392fbba88ea1b80b6738f3cae80d34be8d5b521b7d"
         }
       }
     },
@@ -1471,8 +1475,8 @@
     "zzzzzzzzzzzzz-ohos-lifecycle.diff": {
       "0.2.2-rc.1": {
         "node_modules/@deepseek-ai/dsh-agent-loop/lib/index.js": {
-          "after": "9903e155b0469706c3e4bc46e4e0eecbaad5bf6477e9490ee7af099b25357245",
-          "before": "d6ebbb703d0a9236e15f4a9c65d079f70ce67d24c81756f83a3ba1cd8353815b"
+          "after": "edf486790c64ce75feea979cedd15fd985b41846a652ecb4d6feddb9f80e76d9",
+          "before": "927efc78e67b6203502892f1ebef4d198c9b95dfc8f8432692ba28f41eb511bf"
         },
         "node_modules/@deepseek-ai/dsh-http-proxy/lib/index.js": {
           "after": "61254bcefd6a84084c021ca83b69834790347d56ee8f154554cb86b74869ba4d",
@@ -1503,8 +1507,8 @@
           "before": "67261e96bd96782e6bdfebb5e5e167ba85ae8b22e9a27023d71d07bb5f248ae0"
         },
         "node_modules/@deepseek-ai/dsh-plugin-manager/lib/types/operations.js": {
-          "after": "5affde0680b345f4e52d0cfe8dea101db9729aa6a2e4c586b70f93ddd7659f73",
-          "before": "5886367b89cde0db08f4f9645afeb6c8a21ecb0be8a3f92d2459b433c9019661"
+          "after": "7cad04583f2f3b68375acf06b6e9cfb5ff746fb5177a4f69c4e5269fdd355650",
+          "before": "c7d72b35b81443a16f6a57f91087ba2f88812d0e5db7b9cdf131d852adcff9c8"
         }
       }
     },
@@ -2098,7 +2102,7 @@
       "ohos-plugin-remove-rollback.diff",
       "ohos-plugin-manifest-bom.diff",
       "ohos-plugin-locale-bom.diff",
-      "ohos-effect-dispose-completion.diff"
+      "ohos-plugin-linkless.diff"
     ]
   }
 }

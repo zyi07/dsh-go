@@ -1,3 +1,4 @@
+import { symlinkFixture } from './host-link-fixture.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as fs from 'node:fs/promises';
@@ -20,7 +21,7 @@ const proof = 'c'.repeat(64);
 
 async function fixture(t) {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'phone-http-'));
-  await fs.symlink(prefix, path.join(directory, 'node_modules'), 'dir');
+  await symlinkFixture(prefix, path.join(directory, 'node_modules'), 'dir');
   const authPath = path.join(directory, 'actual-auth.mjs');
   await fs.writeFile(authPath, authSource + '\nexport { BrowserAuth };\n');
   const { BrowserAuth, HostConnectionService } = await import(pathToFileURL(authPath));

@@ -1,3 +1,4 @@
+import { symlinkFixture } from './host-link-fixture.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as fs from 'node:fs/promises';
@@ -164,8 +165,8 @@ test('resource ids and owned paths cannot cross jobs even when roots are shared'
 test('another host session root and live or dangling outward symlinks remain denied', async t => {
   const f = await fixture(t); const session = f.session();
   await fs.writeFile(join(f.other, 'foreign'), 'foreign');
-  await fs.symlink(f.other, join(f.workspace, 'outside'));
-  await fs.symlink(join(f.other, 'missing'), join(f.workspace, 'dangling'));
+  await symlinkFixture(f.other, join(f.workspace, 'outside'));
+  await symlinkFixture(join(f.other, 'missing'), join(f.workspace, 'dangling'));
   for (const target of [join(f.other, 'foreign'), join(f.workspace, 'outside/foreign'), join(f.workspace, 'dangling')]) {
     await assert.rejects(session.writeMetadata({ target, content: Buffer.from('bad'), roots: [f.other] }), { code: 'EACCES' });
   }
@@ -177,7 +178,7 @@ test('another host session root and live or dangling outward symlinks remain den
 test('internal symlink and explicitly granted temporary root keep their authority', async t => {
   const f = await fixture(t); const session = f.session();
   await fs.mkdir(join(f.workspace, 'data'));
-  await fs.symlink(join(f.workspace, 'data'), join(f.workspace, 'alias'));
+  await symlinkFixture(join(f.workspace, 'data'), join(f.workspace, 'alias'));
   await session.writeMetadata({ target: join(f.workspace, 'alias/ref'), content: Buffer.from('ref'), mode: 0o600 });
   await session.writeMetadata({ target: join(f.temporary, 'private-index'), content: Buffer.from('private') });
   assert.equal(await fs.readFile(join(f.workspace, 'data/ref'), 'utf8'), 'ref');
@@ -336,7 +337,7 @@ test('native cleanup clears only owned contents and keeps an empty root; worktre
   const item=await owner.createClone({target:join(root,'destination')});
   const external=join(root,'external'); await fs.mkdir(external);await fs.writeFile(join(external,'user'),'keep');
   await fs.mkdir(join(item.path,'nested'));await fs.writeFile(join(item.path,'nested','owned'),'clear');
-  await fs.symlink(external,join(item.path,'link'));
+  await symlinkFixture(external,join(item.path,'link'));
   await owner.releaseClone(item.id);await owner.finish();
   assert.deepEqual(await fs.readdir(item.path),[]);
   assert.equal(await fs.readFile(join(external,'user'),'utf8'),'keep');
@@ -370,7 +371,7 @@ test('native clone cleanup rejects wrong receipt, invalid descriptors, and Worke
 }));
 test('clone refuses readonly, workspace root, outward symlink and foreign owner id',()=>cloneFixture(async root=>{
   const workspace=join(root,'workspace'),outside=join(root,'outside');await fs.mkdir(workspace);await fs.mkdir(outside);
-  await fs.symlink(outside,join(workspace,'link'));
+  await symlinkFixture(outside,join(workspace,'link'));
   const owner=createOwnedGitResources({clearOwnedClone:binding.clearOwnedClone,roots:[workspace]});
   const ro=createOwnedGitResources({clearOwnedClone:binding.clearOwnedClone,roots:[workspace],policy:{mode:'read-only'}});
   await assert.rejects(ro.createClone({target:join(workspace,'repo')}),{code:'EACCES'});

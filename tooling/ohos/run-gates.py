@@ -407,7 +407,7 @@ class Gates:
                 'OHOS_ESBUILD_PREFIX': str(self.path('esbuild_prefix')),
                 'NODE': str(self.path('node_root', 'bin/node'))}
 
-    def node_tests(self, label, tests, *, mode='plain', extra=None, imports=(), needs=(), timeout=180):
+    def node_tests(self, label, tests, *, mode='plain', extra=None, imports=(), needs=(), timeout=180, host_links=False):
         def argv():
             flags = []
             if mode == 'strict':
@@ -419,13 +419,18 @@ class Gates:
             elif mode == 'jitless':
                 flags = ['--jitless']
             for entry in imports: flags += ['--import', self.source / entry]
-            return self.node(*flags, '--experimental-import-meta-resolve', '--test', '--test-isolation=none', '--test-reporter=tap',
-                             *[self.source / p for p in tests])
+            command = self.node(*flags, '--experimental-import-meta-resolve', '--test', '--test-isolation=none', '--test-reporter=tap',
+                                *[self.source / p for p in tests])
+            if host_links and mode in ('strict', 'sim'):
+                return self.py('runtime/tests/ohos/process-link-fixture.py', '--evidence', self.out / (label + '-host-links.json'), '--', *command)
+            return command
         def env():
             value = self.common()
             if mode in ('strict', 'sim'):
                 value.update(DSH_GO_OHOS_SIM_PLATFORM='openharmony', DSH_GO_OHOS_SIM_ADDONS='[]')
             value.update(extra() if callable(extra) else (extra or {}))
+            if host_links and mode in ('strict', 'sim') and 'LD_PRELOAD' in value:
+                value['OHOS_TEST_LINK_LD_PRELOAD'] = value.pop('LD_PRELOAD')
             return value
         self.run(label, argv, env=env, needs=needs, timeout=timeout, tests=tests)
 
@@ -744,7 +749,7 @@ def main():
         g.run('net-' + filename[:-3], lambda f=filename: ['bash', s / 'runtime/ohos/net' / f], needs=('prepared-inputs', *(['network-interface-tools'] if filename == 'test-proxy-env.sh' else [])), env=lambda f=filename: {**g.common(), **({'NODE': str(p('fetch_node'))} if f == 'test.sh' else {})}, timeout=300)
     g.node_tests('net-bootstrap', [rt + 'net-bootstrap.test.mjs'], needs=('prepared-inputs',))
     for mode in ['plain', 'jitless']:
-        g.node_tests('plugin-store-installer-' + mode, [rt + 'plugin-store.test.mjs', rt + 'plugin-installer.test.mjs'], mode=mode, needs=('prepared-inputs',))
+        g.node_tests('plugin-store-recovery-' + mode, [rt + 'plugin-store.test.mjs', rt + 'plugin-linkless-recovery.test.mjs'], mode=mode, needs=('prepared-inputs',))
     g.node_tests('provider-body-timeout', [rt + 'provider-body-timeout.test.mjs'], needs=('android-targets',))
     for mode in ['strict', 'plain']:
         g.node_tests('attachment-diagnostic-' + mode, [rt + 'attachment-error-recovery.test.mjs'],
@@ -779,6 +784,7 @@ def main():
                      extra=lambda: {'DSH_DISCOVERY_PREFIX': str(prefix())})
     for mode in ['marker', 'strict']:
         g.node_tests('net-body-types-' + mode, [rt + 'net-body-types.test.mjs'], mode=mode, needs=('prepared-inputs',), extra={'DSH_GO_OHOS_SIM_PLATFORM': 'openharmony', 'DSH_GO_OHOS_SIM_ADDONS': '[]'})
+    g.node_tests('host-link-fixture', [rt + 'host-link-fixture.test.mjs'], mode='strict', host_links=True)
     for filename in ['test.sh', 'test-roots.sh']:
         g.run('process-' + filename[:-3], lambda f=filename: ['bash', s / 'runtime/ohos/process' / f], needs=('build-bash', 'build-regex'), env=g.common, timeout=360)
     for mode in ['marker', 'strict']:
@@ -789,7 +795,7 @@ def main():
             g.run('owned-' + suite + '-' + mode, lambda su=suite, m=mode: g.py(rt + 'run-owned-tests.py', '--node', node(), '--native', native() / 'publication.node', '--linked', native() / 'libpublication-test-linked.so', '--sim-preload', s / 'runtime/ohos/sim/preload.mjs', '--marker-preload', s / 'runtime/ohos/sim/marker.mjs', '--suite', su, '--mode', 'jit' if m == 'marker' else m, '--output', o / ('owned-' + su + '-' + m)), needs=('native-publication-build',), timeout=90)
     for mode in ['marker', 'strict']:
         g.run('rg-oracle-' + mode, lambda m=mode: g.node(*(['--jitless', '--import', s / 'runtime/ohos/sim/preload.mjs'] if m == 'strict' else ['--import', s / 'runtime/ohos/sim/marker.mjs']), s / (rt + 'process-rg-m4-differential.mjs')), needs=('build-bash', 'build-regex'), env=lambda: {**g.common(), 'M4_RG_MODE': 'replay', 'DSH_GO_OHOS_SIM_PLATFORM': 'openharmony', 'DSH_GO_OHOS_SIM_ADDONS': '[]'}, timeout=300, tests=[rt + 'process-rg-m4-differential.mjs'])
-        g.node_tests('publication-installed-' + mode, [rt + 'publication-integration.test.mjs', rt + 'publication-locks.test.mjs', rt + 'lock-node-contract.test.mjs'], mode='sim' if mode == 'marker' else mode, imports=['runtime/ohos/publication/preload.mjs'], needs=('native-publication-build', 'prepared-inputs'), extra=lambda: {**linked_env(), 'DSH_HOME': str(o / ('publication-installed-' + mode + '-home')), 'DSH_GO_OHOS_SIM_PLATFORM': 'openharmony'}, timeout=240)
+        g.node_tests('publication-installed-' + mode, [rt + 'publication-integration.test.mjs', rt + 'publication-locks.test.mjs', rt + 'lock-node-contract.test.mjs'], mode='sim' if mode == 'marker' else mode, imports=['runtime/ohos/publication/preload.mjs'], needs=('native-publication-build', 'prepared-inputs'), extra=lambda: {**linked_env(), 'DSH_HOME': str(o / ('publication-installed-' + mode + '-home')), 'DSH_GO_OHOS_SIM_PLATFORM': 'openharmony'}, timeout=240, host_links=True)
     def native_boundary_env():
         return {'M3_PUBLICATION_ADDON': str(native() / 'publication.node'), 'M3_PUBLICATION_SHA256': sha(native() / 'publication.node'), 'M3_PUBLICATION_MODULE': str(s / 'runtime/ohos/publication/atomic.mjs'), 'M3_NATIVE_REPORT': str(o / 'native-boundaries.json'), 'M3_PUBLISHER_ERROR_REPORT': str(o / 'native-errno.json')}
     g.node_tests('publication-native-boundaries', [rt + 'publication-native-boundaries.test.mjs', rt + 'publication-errno-boundaries.test.mjs'], needs=('native-publication-build', 'permission-tools'), extra=native_boundary_env, timeout=240)
@@ -800,6 +806,16 @@ def main():
                 'DSH_GO_OHOS_SIM_ADDONS': json.dumps([str(p('native_library_dir') / name)
                     for name in ['libdsh_flock.so', 'libdsh_require_builtin.so']]),
                 'NARB_DISABLE_NATIVE_CACHE': '1'}
+    for mode in ['sim', 'strict']:
+        g.node_tests('plugin-installer-' + mode, [rt + 'plugin-installer.test.mjs'],
+                     mode=mode, needs=('prepared-inputs', 'ohos-test-helpers', 'native-loader'), extra=plugin_hmr_env)
+        g.node_tests('plugin-linkless-resolution-' + mode, [rt + 'plugin-linkless-resolution.test.mjs'],
+                     mode=mode, needs=('prepared-inputs', 'ohos-test-helpers', 'native-loader'), extra=plugin_hmr_env)
+    g.node_tests('plugin-linkless-worker', [rt + 'plugin-linkless-worker.test.mjs'], mode='strict',
+                 imports=['runtime/ohos/plugins/preload.mjs'], needs=('prepared-inputs', 'ohos-test-helpers', 'native-loader'), extra=plugin_hmr_env)
+    g.node_tests('plugin-internal-workers', [rt + 'plugin-internal-workers.test.mjs'], mode='strict',
+                 imports=['runtime/ohos/plugins/preload.mjs', 'runtime/ohos/process/node-worker-preload.mjs'],
+                 needs=('prepared-inputs', 'ohos-test-helpers', 'native-loader', 'build-bash', 'build-regex'), extra=plugin_hmr_env, timeout=180)
     g.node_tests('plugin-effect-dispose', [rt + 'plugin-effect-dispose.test.mjs'], mode='strict',
                  needs=('prepared-inputs', 'ohos-test-helpers', 'native-loader'), extra=plugin_hmr_env)
     g.node_tests('plugin-hmr-update', [rt + 'plugin-hmr-update.test.mjs'], mode='strict',
@@ -820,7 +836,7 @@ def main():
     publication = ['publication-atomic', 'publication-atomic-fuse', 'publication-ledger', 'publication-ledger-lifecycle', 'publication-capabilities']
     lifecycle = ['lifecycle-journal', 'lifecycle-budget', 'lifecycle-tool-budgets', 'lifecycle-transport', 'lifecycle-engine', 'lifecycle-explicit-resume', 'runtime-capabilities']
     for mode in ['marker', 'strict']:
-        g.node_tests('publication-' + mode, [rt + n + '.test.mjs' for n in publication], mode=mode, needs=('native-publication-build', 'prepared-inputs'), extra=linked_env, timeout=240)
+        g.node_tests('publication-' + mode, [rt + n + '.test.mjs' for n in publication], mode=mode, needs=('native-publication-build', 'prepared-inputs'), extra=linked_env, timeout=240, host_links=True)
         g.node_tests('publication-lock-' + mode, [rt + 'publication-lock.test.mjs'],
                      needs=('native-publication-build',), extra=lambda m=mode: {**linked_env(),
                          'DSH_TEST_LOCK_STRICT': '1' if m == 'strict' else '0',
@@ -839,12 +855,12 @@ def main():
             g.node_tests(name + '-' + mode, [rt + name + '.test.mjs'], mode=mode, imports=['tooling/ohos/tests/ets-fixture-loader.mjs'] if mode == 'strict' else [],
                          needs=('native-publication-build', 'prepared-inputs', 'android-targets'), extra=lambda: {**linked_env(), 'DSH_HOME': str(o / 'background-home'),
                              'DSH_LIFECYCLE_TEST_PREFIX': str(prefix()), 'DSH_BACKGROUND_OLD_PREFIX': str(o / 'targets/candidate-prefix'),
-                             'NODE_PATH': str(p('android_pristine') / 'node_modules'), 'OHOS_ETS_FIXTURE_ARTIFACTS': str(o / 'ets-fixture-artifacts')}, timeout=240)
+                             'NODE_PATH': str(p('android_pristine') / 'node_modules'), 'OHOS_ETS_FIXTURE_ARTIFACTS': str(o / 'ets-fixture-artifacts')}, timeout=240, host_links=name in ('background-native-contract', 'background-owner-before', 'background-protocol'))
     for mode in ['marker', 'strict']:
         for name in ['phone-bridge', 'phone-callback', 'phone-effects', 'phone-reminders', 'phone-http', 'phone-plugin-owner']:
             g.node_tests(name + '-' + mode, [rt + name + '.test.mjs'], mode=mode, imports=['tooling/ohos/tests/ets-fixture-loader.mjs'] if mode == 'strict' else [],
                          needs=('native-publication-build', 'prepared-inputs'), extra=lambda: {**linked_env(), 'DSH_HOME': str(o / 'phone-home'),
-                             'NODE_PATH': str(p('android_pristine') / 'node_modules'), 'OHOS_ETS_FIXTURE_ARTIFACTS': str(o / 'ets-fixture-artifacts')}, timeout=240)
+                             'NODE_PATH': str(p('android_pristine') / 'node_modules'), 'OHOS_ETS_FIXTURE_ARTIFACTS': str(o / 'ets-fixture-artifacts')}, timeout=240, host_links=name == 'phone-http')
     for mode in ['marker', 'strict']:
         g.node_tests('phone-calendar-all-day-' + mode, [rt + 'phone-calendar-all-day.test.mjs'], mode=mode,
                      imports=['tooling/ohos/tests/ets-fixture-loader.mjs'] if mode == 'strict' else [],

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { selectedPackage } from './plugin-selection-fixture.mjs';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync,
   unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -38,6 +39,7 @@ try {
     const f = await fixture({ name: 'write-failure-manager', after(fn) { cleanup = fn; }, diagnostic() {} });
     const initial = await f.invoke('installBundle', name + '@1.0.0', { registry: f.registry, enabled: false });
     assert.equal(initial.application, 'restart-required');
+    const before = await f.snapshot(), beforeSelection = selectedPackage(f.dir, name);
     f.holdTar('2.0.0');
     const pending = f.invoke('updateBundle', name, '2.0.0', { registry: f.registry, requestId: 'write-failure-update' });
     await f.tarEntered.promise;
@@ -48,7 +50,14 @@ try {
     assert.match(failed.error.diagnostic, /EFBIG/);
     const journal = join(f.dir, '.plugin-manager/ohos/transaction.json');
     assert.equal(existsSync(join(f.dir, 'package.json.lock')), false);
-    assert.equal(JSON.parse(readFileSync(journal, 'utf8')).phase, 'pending');
+    // The ordinary beforeimages permit the manager's final rollback while the
+    // kernel write limit is still zero. This completed recovery has no journal.
+    assert.equal(existsSync(journal), false, 'completed rollback removes its journal without waiting for writable space');
+    assert.deepEqual(await f.snapshot(), before, 'profile bytes and active selection are restored before writes resume');
+    assert.equal(selectedPackage(f.dir, name), beforeSelection);
+    await runInstalledTool(f.dir, '1.0.0');
+    process.send({ stage: 'rollback-complete', writesStillLimited: true,
+      journalRemoved: true, restoredVersion: '1.0.0', actualToolVersion: '1.0.0' });
     await setLimit('restore');
     checkWritable(f.root);
     f.holdTar(undefined);
@@ -79,7 +88,7 @@ try {
     checkWritable(dir);
     recoverProfile(dir);
     assert.deepEqual(readFileSync(join(dir, 'package.json')), before);
-    assert.equal(realpathSync(join(dir, 'node_modules/write-failure-plugin')), old);
+    assert.equal(selectedPackage(dir, 'write-failure-plugin'), old);
     assert.equal(existsSync(newer), false);
     tx = beginTransaction(dir);
     assert.equal(transactionFor(dir), tx);

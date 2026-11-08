@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { fixture, name, executeTool } from './plugin-package-harness.mjs';
+import { fixture, name, executeTool, selectedPackage } from './plugin-package-harness.mjs';
 const statePath = process.env.DSH_PLUGIN_HMR_STATE;
 const mode = process.argv[2];
 if (mode === 'update') {
@@ -17,7 +17,7 @@ if (mode === 'update') {
     const update = await f.invoke('updateBundle', name, '2.0.0', { registry: f.registry });
     assert.equal(update.result.application, 'restart-required');
     assert.equal(update.result.changed, true);
-    assert.equal(JSON.parse(await readFile(join(f.dir, 'node_modules', name, 'package.json'))).version, '2.0.0');
+    assert.equal(JSON.parse(await readFile(join(selectedPackage(f.dir), 'package.json'))).version, '2.0.0');
     await executeTool(f.ctx, '1.0.0');
     console.log('disk-v2-running-tool-v1');
   } finally { for (const fn of cleanup.reverse()) await fn(); }
