@@ -151,7 +151,11 @@ python3 -I -B "$APP/../tooling/ohos/prepare-forks.py" \
 # No icon tree shaking: oh-flutter's const_finder fails on its own Dart ("Invalid SDK hash").
 # ENABLE_FLEX_OVERFLOW: oh-flutter's release-only strategy shrinks the whole app's
 # device pixel ratio when a Column overflows. Android clips the overflow and carries on.
-"$FLUTTER" build hap "$MODE" --target-platform ohos-arm64 --no-tree-shake-icons --dart-define=ENABLE_FLEX_OVERFLOW=false
+# --no-codesign keeps an unsigned build unsigned: oh-flutter otherwise starts AGC auto-signing,
+# which needs an interactive login and times out in a non-interactive build.
+UNSIGNED=()
+if [[ "$SIGN" == 0 ]]; then UNSIGNED=(--no-codesign); fi
+"$FLUTTER" build hap "$MODE" --target-platform ohos-arm64 --no-tree-shake-icons "${UNSIGNED[@]}" --dart-define=ENABLE_FLEX_OVERFLOW=false
 python3 -I -B "$APP/../tooling/ohos/prepare-forks.py" \
   --verify-package-config "$APP/.dart_tool/package_config.json" --output "$APP/ohos/.vendor/forks" --after-build
 python3 -I -B "$APP/../tooling/ohos/prepare-forks.py" --verify-installed "$APP/ohos"

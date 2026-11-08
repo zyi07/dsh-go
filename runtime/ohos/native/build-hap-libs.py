@@ -124,11 +124,17 @@ def main():
                     '--node-headers', str(headers), '--compiler', str(sdk / 'llvm/bin/clang'),
                     '--napi-rename-header', str(rename), '--libnode', str(output / 'libnode.so'),
                     '--output', str(work / 'flock')], check=True)
+    # The 6.1 public SDK sysroot carries no libc++, and nothing in the target link line names the static
+    # C++ runtimes that sit beside libnode.so; without these the loader's own libc++ references stay undefined.
+    static_cxx = [f'--ld-flag={flag}' for flag, name in
+                  (('-lc++', 'libc++.a'), ('-lc++abi', 'libc++abi.a'), ('-lunwind', 'libunwind.a'))
+                  if (runtimes / 'lib' / name).is_file()]
     subprocess.run([sys.executable, '-B', str(HERE / 'loader/build-loader.py'), '--sdk-native', str(sdk),
                     '--source', str(loader), '--node-headers', str(headers), '--node-addon-api', str(api),
                     '--compiler', str(clang), f'--cxx-flag=-resource-dir={runtimes / "clang-resource"}',
                     f'--cxx-flag=-stdlib++-isystem{runtimes / "include/c++/v1"}', '--cxx-flag=-D__MUSL__=1',
-                    f'--ld-flag=-L{runtimes / "lib"}', f'--ld-flag=--ld-path={sdk / "llvm/bin/ld.lld"}',
+                    f'--ld-flag=-L{runtimes / "lib"}', *static_cxx,
+                    f'--ld-flag=--ld-path={sdk / "llvm/bin/ld.lld"}',
                     '--napi-rename-header', str(rename), '--libnode', str(output / 'libnode.so'),
                     '--libnode-build-json', str(built / 'build.json'), '--output', str(work / 'loader')], check=True)
     subprocess.run(['cmake', '-S', str(ROOT / 'app/ohos/entry/src/main/cpp'), '-B', str(work / 'host'), '-G', 'Ninja',

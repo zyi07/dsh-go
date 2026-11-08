@@ -40,3 +40,9 @@ site/build/
 
 # Reproducible private OHOS rg regex build
 runtime/ohos/process/build/
+
+# Task work and archive directories
+/_work/
+/_archive/
+/*.tar.xz
+/toolchain/

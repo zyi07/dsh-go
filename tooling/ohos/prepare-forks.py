@@ -44,7 +44,7 @@ def tree(root, ignored=()):
                 raise ValueError('non-regular package member: ' + str(path))
             data = path.read_bytes()
             rows.append({'path': relative, 'bytes': len(data), 'sha256': sha(data)})
-    rows.sort(key=lambda row: Path(row['path']))
+    rows.sort(key=lambda row: row['path'])
     data = json.dumps(rows, ensure_ascii=False, separators=(',', ':')).encode()
     return rows, sha(data)
 
