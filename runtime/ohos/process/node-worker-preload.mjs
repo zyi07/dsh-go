@@ -11,8 +11,8 @@ if (workerData?.dshOhosNodeScript?.protocol === 1) {
   if (!(config.stdin instanceof Uint8Array)) throw new TypeError('Node script batch input must be bytes');
   // Worker stdin's message acknowledgements otherwise keep an unread batch
   // alive. This private finite stream has no application-level fd or handle.
-  Object.defineProperty(process, 'stdin', { value: Readable.from([Buffer.from(config.stdin)], { objectMode: false }),
-    configurable: true, enumerable: true });
+  if (!config.streamStdin) Object.defineProperty(process, 'stdin', {
+    value: Readable.from([Buffer.from(config.stdin)], { objectMode: false }), configurable: true, enumerable: true });
   installNodeWorkerPaths(config);
   if (config.inline !== undefined) {
     // A file base gives inline ESM normal neighboring-resource URLs. The private

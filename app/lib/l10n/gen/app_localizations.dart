@@ -16508,6 +16508,204 @@ abstract class L10n {
   /// **'快捷方式,自定义图标,桌面图片,换图标'**
   String get searchKwIconShortcut;
 
+  /// No description provided for @linuxTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Linux 环境'**
+  String get linuxTitle;
+
+  /// No description provided for @linuxSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'在手机里运行 gh、Python、git 等命令行工具'**
+  String get linuxSubtitle;
+
+  /// No description provided for @linuxSwitch.
+  ///
+  /// In zh, this message translates to:
+  /// **'开启 Linux'**
+  String get linuxSwitch;
+
+  /// No description provided for @linuxStatus.
+  ///
+  /// In zh, this message translates to:
+  /// **'状态'**
+  String get linuxStatus;
+
+  /// No description provided for @linuxFirstHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'第一次开启会下载约 3.5 MB 的基础系统并安装，大约一两分钟；之后再开几秒就好。'**
+  String get linuxFirstHint;
+
+  /// No description provided for @linuxMemoryNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'开着 Linux 时 App 大约多占 100 MB 以上内存；关掉开关后，要等 App 完全退出才会还给系统。'**
+  String get linuxMemoryNote;
+
+  /// No description provided for @linuxStateOn.
+  ///
+  /// In zh, this message translates to:
+  /// **'已开启'**
+  String get linuxStateOn;
+
+  /// No description provided for @linuxStateOff.
+  ///
+  /// In zh, this message translates to:
+  /// **'未开启'**
+  String get linuxStateOff;
+
+  /// No description provided for @linuxStateInstalling.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在准备'**
+  String get linuxStateInstalling;
+
+  /// No description provided for @linuxStateStopping.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在关闭'**
+  String get linuxStateStopping;
+
+  /// No description provided for @linuxStateFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'出错了'**
+  String get linuxStateFailed;
+
+  /// No description provided for @linuxStateUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂不可用'**
+  String get linuxStateUnavailable;
+
+  /// No description provided for @linuxStageDownload.
+  ///
+  /// In zh, this message translates to:
+  /// **'下载基础系统'**
+  String get linuxStageDownload;
+
+  /// No description provided for @linuxStageDisk.
+  ///
+  /// In zh, this message translates to:
+  /// **'准备磁盘'**
+  String get linuxStageDisk;
+
+  /// No description provided for @linuxStageBoot.
+  ///
+  /// In zh, this message translates to:
+  /// **'启动'**
+  String get linuxStageBoot;
+
+  /// No description provided for @linuxStageTools.
+  ///
+  /// In zh, this message translates to:
+  /// **'安装工具'**
+  String get linuxStageTools;
+
+  /// No description provided for @linuxEngineOffline.
+  ///
+  /// In zh, this message translates to:
+  /// **'本机引擎没在运行，启动引擎后再来开启。'**
+  String get linuxEngineOffline;
+
+  /// No description provided for @linuxRequestFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'没能和引擎通信，请稍后重试。'**
+  String get linuxRequestFailed;
+
+  /// No description provided for @linuxRestartRequired.
+  ///
+  /// In zh, this message translates to:
+  /// **'Linux 已经停止，需要完全退出并重新打开 App 才能再开启。'**
+  String get linuxRestartRequired;
+
+  /// No description provided for @linuxErrorWithCode.
+  ///
+  /// In zh, this message translates to:
+  /// **'没能开启：{code}'**
+  String linuxErrorWithCode(String code);
+
+  /// No description provided for @linuxProxyTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'网络代理'**
+  String get linuxProxyTitle;
+
+  /// No description provided for @linuxProxyFooter.
+  ///
+  /// In zh, this message translates to:
+  /// **'只作用于 Linux 里的命令。gitee、华为云等国内源始终直连。'**
+  String get linuxProxyFooter;
+
+  /// No description provided for @linuxProxyMode.
+  ///
+  /// In zh, this message translates to:
+  /// **'方式'**
+  String get linuxProxyMode;
+
+  /// No description provided for @linuxProxyInherit.
+  ///
+  /// In zh, this message translates to:
+  /// **'跟随 App'**
+  String get linuxProxyInherit;
+
+  /// No description provided for @linuxProxyDirect.
+  ///
+  /// In zh, this message translates to:
+  /// **'不用代理'**
+  String get linuxProxyDirect;
+
+  /// No description provided for @linuxProxyManual.
+  ///
+  /// In zh, this message translates to:
+  /// **'手动'**
+  String get linuxProxyManual;
+
+  /// No description provided for @linuxProxyHttp.
+  ///
+  /// In zh, this message translates to:
+  /// **'HTTP 代理'**
+  String get linuxProxyHttp;
+
+  /// No description provided for @linuxProxyHttps.
+  ///
+  /// In zh, this message translates to:
+  /// **'HTTPS 代理'**
+  String get linuxProxyHttps;
+
+  /// No description provided for @linuxProxyNoProxy.
+  ///
+  /// In zh, this message translates to:
+  /// **'不走代理的地址'**
+  String get linuxProxyNoProxy;
+
+  /// No description provided for @linuxProxyUnset.
+  ///
+  /// In zh, this message translates to:
+  /// **'未设置'**
+  String get linuxProxyUnset;
+
+  /// No description provided for @linuxProxySameAsHttp.
+  ///
+  /// In zh, this message translates to:
+  /// **'同 HTTP'**
+  String get linuxProxySameAsHttp;
+
+  /// No description provided for @linuxProxyLoopbackNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'127.0.0.1 指的是这台手机，不是电脑。'**
+  String get linuxProxyLoopbackNote;
+
+  /// No description provided for @linuxProxyUrlInvalid.
+  ///
+  /// In zh, this message translates to:
+  /// **'请填 http:// 或 https:// 开头的地址，例如 http://127.0.0.1:7890'**
+  String get linuxProxyUrlInvalid;
+
   /// No description provided for @liveThinking.
   ///
   /// In zh, this message translates to:

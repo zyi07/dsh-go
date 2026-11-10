@@ -10,6 +10,7 @@ import { GeneratedPluginRegistrant } from '../plugins/GeneratedPluginRegistrant'
 import { RuntimePlugin } from '../runtime/RuntimePlugin';
 import { RuntimeController } from '../runtime/RuntimeController';
 import FilesMediaPlugin from '../plugins/FilesMediaPlugin';
+import AuthorizedWorkspacesPlugin from '../plugins/AuthorizedWorkspacesPlugin';
 import NativeFilesPlugin from '../plugins/NativeFilesPlugin';
 import NativeMediaPlugin from '../plugins/NativeMediaPlugin';
 import { NativeVoiceStopControl } from '../plugins/NativeVoiceStopControl';
@@ -62,6 +63,7 @@ export default class EntryAbility extends FlutterAbility {
     RuntimeController.onForeground(this);
     VoicePlugin.onForeground(this);
     NativeFilesPlugin.onForeground(this);
+    AuthorizedWorkspacesPlugin.onForeground(this);
     NativeMediaPlugin.onForeground(this);
     super.onForeground();
   }
@@ -72,6 +74,7 @@ export default class EntryAbility extends FlutterAbility {
     RuntimeController.onBackground(this);
     VoicePlugin.onBackground(this);
     NativeFilesPlugin.onBackground(this);
+    AuthorizedWorkspacesPlugin.onBackground(this);
     NativeMediaPlugin.onBackground(this);
     super.onBackground();
   }
@@ -79,6 +82,7 @@ export default class EntryAbility extends FlutterAbility {
   onDestroy(): void {
     PastePlugin.onBackground(this);
     RuntimeController.onDestroy(this);
+    AuthorizedWorkspacesPlugin.onBackground(this);
     super.onDestroy();
   }
 
@@ -95,6 +99,7 @@ export default class EntryAbility extends FlutterAbility {
     flutterEngine.getPlugins()?.add(new IslandsPlugin())
     flutterEngine.getPlugins()?.add(new NotifyPlugin())
     flutterEngine.getPlugins()?.add(new NativeFilesPlugin())
+    flutterEngine.getPlugins()?.add(new AuthorizedWorkspacesPlugin())
     flutterEngine.getPlugins()?.add(new NativeMediaPlugin(async (root: string, relative: string): Promise<number> => {
       const host = await loadNativeHost();
       return host.openUserFile(root, relative);

@@ -80,7 +80,7 @@ export function registerLifecycleRoutes(ctx, coordinator, transport) {
           throw fail('ERR_OHOS_LIFECYCLE_REQUEST', 'Invalid host observation', 400);
         }
         const state = await coordinator.observeHost({ revision: body.revision, foreground: body.foreground,
-          computePermission: body.computePermission });
+          computePermission: body.computePermission }, true);
         // Host acknowledgements stay bounded even after thousands of calls.
         const { v, host, nativeHost, busy, manualPaused, closed, blocked, paused, confirmedPause, controlVersion } = state;
         reply(200, { v, host, nativeHost, busy, manualPaused, observationRevision: body.revision, closed, blocked, paused, confirmedPause, controlVersion });

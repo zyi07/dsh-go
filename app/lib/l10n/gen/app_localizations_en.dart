@@ -9421,6 +9421,111 @@ class L10nEn extends L10n {
   String get searchKwIconShortcut => 'shortcut,custom icon,home screen picture';
 
   @override
+  String get linuxTitle => 'Linux environment';
+
+  @override
+  String get linuxSubtitle => 'Run gh, Python, git and other command-line tools on this phone';
+
+  @override
+  String get linuxSwitch => 'Turn on Linux';
+
+  @override
+  String get linuxStatus => 'Status';
+
+  @override
+  String get linuxFirstHint =>
+      'The first time downloads a 3.5 MB base system and installs it, which takes a minute or two. After that it starts in seconds.';
+
+  @override
+  String get linuxMemoryNote =>
+      'While Linux is on, the app uses roughly 100 MB more memory. Turning it off gives that back only when the app fully quits.';
+
+  @override
+  String get linuxStateOn => 'On';
+
+  @override
+  String get linuxStateOff => 'Off';
+
+  @override
+  String get linuxStateInstalling => 'Getting ready';
+
+  @override
+  String get linuxStateStopping => 'Turning off';
+
+  @override
+  String get linuxStateFailed => 'Failed';
+
+  @override
+  String get linuxStateUnavailable => 'Unavailable';
+
+  @override
+  String get linuxStageDownload => 'Downloading the base system';
+
+  @override
+  String get linuxStageDisk => 'Preparing disks';
+
+  @override
+  String get linuxStageBoot => 'Starting';
+
+  @override
+  String get linuxStageTools => 'Installing tools';
+
+  @override
+  String get linuxEngineOffline => 'The on-device engine isn’t running. Start it, then turn Linux on.';
+
+  @override
+  String get linuxRequestFailed => 'Couldn’t reach the engine. Try again in a moment.';
+
+  @override
+  String get linuxRestartRequired => 'Linux has stopped. Quit and reopen the app to turn it on again.';
+
+  @override
+  String linuxErrorWithCode(String code) {
+    return 'Couldn’t turn on: $code';
+  }
+
+  @override
+  String get linuxProxyTitle => 'Network proxy';
+
+  @override
+  String get linuxProxyFooter =>
+      'Applies only to commands inside Linux. Gitee, Huawei Cloud and other mirrors in China always connect directly.';
+
+  @override
+  String get linuxProxyMode => 'Mode';
+
+  @override
+  String get linuxProxyInherit => 'Same as app';
+
+  @override
+  String get linuxProxyDirect => 'No proxy';
+
+  @override
+  String get linuxProxyManual => 'Manual';
+
+  @override
+  String get linuxProxyHttp => 'HTTP proxy';
+
+  @override
+  String get linuxProxyHttps => 'HTTPS proxy';
+
+  @override
+  String get linuxProxyNoProxy => 'Bypass for';
+
+  @override
+  String get linuxProxyUnset => 'Not set';
+
+  @override
+  String get linuxProxySameAsHttp => 'Same as HTTP';
+
+  @override
+  String get linuxProxyLoopbackNote => '127.0.0.1 means this phone, not your computer.';
+
+  @override
+  String get linuxProxyUrlInvalid =>
+      'Enter an address starting with http:// or https://, such as http://127.0.0.1:7890';
+
+  @override
   String get liveThinking => 'Thinking';
 
   @override

@@ -44,6 +44,7 @@ async function fixture(t, options = {}) {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'dsh-host-http-'));
   const journal = await openBoundaryJournal({ directory: path.join(directory, 'journal'),
     lockExclusive: process._linkedBinding('dsh_ohos_publication').lockExclusive, ...options.journal });
+  await options.seedHistory?.(journal);
   const coordinator = new BoundaryCoordinator({ journal, bootId: 'actual-host-http-test',
     flushSession: async () => true, readEvents: async () => [], readHost: () => native, ...options.coordinator });
   const routes = new Map(), ctx = new Context();
@@ -247,4 +248,56 @@ test('malformed native ACK cannot reach the owner callback as valid authority', 
     };
     await assert.rejects(client.send(f.origin, f.auth.launchToken, observation(1, false)), { code: 'ohos_lifecycle_native' });
   }
+});
+
+
+// The heartbeat is not a request for the per-call diagnostics view.
+test('steady host heartbeat avoids detailed history projection while full queries retain it', async t => {
+  const hash = '0'.repeat(64);
+  const f = await fixture(t, { async seedHistory(journal) {
+    for (let i = 0; i < 4; i++) {
+      const identity = { sessionId: 'history-session', callId: 'history-call-' + i, name: 'fixture-tool',
+        originBootId: 'history-boot', callSeq: i * 2, turn: 1, step: 1, callHash: hash };
+      for (const part of [{ kind: 'prepared' }, { kind: 'outcome', result: { path: 'results/' + hash + '.json', sha256: hash, bytes: 2 } },
+        { kind: 'committed', sessionResultSeq: i * 2 + 1, sessionResultHash: hash }])
+        await journal.append({ bootId: 'history-boot', identity, ...part });
+    }
+  } });
+  f.foreground(true);
+  const cookie = await f.login();
+  await f.post(cookie, { operation: 'host', ...observation(500, true) });
+  const fullStatus = f.coordinator.status.bind(f.coordinator);
+  let detailedReads = 0;
+  f.coordinator.status = (...args) => { detailedReads++; return fullStatus(...args); };
+  const expected = fullStatus();
+  for (const revision of [501, 502, 503]) {
+    const response = await f.post(cookie, { operation: 'host', ...observation(revision, false, 'granted') });
+    assert.equal(response.status, 200);
+    const ack = JSON.parse(response.text);
+    const { v, host, nativeHost, busy, manualPaused, closed, blocked, paused, confirmedPause, controlVersion } = expected;
+    assert.deepEqual(ack, { v, host, nativeHost, busy, manualPaused, observationRevision: revision, closed, blocked, paused, confirmedPause, controlVersion });
+  }
+  assert.equal(detailedReads, 0, 'a stable host heartbeat must not rebuild historical call diagnostics');
+  const direct = await f.coordinator.observeHost(observation(504, true));
+  assert.equal(direct.calls.length, 4, 'the default service API remains a full status view');
+  assert.equal(detailedReads, 1);
+  const get = await request(f.origin + '/dsh-go/v1/lifecycle', { headers: { cookie } });
+  assert.equal(get.status, 200); assert.equal(JSON.parse(get.text).calls.length, 4);
+  assert.equal(detailedReads, 2, 'an explicit GET still obtains detailed history');
+});
+
+test('host heartbeat waits for native control completion before acknowledging', async t => {
+  const entered = Promise.withResolvers(), release = Promise.withResolvers();
+  t.after(() => release.resolve());
+  const f = await fixture(t, { coordinator: { async revalidateTransport() { entered.resolve(); await release.promise; } } });
+  const cookie = await f.login();
+  await f.post(cookie, { operation: 'host', ...observation(600, false) });
+  f.foreground(true); let settled = false;
+  const response = f.post(cookie, { operation: 'host', ...observation(601, false) }).then(value => { settled = true; return value; });
+  await entered.promise; assert.equal(settled, false);
+  release.resolve();
+  const ack = JSON.parse((await response).text);
+  assert.equal(ack.observationRevision, 601); assert.equal(ack.host.revision, f.native.revision);
+  assert.equal(ack.host.foreground, true); assert.equal(ack.paused, false);
+  assert.equal(ack.confirmedPause, false);
 });

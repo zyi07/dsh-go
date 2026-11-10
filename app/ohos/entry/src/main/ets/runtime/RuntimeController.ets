@@ -19,6 +19,8 @@ import { PersistedRuntimeLog } from './PersistedRuntimeLog';
 import { TransientTaskOwner } from './TransientTaskOwner';
 import { RuntimeLifecycle, HostLifecycleAck } from './RuntimeLifecycle';
 import { OhosLifecycleTransport } from './OhosLifecycleTransport';
+import { LinuxControl, LinuxRunRequest } from './LinuxControl';
+import type { LinuxProxyConfiguration } from './LinuxControl';
 import { agentReminderAccess, backgroundComputePermission } from './BackgroundCompute';
 
 type RuntimeSink = (event: Map<string, Object | null>) => void;
@@ -29,6 +31,34 @@ const LIFECYCLE_NOTICE = '前后台状态尚未同步，本机任务可能仍在
 const HEALTHY_MS = 30000;
 
 const PROGRESS_BYTES = 512 * 1024;
+
+// Optional in-memory counts of existing calls, not CPU time or completed work.
+class IdleDiagnosticsWindow {
+  readonly id: string;
+  readonly startedAtMs: number;
+  stoppedAtMs: number | null = null;
+  pollTicks: number = 0;
+  collectCalls: number = 0;
+  snapshotCalls: number = 0;
+  emitStatusCalls: number = 0;
+  lifecycleRefreshRequests: number = 0;
+  manifestPairChecks: number = 0;
+
+  constructor(id: string, startedAtMs: number) {
+    this.id = id; this.startedAtMs = startedAtMs;
+  }
+
+  toMap(): Map<string, Object | null> {
+    return new Map<string, Object | null>([
+      ['id', this.id], ['startedAtMs', this.startedAtMs], ['stoppedAtMs', this.stoppedAtMs],
+      ['counters', new Map<string, Object | null>([
+        ['pollTicks', this.pollTicks], ['collectCalls', this.collectCalls],
+        ['snapshotCalls', this.snapshotCalls], ['emitStatusCalls', this.emitStatusCalls],
+        ['lifecycleRefreshRequests', this.lifecycleRefreshRequests], ['manifestPairChecks', this.manifestPairChecks]
+      ])]
+    ]);
+  }
+}
 
 export class RuntimeController {
   private static shared: RuntimeController | null = null;
@@ -46,11 +76,16 @@ export class RuntimeController {
   private retiredOwners: TransientTaskOwner[] = [];
   private ownerAbility: UIAbility | null = null;
   private lifecycleTicks: number = 0;
+  private idleDiagnosticsEnabled: boolean = false;
+  private idleDiagnosticsWindow: IdleDiagnosticsWindow | null = null;
   private lastLifecycleError: string | null = null;
   private sinks: RuntimeSink[] = [];
   private initialized: Promise<void> | null = null;
   private manifest: RuntimeManifest | null = null;
   private installed: RuntimeManifest | null = null;
+  private comparedManifest: RuntimeManifest | null = null;
+  private comparedInstalled: RuntimeManifest | null = null;
+  private comparedCurrent: boolean = false;
   private setupError: string | null = null;
   private lastError: string | null = null;
   private failureLines: string[] = [];
@@ -58,6 +93,8 @@ export class RuntimeController {
   private startCancelled: boolean = false;
   private startBegan: number = 0;
   private requestedStop: boolean = false;
+  private stopping: Promise<void> | null = null;
+  private linux: LinuxControl = new LinuxControl();
   private timer: number | null = null;
   private lastNative: HostState | null = null;
   private runtimeGeneration: number = 0;
@@ -167,6 +204,25 @@ export class RuntimeController {
     return ability.context;
   }
 
+  // This read and the toggle deliberately do not initialize, collect or emit.
+  getIdleDiagnostics(): Map<string, Object | null> {
+    return new Map<string, Object | null>([
+      ['schema', 1], ['enabled', this.idleDiagnosticsEnabled], ['observedAtMs', Date.now()],
+      ['window', this.idleDiagnosticsWindow?.toMap() ?? null]
+    ]);
+  }
+
+  setIdleDiagnosticsEnabled(enabled: boolean): Map<string, Object | null> {
+    if (enabled && !this.idleDiagnosticsEnabled) {
+      this.idleDiagnosticsWindow = new IdleDiagnosticsWindow(util.generateRandomUUID(), Date.now());
+      this.idleDiagnosticsEnabled = true;
+    } else if (!enabled && this.idleDiagnosticsEnabled) {
+      if (this.idleDiagnosticsWindow !== null) this.idleDiagnosticsWindow.stoppedAtMs = Date.now();
+      this.idleDiagnosticsEnabled = false;
+    }
+    return this.getIdleDiagnostics();
+  }
+
   initialize(): Promise<void> {
     if (this.initialized === null) this.initialized = this.prepareRecovery().catch((error: Error): void => {
       this.initialized = null;
@@ -229,20 +285,32 @@ export class RuntimeController {
   }
 
   private current(): boolean {
-    if (this.manifest === null || this.installed === null ||
-        this.manifest.runtimeVersion !== this.installed.runtimeVersion ||
-        this.manifest.dshVersion !== this.installed.dshVersion ||
-        this.manifest.nodeVersion !== this.installed.nodeVersion ||
-        this.manifest.files.length !== this.installed.files.length) return false;
-    const files = new Map<string, RuntimeFile>();
-    this.installed.files.forEach((file: RuntimeFile) => files.set(file.path, file));
-    return this.manifest.files.every((file: RuntimeFile) => {
-      const other = files.get(file.path);
-      return other !== undefined && other.sha256 === file.sha256 && other.size === file.size;
-    });
+    const manifest = this.manifest;
+    const installed = this.installed;
+    if (manifest === null || installed === null) {
+      this.comparedManifest = null; this.comparedInstalled = null; this.comparedCurrent = false;
+      return false;
+    }
+    // These private parsed records are read-only after acquisition. A successful
+    // installed() re-read returns a new object, even when its version is unchanged.
+    if (manifest === this.comparedManifest && installed === this.comparedInstalled) return this.comparedCurrent;
+    if (this.idleDiagnosticsEnabled && this.idleDiagnosticsWindow !== null) this.idleDiagnosticsWindow.manifestPairChecks++;
+    let matches = false;
+    if (manifest.runtimeVersion === installed.runtimeVersion && manifest.dshVersion === installed.dshVersion &&
+        manifest.nodeVersion === installed.nodeVersion && manifest.files.length === installed.files.length) {
+      const files = new Map<string, RuntimeFile>();
+      installed.files.forEach((file: RuntimeFile) => files.set(file.path, file));
+      matches = manifest.files.every((file: RuntimeFile) => {
+        const other = files.get(file.path);
+        return other !== undefined && other.sha256 === file.sha256 && other.size === file.size;
+      });
+    }
+    this.comparedManifest = manifest; this.comparedInstalled = installed; this.comparedCurrent = matches;
+    return matches;
   }
 
   snapshot(): Map<string, Object | null> {
+    if (this.idleDiagnosticsEnabled && this.idleDiagnosticsWindow !== null) this.idleDiagnosticsWindow.snapshotCalls++;
     const native = nativeHostState();
     this.syncManagedSkills(native);
     let phase = this.current() ? 'installed' : 'notInstalled';
@@ -320,17 +388,22 @@ export class RuntimeController {
   }
 
   private emitStatus(): void {
+    if (this.idleDiagnosticsEnabled && this.idleDiagnosticsWindow !== null) this.idleDiagnosticsWindow.emitStatusCalls++;
     this.emit(new Map<string, Object | null>([['type', 'status'], ['status', this.snapshot()]]));
   }
 
   private startPolling(): void {
     const state = nativeHostState();
     if (this.timer === null && ['starting', 'running', 'stopping'].includes(state.phase)) {
-      this.timer = setInterval(() => this.collect(), 100);
+      this.timer = setInterval(() => {
+        if (this.idleDiagnosticsEnabled && this.idleDiagnosticsWindow !== null) this.idleDiagnosticsWindow.pollTicks++;
+        this.collect();
+      }, 100);
     }
   }
 
   collect(): void {
+    if (this.idleDiagnosticsEnabled && this.idleDiagnosticsWindow !== null) this.idleDiagnosticsWindow.collectCalls++;
     const state = nativeHostState();
     this.retiredOwners = this.retiredOwners.filter((owner: TransientTaskOwner): boolean => owner.cleanupPending());
     const finished = (state.phase === 'exited' || state.phase === 'error') && this.lastNative?.phase !== state.phase;
@@ -349,7 +422,11 @@ export class RuntimeController {
     }
     this.noteHealthy(state);
     this.noteLastGood(state);
-    if (++this.lifecycleTicks >= 10) { this.lifecycleTicks = 0; this.lifecycle.refresh(); }
+    if (++this.lifecycleTicks >= 10) {
+      this.lifecycleTicks = 0;
+      if (this.idleDiagnosticsEnabled && this.idleDiagnosticsWindow !== null) this.idleDiagnosticsWindow.lifecycleRefreshRequests++;
+      this.lifecycle.refresh();
+    }
     this.syncManagedSkills(state);
     if (state.token !== null) this.logs.rememberSecret(state.token);
     const batch: RuntimeLogEntry[] = [];
@@ -508,6 +585,7 @@ export class RuntimeController {
       await this.storage.ensureDirectory(dshHome);
       await this.storage.ensureDirectory(this.paths.agentsHome);
       await this.storage.ensureDirectory(this.paths.outputs);
+      await this.storage.ensureDirectory(this.paths.linuxDirectory);
       await new OhosRuntimeStorage(this.context.resourceManager, this.context.cacheDir).ensureDirectory(cache);
       await this.writeInstructions(dshHome, workspace, visualReplies);
       this.traceStart('directories ready');
@@ -517,7 +595,8 @@ export class RuntimeController {
       }
       Object.keys(environment).forEach((key: string) => this.logs.rememberSecret(environment[key]));
       const options: HostOptions = { runtimeRoot: this.installer.root, guestRoot: this.paths.guestRoot, dshHome: dshHome,
-        workspaceRoots: [workspace], cacheDir: cache, nativeLibraryDir: nativeLibraryDir, env: environment, safeMode: selectedMode === 'safe' };
+        workspaceRoots: [workspace], cacheDir: cache, nativeLibraryDir: nativeLibraryDir,
+        linuxDirectory: this.paths.linuxDirectory, env: environment, safeMode: selectedMode === 'safe' };
       this.requestedStop = false;
       this.runtimeGeneration++;
       const host = await loadNativeHost();
@@ -563,7 +642,7 @@ export class RuntimeController {
     if (this.pending === 'install') throw new RuntimeChannelError('reset_busy', '安装进行中，未提交重置。');
     // Stop admission synchronously, including a loader currently awaiting I/O.
     this.resetRequested = true;
-    this.stop();
+    await this.stop();
     await this.recovery.requestReset(keep, util.generateRandomUUID(), reinstall);
     try { this.emitStatus(); }
     finally {
@@ -572,18 +651,66 @@ export class RuntimeController {
     }
   }
 
-  stop(): void {
+  stop(): Promise<void> {
     if (this.pending === 'start') this.startCancelled = true;
     this.requestedStop = true;
-    this.retireOwner();
-    this.lifecycle.runtime(null, null);
     this.managedSkills.stop(this.runtimeGeneration);
+    if (this.stopping !== null) return this.stopping;
+    this.stopping = this.finishStop().finally((): void => { this.stopping = null; });
+    return this.stopping;
+  }
+
+  private async finishStop(): Promise<void> {
     const state = nativeHostState();
-    if (['starting', 'running', 'stopping'].includes(state.phase)) {
+    if (['starting', 'running'].includes(state.phase)) {
+      // Linux can only be enabled through the authenticated, ready Node endpoint.
+      // Keep JS and its native join callbacks alive until that service retires.
+      if (state.baseUrl !== null && state.token !== null) {
+        try { await this.linux.shutdown(state.baseUrl, state.token); }
+        catch (error) {
+          this.lastError = 'Linux 任务或资源收尾未确认，停止操作未完成；请查看 Linux 状态后重试。';
+          this.emitStatus(); throw error as Error;
+        }
+      } else if (state.phase === 'running') {
+        throw new RuntimeChannelError('ohos_linux_shutdown_unconfirmed', '运行中的引擎缺少可信控制入口，未停止 Node。');
+      }
+      this.retireOwner();
+      this.lifecycle.runtime(null, null);
       peekNativeHost()?.stop();
       this.startPolling();
       this.emitStatus();
     }
+  }
+
+  private linuxHost(): HostState {
+    const state = nativeHostState();
+    if (state.phase !== 'running' || state.baseUrl === null || state.token === null) {
+      throw new RuntimeChannelError('ohos_linux_engine_unavailable', '请先启动本机引擎；Linux 状态查询不会启动或安装引擎。');
+    }
+    return state;
+  }
+
+  getLinuxStatus(): Promise<string> {
+    const state = this.linuxHost();
+    return this.linux.getStatus(state.baseUrl as string, state.token as string);
+  }
+
+  setLinuxEnabled(enabled: boolean): Promise<string> {
+    if (this.requestedStop || this.resetRequested) throw new RuntimeChannelError('ohos_linux_stopping', '引擎正在停止，未更改 Linux 开关。');
+    const state = this.linuxHost();
+    return this.linux.setEnabled(state.baseUrl as string, state.token as string, enabled);
+  }
+
+  setLinuxProxy(proxy: LinuxProxyConfiguration): Promise<string> {
+    if (this.requestedStop || this.resetRequested) throw new RuntimeChannelError('ohos_linux_stopping', '引擎正在停止，未更改 Linux 代理。');
+    const state = this.linuxHost();
+    return this.linux.setProxy(state.baseUrl as string, state.token as string, proxy);
+  }
+
+  runLinuxPrivateGuest(request: LinuxRunRequest): Promise<string> {
+    if (this.requestedStop || this.resetRequested) throw new RuntimeChannelError('ohos_linux_stopping', '引擎正在停止，未开始 Linux 作业。');
+    const state = this.linuxHost();
+    return this.linux.runPrivateGuest(state.baseUrl as string, state.token as string, request);
   }
 
   private syncManagedSkills(state: HostState): void {
@@ -638,6 +765,7 @@ export class RuntimeController {
       `- 你运行在鸿蒙 App 的进程内 Node 中，默认工作区是 \`${workspace}\`。\n` +
       `- 要交给用户的文件放在 \`${this.paths.outputs}\`；App 的产出列表只显示这个目录中的文件。\n` +
       '- bash、rg 和 git 等能力以引擎当前能力清单为准；没有 Android 的 Ubuntu、PRoot、apt 或 /sdcard 挂载。\n' +
+      '- bash 里的 gh、python3、python、pip、pip3 交给 App 内 Linux 环境运行，看得到当前工作区；其他 Linux 程序用 `linux <命令>`。需要用户先在 设置 · 能力 · Linux 环境 打开；这些命令结束后一次性返回输出，同一时间只运行一个。\n' +
       '- 对不支持的命令说明限制，可请用户交给已连接的电脑执行；不能声称命令已经成功。\n' +
       '- 手机文件通过 App 的系统选择器导入或导出；不能遍历其他应用的数据。\n' +
       '- App 使用 Flutter 原生界面；不要把修改 Harness 网页当作修改 App 界面。\n';

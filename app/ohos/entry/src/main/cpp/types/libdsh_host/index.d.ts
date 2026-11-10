@@ -8,6 +8,8 @@ export interface HostOptions {
   cacheDir: string;
   // Ark resolves this from its own Context installation paths; never from Dart.
   nativeLibraryDir: string;
+  // Independent writable Linux data, derived from the same trusted Context.
+  linuxDirectory: string;
   env: Record<string, string>;
   // Selects only the fixed rescue profile; no caller-supplied argv or paths.
   safeMode?: boolean;
@@ -59,3 +61,6 @@ export const phoneAttach: (ownerHash: string, engine: number, owner: number) => 
 export const phoneSnapshot: () => HostPhoneSnapshot;
 export const phoneRetire: (generation: number) => boolean;
 export const phoneOperation: (operation: string, key: HostPhoneKey, result?: string) => string | boolean | null;
+
+export interface WorkspaceGrantStatus { active: boolean; drained: boolean; writable: boolean; leases: number; generation: number; }
+export const workspaceGrant: (operation: string, id: string, generation: number, fd?: number, writable?: boolean) => WorkspaceGrantStatus;

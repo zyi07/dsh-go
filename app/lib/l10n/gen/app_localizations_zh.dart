@@ -8932,6 +8932,107 @@ class L10nZh extends L10n {
   String get searchKwIconShortcut => '快捷方式,自定义图标,桌面图片,换图标';
 
   @override
+  String get linuxTitle => 'Linux 环境';
+
+  @override
+  String get linuxSubtitle => '在手机里运行 gh、Python、git 等命令行工具';
+
+  @override
+  String get linuxSwitch => '开启 Linux';
+
+  @override
+  String get linuxStatus => '状态';
+
+  @override
+  String get linuxFirstHint => '第一次开启会下载约 3.5 MB 的基础系统并安装，大约一两分钟；之后再开几秒就好。';
+
+  @override
+  String get linuxMemoryNote => '开着 Linux 时 App 大约多占 100 MB 以上内存；关掉开关后，要等 App 完全退出才会还给系统。';
+
+  @override
+  String get linuxStateOn => '已开启';
+
+  @override
+  String get linuxStateOff => '未开启';
+
+  @override
+  String get linuxStateInstalling => '正在准备';
+
+  @override
+  String get linuxStateStopping => '正在关闭';
+
+  @override
+  String get linuxStateFailed => '出错了';
+
+  @override
+  String get linuxStateUnavailable => '暂不可用';
+
+  @override
+  String get linuxStageDownload => '下载基础系统';
+
+  @override
+  String get linuxStageDisk => '准备磁盘';
+
+  @override
+  String get linuxStageBoot => '启动';
+
+  @override
+  String get linuxStageTools => '安装工具';
+
+  @override
+  String get linuxEngineOffline => '本机引擎没在运行，启动引擎后再来开启。';
+
+  @override
+  String get linuxRequestFailed => '没能和引擎通信，请稍后重试。';
+
+  @override
+  String get linuxRestartRequired => 'Linux 已经停止，需要完全退出并重新打开 App 才能再开启。';
+
+  @override
+  String linuxErrorWithCode(String code) {
+    return '没能开启：$code';
+  }
+
+  @override
+  String get linuxProxyTitle => '网络代理';
+
+  @override
+  String get linuxProxyFooter => '只作用于 Linux 里的命令。gitee、华为云等国内源始终直连。';
+
+  @override
+  String get linuxProxyMode => '方式';
+
+  @override
+  String get linuxProxyInherit => '跟随 App';
+
+  @override
+  String get linuxProxyDirect => '不用代理';
+
+  @override
+  String get linuxProxyManual => '手动';
+
+  @override
+  String get linuxProxyHttp => 'HTTP 代理';
+
+  @override
+  String get linuxProxyHttps => 'HTTPS 代理';
+
+  @override
+  String get linuxProxyNoProxy => '不走代理的地址';
+
+  @override
+  String get linuxProxyUnset => '未设置';
+
+  @override
+  String get linuxProxySameAsHttp => '同 HTTP';
+
+  @override
+  String get linuxProxyLoopbackNote => '127.0.0.1 指的是这台手机，不是电脑。';
+
+  @override
+  String get linuxProxyUrlInvalid => '请填 http:// 或 https:// 开头的地址，例如 http://127.0.0.1:7890';
+
+  @override
   String get liveThinking => '正在思考';
 
   @override

@@ -85,6 +85,25 @@ test('DSH profile registration does not enter internal command Worker subtrees',
       assert.equal(result.exitCode, 0, result.stderr);
       assert.deepEqual(JSON.parse(result.stdout), expectedNode);
     });
+    await t.test('internal Node ESM imports child_process without a managed-plugin ancestor scan; guards remain installed', async () => {
+      await writeFile(join(workspace, 'relative.mjs'), "export default 'relative-ok';\n");
+      await writeFile(join(workspace, 'guarded.mjs'), `
+        import assert from 'node:assert/strict';
+        import { spawn } from 'node:child_process';
+        import { readFileSync } from 'node:fs';
+        import value from './relative.mjs';
+        assert.equal(value, 'relative-ok');
+        assert.equal(readFileSync('./input.txt', 'utf8'), '真实中文命中\\n');
+        assert.throws(() => spawn('node', ['-e', '']), { code: 'ERR_OHOS_CHILD_PROCESS_UNAVAILABLE' });
+        assert.throws(() => readFileSync('../outside.txt'), error => error.code === 'EACCES' && /OHOS_SANDBOX_DENIED/.test(error.message));
+        console.log('internal-esm-guard-ok');
+      `);
+      for (const argv of [['node', 'guarded.mjs'], ['bash', '-c', 'node guarded.mjs']]) {
+        const result = await run(argv);
+        assert.equal(result.exitCode, 0, result.stderr);
+        assert.equal(result.stdout, 'internal-esm-guard-ok\n');
+      }
+    });
     await t.test('a Node script ordinary descendant inherits no DSH profile registration', async () => {
       await writeFile(join(workspace, 'descendant.mjs'), `
         import { parentPort, getEnvironmentData } from 'node:worker_threads';

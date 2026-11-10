@@ -4,6 +4,7 @@
 
 #include <cstdlib>
 #include <fstream>
+#include <filesystem>
 #include <iostream>
 #include <string>
 
@@ -28,7 +29,7 @@ int CaptureArguments(int argc, char** argv) {
   environment << '{';
   bool first = true;
   for (const auto* key : {"HOME", "DSH_HOME", "DSH_AGENTS_HOME", "TMPDIR", "NODE_COMPILE_CACHE",
-      "NARB_DISABLE_NATIVE_CACHE", "DSH_GO_OHOS_NATIVE_LIBRARY_DIR", "DSH_PERMISSION_MODE"}) {
+      "NARB_DISABLE_NATIVE_CACHE", "DSH_GO_OHOS_NATIVE_LIBRARY_DIR", "DSH_GO_OHOS_LINUX_DIRECTORY", "DSH_PERMISSION_MODE"}) {
     const auto* value = std::getenv(key);
     if (!value) return 97;
     if (!first) environment << ',';
@@ -53,6 +54,8 @@ int main(int argc, char** argv) {
     options.runtime_root = argv[1]; options.guest_root = argv[2]; options.dsh_home = argv[3];
     options.workspace_roots = {argv[4]}; options.cache_dir = argv[5];
     options.native_library_dir = argv[6];
+    options.linux_directory = (std::filesystem::path(options.guest_root).parent_path().parent_path() / "linux-tools").string();
+    std::filesystem::create_directories(options.linux_directory);
     if (argc == 9) {
       if (std::string(argv[8]) != "safe") return 2;
       options.safe_mode = true;

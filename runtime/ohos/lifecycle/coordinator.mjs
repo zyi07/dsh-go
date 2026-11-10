@@ -379,12 +379,12 @@ export class BoundaryCoordinator {
     this.#recoveries.delete(sessionId);
     return this.status(sessionId);
   }
-  observeHost(observation) {
+  observeHost(observation, hostOnly = false) {
     this.#check();
     // This authenticated HTTP call is only a wake-up/correlation hint. Neither
     // its foreground flag nor its revision is authority over native facts.
     this.#refreshNative();
-    return Promise.resolve(this.#hostControl).then(() => this.status());
+    return Promise.resolve(this.#hostControl).then(() => hostOnly ? this.#hostStatus() : this.status());
   }
   pause() {
     this.#check();
@@ -477,16 +477,21 @@ export class BoundaryCoordinator {
       hasReturned: !!row.returned, hasFinalOutcome: !!row.outcome,
       ...(row.reconciliation ? { reconciliation: snapshot(row.reconciliation) } : {}),
     }));
-    const blocked = this.#fault || this.#journal.failed || this.#journal.corruption;
+    const host = this.#hostStatus();
     const unknown = calls.some(row => !row.active && (row.reconciliation?.blocking === true || row.phase !== 'committed') && row.reconciliation?.blocking !== false);
     const cancelled = sessionId !== undefined && this.#cancelled.has(sessionId);
-    const state = blocked || unknown || (sessionId !== undefined && this.#blocked.has(sessionId)) ? 'result-unknown'
+    const state = host.blocked || unknown || (sessionId !== undefined && this.#blocked.has(sessionId)) ? 'result-unknown'
       : cancelled ? this.#cancelling.has(sessionId) || calls.some(row => row.active) ? 'cancelling' : 'terminated'
         : this.#gate ? 'paused' : calls.some(row => row.active) || (sessionId !== undefined && this.resolveAgent(sessionId)?.status === 'running') ? 'running' : calls.length ? 'completed' : 'running';
-    return { v: 1, bootId: this.bootId, state, nativeHost: this.#nativeHost ?? null, nativeFailure: this.#nativeFailure ?? null, closed: this.#closing, paused: !!this.#gate, confirmedPause: this.clock.paused,
+    return { ...host, bootId: this.bootId, state, nativeFailure: this.#nativeFailure ?? null,
+      corruption: this.#journal.corruption, activeBudgetCount: this.clock.pendingCount, calls };
+  }
+  // A steady host heartbeat does not request the historical per-call view.
+  #hostStatus() {
+    const blocked = this.#fault || this.#journal.failed || this.#journal.corruption;
+    return { v: 1, nativeHost: this.#nativeHost ?? null, closed: this.#closing, paused: !!this.#gate, confirmedPause: this.clock.paused,
       manualPaused: this.#manualPaused, busy: this.#pending.size > 0 || this.hasActiveRounds() === true,
-      blocked: !!blocked, corruption: this.#journal.corruption, controlVersion: this.#controlVersion,
-      activeBudgetCount: this.clock.pendingCount, calls,
+      blocked: !!blocked, controlVersion: this.#controlVersion,
       host: { revision: this.#nativeHost?.revision ?? 0,
         foreground: this.#nativeHost?.available === 1 && this.#nativeHost?.foreground === 1,
         computePermission: this.#nativeHost?.available === 1 && this.#nativeHost?.clockFailed === 0 &&

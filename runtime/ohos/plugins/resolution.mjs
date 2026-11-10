@@ -272,6 +272,10 @@ export function installPluginResolution() {
   };
   installed = registerHooks({
     resolve(specifier, context, nextResolve) {
+      if (['child_process', 'node:child_process'].includes(specifier)
+          && context.parentURL?.startsWith('file:') && profileOf(fileURLToPath(context.parentURL))) {
+        return { url: new URL('../process/plugin-process.mjs', import.meta.url).href, shortCircuit: true };
+      }
       // Node 24 CJS has no import attributes. ESM may also use a custom
       // condition named "require", while still supplying an attributes object.
       if (context.importAttributes === undefined && context.conditions.includes('require')) return nextResolve(specifier, context);

@@ -56,6 +56,12 @@ RUNTIME="${DSH_OHOS_RUNTIME:?Set DSH_OHOS_RUNTIME to the zip from runtime/ohos/p
 RUNTIME="$(cd "$(dirname "$RUNTIME")" && pwd)/$(basename "$RUNTIME")"
 [[ -f "$RUNTIME" ]] || { printf 'Missing runtime zip: %s\n' "$RUNTIME" >&2; exit 1; }
 PREBUILT=(libnode.so libdsh_flock.so libdsh_require_builtin.so)
+# Optional Python is one complete signed pair; never copy arbitrary extra libraries.
+if [[ -f "$NATIVE_LIBS/libdsh_python.so" || -f "$NATIVE_LIBS/libpython3.14.so" ]]; then
+  PREBUILT+=(libdsh_python.so libpython3.14.so)
+fi
+if [[ -f "$NATIVE_LIBS/libdsh_linux.so" ]]; then PREBUILT+=(libdsh_linux.so); fi
+if [[ -f "$NATIVE_LIBS/libdsh_workspace_grants.so" ]]; then PREBUILT+=(libdsh_workspace_grants.so); fi
 for lib in "${PREBUILT[@]}"; do
   [[ -f "$NATIVE_LIBS/$lib" ]] || { printf 'Missing native library: %s\n' "$NATIVE_LIBS/$lib" >&2; exit 1; }
 done
@@ -115,6 +121,8 @@ with zipfile.ZipFile(transport) as bundle:
         sys.exit(f"{transport} must contain one unencrypted Stored dsh-runtime/runtime.zip")
     bundle.extract(entries[0], rawfile)
 PY_RUNTIME_ARCHIVE
+python3 -I -B "$APP/../runtime/ohos/package/linux-assets.py" \
+  --runtime-zip "$RAWFILE/dsh-runtime/runtime.zip" --native-directory "$LIBS"
 FLUTTER_ROOT="$(dirname "$(dirname "$(readlink -f "$(command -v "$FLUTTER")")")")"
 python3 -I -B "$APP/../tooling/ohos/patch_framework.py" "$FLUTTER_ROOT"
 if [[ "$MODE" == --release ]]; then

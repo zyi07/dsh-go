@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import copy
 import importlib.util
+import io
 import json
 import os
 from pathlib import Path
@@ -84,13 +85,17 @@ class DistributionTests(unittest.TestCase):
             (app / 'ohos/build-profile.json5').write_text('{"app":{"signingConfigs":[]}}')
             for name in ('build-hap.sh', 'hap-distribution.py'):
                 shutil.copy2(ROOT / 'tooling/ohos' / name, helpers / name)
+            asset_helpers = root / 'runtime/ohos/package'; asset_helpers.mkdir(parents=True)
+            shutil.copy2(ROOT / 'runtime/ohos/package/linux-assets.py', asset_helpers / 'linux-assets.py')
             observed = root / 'observed.json'
             (helpers / 'patch_framework.py').write_text('import json,os,pathlib\npathlib.Path(' + repr(str(observed)) + ').write_text(json.dumps({k:v for k,v in os.environ.items() if k.startswith("DSH_OHOS_SIGN_")}))\nraise SystemExit(3)\n')
             libs = root / 'libs'; libs.mkdir()
             for name in ('libnode.so', 'libdsh_flock.so', 'libdsh_require_builtin.so'):(libs / name).touch()
             flutter = root / 'flutter/bin/flutter'; flutter.parent.mkdir(parents=True); flutter.write_text('#!/bin/sh\nexit 0\n'); flutter.chmod(0o755)
             archive = root / 'runtime.zip'
-            with zipfile.ZipFile(archive, 'w', compression=zipfile.ZIP_STORED) as z:z.writestr('dsh-runtime/runtime.zip', b'fixture')
+            inner = io.BytesIO()
+            with zipfile.ZipFile(inner, 'w') as z:z.writestr('manifest.json', b'{}')
+            with zipfile.ZipFile(archive, 'w', compression=zipfile.ZIP_STORED) as z:z.writestr('dsh-runtime/runtime.zip', inner.getvalue())
             env = dict(os.environ, FLUTTER_OHOS=str(flutter), DSH_OHOS_NATIVE_LIBS=str(libs), DSH_NODE_HEADERS=str(root), DSH_OHOS_RUNTIME=str(archive), DSH_OHOS_SIGN_KEY_PASSWORD='fake-secret-trace')
             result = subprocess.run(['bash', '-x', str(helpers / 'build-hap.sh')],env=env,capture_output=True,text=True)
             self.assertEqual(result.returncode, 3)

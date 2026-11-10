@@ -71,6 +71,14 @@ export class OhosLifecycleTransport {
   }
   cancel() { lifecycleControl.cancels++; }
 }
+// Unrelated channel regressions do not start Linux. Dedicated Linux transport
+// and controller-barrier tests exercise the new shutdown protocol separately.
+export class LinuxControl {
+  async shutdown() {}
+  getStatus() { throw Error('Linux status outside runtime-channel fixture'); }
+  setEnabled() { throw Error('Linux enable outside runtime-channel fixture'); }
+  runPrivateGuest() { throw Error('Linux execution outside runtime-channel fixture'); }
+}
 export function agentReminderAccess() { return lifecycleControl.reminders ?? 'denied'; }
 export function backgroundComputePermission() { lifecycleControl.queries++; return lifecycleControl.permission ?? 'denied'; }
 export class FlutterAbility {

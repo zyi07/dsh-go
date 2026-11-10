@@ -156,6 +156,8 @@ controllerText = controllerText.replace("import common from '@ohos.app.ability.c
   .replace("from './RuntimeLifecycle'", "from './RuntimeLifecycle.mts'")
   .replace("from './TransientTaskOwner'", "from './TransientTaskOwner.mts'")
   .replace("from './OhosLifecycleTransport'", `from '${hostFixtureUrl}'`)
+  .replace('LinuxControl, LinuxRunRequest', 'LinuxControl, type LinuxRunRequest')
+  .replace("from './LinuxControl'", `from '${hostFixtureUrl}'`)
   .replace("from './BackgroundCompute'", `from '${hostFixtureUrl}'`)
   .replace("from './ManagedSkillService'", "from './ManagedSkillService.mts'")
   .replace("from './OhosRuntimeStorage'", "from './OhosRuntimeStorage.mts'");
@@ -183,7 +185,8 @@ await fs.writeFile(path.join(temp, 'EntryAbility.mts'),
   `const AppLinksPlugin = { onForeground() {}, onBackground() {} };\n` +
   `const PastePlugin = { onForeground() {}, onBackground() {} };\n` +
   `const NativeFilesPlugin = { onForeground() {}, onBackground() {} };\n` +
-  `const NativeMediaPlugin = { onForeground() {}, onBackground() {} };\n` + entryText);
+  `const NativeMediaPlugin = { onForeground() {}, onBackground() {} };\n` +
+  `const AuthorizedWorkspacesPlugin = { onForeground() {}, onBackground() {}, onDestroy() {} };\n` + entryText);
 const { default: EntryAbility } = await import(pathToFileURL(path.join(temp, 'EntryAbility.mts')));
 let phoneText = (await fs.readFile(path.join(source, '../phone/PhoneBridge.ets'), 'utf8'))
   .replace("import common from '@ohos.app.ability.common';", '')
@@ -196,6 +199,7 @@ let phoneText = (await fs.readFile(path.join(source, '../phone/PhoneBridge.ets')
   .replace("from './PhoneEffects'", `from '${hostFixtureUrl}'`);
 await fs.writeFile(path.join(temp, 'PhoneBridge.mts'), phoneText);
 let pluginText = await fs.readFile(path.join(source, 'RuntimePlugin.ets'), 'utf8');
+pluginText = pluginText.replace("import { LinuxRunRequest } from './LinuxControl';", '');
 pluginText = pluginText.replace("from '../phone/PhoneBridge'", "from './PhoneBridge.mts'").replace(/^import .* from '@ohos\/flutter_ohos[^\n]+\n/gm, '')
   .replace("import { BusinessError } from '@ohos.base';", '')
   .replace("import hilog from '@ohos.hilog';", 'const hilog = { info() {}, warn() {} };')
@@ -614,7 +618,7 @@ test('懒加载：构造、状态、日志、路径、安装、诊断与未启�
     const sink = () => {}; c.controller.subscribe(sink); await Promise.resolve(); c.controller.unsubscribe(sink);
     await c.controller.install(false);
     await c.controller.publishDiagnostics('# fixture');
-    c.controller.stop(); c.controller.collect(); await c.controller.clearFailure();
+    await c.controller.stop(); c.controller.collect(); await c.controller.clearFailure();
     assert.equal(nativeModuleLoads, 0);
     assert.equal(native.starts.length, 0);
   } finally { plugin.onDetachedFromEngine(binding); RuntimeController.shared = previous; }
@@ -634,7 +638,7 @@ test('懒加载：等待动态import期间stop仍取消启动，并发start不�
     await c.controller.start(null, false, null, false);
     assert.equal(c.controller.snapshot().get('phase'), 'starting');
     assert.equal(native.starts.length, 0);
-    c.controller.stop(); release(); await rejected;
+    await c.controller.stop(); release(); await rejected;
     assert.equal(native.starts.length, 0); assert.equal(native.state.consumed, false);
     assert.equal(nativeModuleLoads, 1);
     await c.controller.start(null, false, null, false);
@@ -686,7 +690,7 @@ test('status与事件沿用Dart字段，ready前不报告running，stop完成后
   assert.doesNotMatch(c.controller.recentLogs(1)[0], /fixture-/);
   assert.equal(received.some(e => e.get('type') === 'logs'), true);
   await c.controller.start(null, false, null, true); assert.equal(native.starts.length, 1);
-  c.controller.stop(); assert.equal(native.stops, 1); assert.equal(c.controller.snapshot().get('phase'), 'stopping');
+  await c.controller.stop(); assert.equal(native.stops, 1); assert.equal(c.controller.snapshot().get('phase'), 'stopping');
   native.state.phase = 'exited'; native.state.exitCode = 0; native.state.baseUrl = null; native.state.token = null;
   native.events.push({kind: 'exit', exitCode: 0}); c.controller.collect();
   assert.equal(c.controller.snapshot().get('phase'), 'installed');
@@ -700,7 +704,7 @@ test('stop发生在异步启动准备期间时不会随后偷偷启动；用户A
   const c = await controllerCase('cancel-setup');
   await c.controller.install(false);
   const starting = c.controller.start(null, false, null, false);
-  c.controller.stop();
+  await c.controller.stop();
   await assert.rejects(starting, {code: 'ohos_start_cancelled'});
   assert.equal(native.starts.length, 0);
   assert.doesNotMatch(await fs.readFile(c.dir + '/runtime/rootfs/root/.dsh/AGENTS.md', 'utf8'), /可视化回复/);
@@ -796,6 +800,8 @@ test('P2 v6: 原生参数、真实沙箱目录和交付指令使用同一个gues
   assert.equal(options.dshHome, root + '/root/.dsh');
   assert.deepEqual(options.workspaceRoots, [root + '/root/workspace']);
   assert.equal(options.runtimeRoot, c.dir + '/dsh-runtime/tree');
+  assert.equal(options.linuxDirectory, c.dir + '/linux-tools');
+  assert((await fs.stat(options.linuxDirectory)).isDirectory());
   for (const relative of ['root/.dsh', 'root/.agents', 'root/workspace/DSH-Go']) {
     assert((await fs.stat(root + '/' + relative)).isDirectory());
   }
@@ -804,6 +810,35 @@ test('P2 v6: 原生参数、真实沙箱目录和交付指令使用同一个gues
   const diagnostic = await c.controller.publishDiagnostics('# 实际报告\n');
   assert.equal(diagnostic.get('path'), root + '/root/.dsh/dsh-app/diagnostics.md');
   assert.equal(await fs.readFile(diagnostic.get('path'), 'utf8'), '# 实际报告\n');
+});
+
+test('930 stop shares one Linux barrier and does not stop Node before it settles', async () => {
+  const c = await controllerCase('linux-stop-barrier');
+  await c.controller.install(false); await c.controller.start(null, false, null, true);
+  Object.assign(native.state, {phase: 'running', baseUrl: 'http://127.0.0.1:3080', token: 'fixture-linux-control'});
+  const gate = Promise.withResolvers(); let requests = 0;
+  c.controller.linux = {async shutdown(url, token) {
+    requests++; assert.equal(url, native.state.baseUrl); assert.equal(token, native.state.token);
+    await gate.promise;
+  }};
+  const first = c.controller.stop(), second = c.controller.stop();
+  assert.equal(first, second); assert.equal(requests, 1); assert.equal(native.stops, 0);
+  assert.equal(c.controller.requestedStop, true);
+  gate.resolve(); await first;
+  assert.equal(native.stops, 1);
+  await c.controller.stop(); assert.equal(native.stops, 1, 'already stopping does not reopen the HTTP control path');
+});
+
+test('930 unknown Linux retirement prevents Node stop and durable reset intent', async () => {
+  const c = await controllerCase('linux-reset-unknown');
+  await c.controller.install(false); await c.controller.start(null, false, null, true);
+  Object.assign(native.state, {phase: 'running', baseUrl: 'http://127.0.0.1:3080', token: 'fixture-linux-control'});
+  const sentinel = c.dir + '/linux-tools/user-data.txt'; await fs.writeFile(sentinel, 'must remain');
+  c.controller.linux = {async shutdown() { throw new core.RuntimeChannelError('ohos_linux_shutdown_unconfirmed', 'fixture unknown'); }};
+  await assert.rejects(c.controller.reset([], false), {code: 'ohos_linux_shutdown_unconfirmed'});
+  assert.equal(native.stops, 0); assert.equal(native.state.phase, 'running');
+  await assert.rejects(fs.access(c.dir + '/dsh-recovery/reset.json'), {code: 'ENOENT'});
+  assert.equal(await fs.readFile(sentinel, 'utf8'), 'must remain');
 });
 
 test('P2 v6: guestRoot在未安装且清单读取失败时仍同步返回且不读rawfile', async () => {
@@ -869,7 +904,7 @@ test('P2 v6: reopenApp先stop，当前Ability固定Want及SDK错误码消息原�
     plugin.onAttachedToEngine(binding);
     plugin.onAttachedToAbility?.({ getAbility: () => ability });
     await c.controller.install(false); await c.controller.start(null, false, null, true);
-    native.state.phase = 'running'; native.state.token = 'fixture-reopen-token';
+    native.state.phase = 'running'; native.state.baseUrl = 'http://127.0.0.1:3080'; native.state.token = 'fixture-reopen-token';
     assert.deepEqual(await invoke(), { code: '16000065', message: 'fixture ability not focused' });
     assert.deepEqual(attempts[0], { want: { bundleName: 'test.bundle', moduleName: 'entry', abilityName: 'EntryAbility' }, stops: 1 });
     assert.equal(c.controller.snapshot().get('managedSkillGeneration'), null);
@@ -945,6 +980,55 @@ test('P2 v6: 实际通道安装中文技能，Activity变化保留grant而stop�
     assert.equal(managedSkillIo.calls.length, count);
     assert.equal(await fs.readFile(c.directory + '/notes/readme.txt', 'utf8'), '更新后的正文');
     assert.equal(managedSkillIo.opened.size, 0);
+  } finally { c.close(); }
+});
+
+test('930 Linux MethodChannel preserves request identity and uses only NativeHost endpoint', async () => {
+  const c = await managedChannelCase('linux-channel-control');
+  const calls = [];
+  c.controller.linux = {
+    async getStatus(url, token) { calls.push(['status', url, token]); return '{"fixture":"status"}'; },
+    async setEnabled(url, token, enabled) { calls.push(['enable', url, token, enabled]); return '{"fixture":"accepted"}'; },
+    async runPrivateGuest(url, token, request) { calls.push(['run', url, token, request]); return '{"fixture":"queued"}'; },
+  };
+  c.controller.initialize = () => { throw Error('Linux controls must not run runtime installation or recovery'); };
+  try {
+    assert.equal(await c.invoke('getLinuxStatus', {baseUrl: 'http://untrusted.invalid', token: 'untrusted'}), '{"fixture":"status"}');
+    assert.equal(await c.invoke('setLinuxEnabled', {enabled: false}), '{"fixture":"accepted"}');
+    assert.equal((await c.invoke('setLinuxEnabled', {enabled: 'true'})).code, 'ohos_linux_arguments');
+    const args = {instanceId: 'service-930', attemptId: 'attempt-930', requestId: 9,
+      argv: ['python3', '-c', 'print("中文")'], cwd: '/workspace',
+      env: new Map([['TEST_VALUE', 'a b'], ['__proto__', 'literal value'], ['constructor', 'kept'], ['toString', 'kept too']]), stdin: 'input\n'};
+    assert.equal(await c.invoke('runLinuxPrivateGuest', args), '{"fixture":"queued"}');
+    assert.deepEqual(calls.map(row => row.slice(1, 3)), Array(3).fill(['http://127.0.0.1:3080', 'fixture-managed-token']));
+    assert.deepEqual(calls[2][3], {v: 1, instanceId: args.instanceId, attemptId: args.attemptId,
+      action: 'runPrivateGuest', requestId: 9, argv: args.argv, cwd: '/workspace', env: Object.fromEntries(args.env), stdin: 'input\n'});
+    assert.equal(Object.hasOwn(calls[2][3].env, '__proto__'), true);
+    assert.deepEqual(Object.entries(JSON.parse(JSON.stringify(calls[2][3])).env), [...args.env]);
+    assert.equal((await c.invoke('runLinuxPrivateGuest', {...args, env: new Map([['TEST_VALUE', 4]])})).code, 'ohos_linux_arguments');
+    assert.equal(calls.length, 3);
+  } finally { c.close(); }
+});
+
+test('Linux proxy MethodChannel validates the codec map without starting installation', async () => {
+  const c = await managedChannelCase('linux-channel-proxy');
+  const calls = [];
+  c.controller.linux = {
+    async setProxy(url, token, proxy) { calls.push([url, token, proxy]); return '{"fixture":"proxy-accepted"}'; },
+  };
+  c.controller.initialize = () => { throw Error('proxy configuration must not initialize runtime'); };
+  const proxy = new Map([['mode', 'manual'], ['httpProxy', 'http://127.0.0.1:3128'], ['noProxy', 'fixture.invalid']]);
+  try {
+    assert.equal(await c.invoke('setLinuxProxy', { proxy, baseUrl: 'http://untrusted.invalid', token: 'untrusted' }), '{"fixture":"proxy-accepted"}');
+    assert.deepEqual(calls, [['http://127.0.0.1:3080', 'fixture-managed-token', Object.fromEntries(proxy)]]);
+    for (const invalid of [null, {}, new Map([['mode', true]]), new Map([['mode', 'direct'], ['extra', 'ignored']]),
+      new Map([['mode', 'manual'], ['httpProxy', 4]])]) {
+      assert.equal((await c.invoke('setLinuxProxy', { proxy: invalid })).code, 'ohos_linux_arguments');
+    }
+    assert.equal(calls.length, 1);
+    c.controller.requestedStop = true;
+    assert.equal((await c.invoke('setLinuxProxy', { proxy: new Map([['mode', 'direct']]) })).code, 'ohos_linux_stopping');
+    assert.equal(calls.length, 1);
   } finally { c.close(); }
 });
 
@@ -1043,7 +1127,7 @@ test('真实Controller收集已就绪host后才同步当前前后台，stop后�
     ability.onBackground(); await Promise.resolve();
     assert.equal(lifecycleControl.sends.at(-1).observation.foreground, false);
     const count = lifecycleControl.sends.length;
-    c.controller.stop(); ability.onForeground(); c.controller.collect(); await Promise.resolve();
+    await c.controller.stop(); ability.onForeground(); c.controller.collect(); await Promise.resolve();
     assert.equal(lifecycleControl.sends.length, count);
   } finally { ability.onDestroy(); RuntimeController.shared = previous; }
 });
@@ -1076,7 +1160,7 @@ test('生命周期同步失败通过现有Dart可读error和notice事件暴露�
       await fs.writeFile(process.env.DSH_LIFECYCLE_DART_WIRE, JSON.stringify({ failed: plain(failed), recovered: plain(recovered), events: events.map(plain) }));
     }
   } finally {
-    lifecycleControl.failure = null; c.controller.unsubscribe(sink); c.controller.stop(); ability.onDestroy(); RuntimeController.shared = previous;
+    lifecycleControl.failure = null; c.controller.unsubscribe(sink); await c.controller.stop(); ability.onDestroy(); RuntimeController.shared = previous;
   }
 });
 
@@ -1096,7 +1180,7 @@ test('真实Entry销毁只退休native owner，旧Ability销毁不撤新owner且
     assert.equal(native.lifecycleWrites.at(-1).operation, 'retire');
     assert.equal(native.lifecycleWrites.some(row => row.operation === 'begin'), false);
     assert.equal(RuntimeController.ability, null);
-  } finally { c.controller.stop(); RuntimeController.shared = previous; }
+  } finally { await c.controller.stop(); RuntimeController.shared = previous; }
 });
 
 // A synthetic process restart resets only the fixture's native singletons;
@@ -1209,7 +1293,7 @@ test('恢复完成后最后一次启动记录读取失败不使两层初始化�
     await c.controller.install(false);
     await c.controller.start(null, false, null, false);
     assert.equal(native.starts.length, 1);
-  } finally { fileIo.readText = readText; c.controller.stop(); }
+  } finally { fileIo.readText = readText; await c.controller.stop(); }
 });
 
 test('recovery: two unclean engine generations persist strikes/failure; clearing notice cannot reopen automatic-start budget',async()=>{
@@ -1242,7 +1326,7 @@ test('recovery: the failure says its cause is unknown; thirty seconds running cl
  let c=await controllerCase('rescue-healthy');await c.controller.install(false);
  await c.controller.start(null,false,null,false);c=await reopenCase(c);
  const failure=c.controller.snapshot().get('failure');assert.equal(failure.get('kind'),'killed');assert.equal(failure.get('causeUnknown'),true);assert.equal(c.controller.snapshot().get('strikes'),1);
- await c.controller.start(null,false,null,false);native.state.phase='running';
+ await c.controller.start(null,false,null,false);native.state.phase='running';native.state.baseUrl='http://127.0.0.1:3080';native.state.token='fixture-linux-control';
  const realNow=Date.now,start=realNow();
  try{
   Date.now=()=>start;c.controller.collect();Date.now=()=>start+29999;c.controller.collect();await c.controller.recovery.pending;
@@ -1684,7 +1768,7 @@ test('consumed host saves manual next mode before restart and new Controller rea
   const c = await controllerCase('manual-safe-reopen');
   await c.controller.install(false);
   await c.controller.start(null, false, 'normal', true);
-  c.controller.stop(); native.state.phase = 'exited'; c.controller.collect();
+  await c.controller.stop(); native.state.phase = 'exited'; c.controller.collect();
   await c.controller.recovery.pending;
   await assert.rejects(c.controller.start(null, false, 'safe', true), {code:'ohos_restart_required'});
   assert.equal(native.starts.length, 1, 'never starts a second embedded Node');
@@ -1714,7 +1798,7 @@ test('failed durable mode commit cannot start Node or request a restart', async 
   assert.equal(c.controller.snapshot().get('safeState'), 'off');
   await c.controller.start(null, false, 'safe', true);
   assert.equal(native.starts.length, 1); assert.equal(native.starts[0].safeMode, true);
-  c.controller.stop();
+  await c.controller.stop();
 });
 
 test('public normal healthy boot restores its launch profile through RuntimePlugin',async()=>{
@@ -1728,7 +1812,7 @@ test('public normal healthy boot restores its launch profile through RuntimePlug
  const plugin=new RuntimePlugin();plugin.onAttachedToEngine({getApplicationContext:()=>c.context,getBinaryMessenger:()=>({setMessageHandler(){}})});
  const invoke=(method,args={})=>new Promise(resolve=>plugin.onMethodCall(new MethodCall(method,new Map(Object.entries(args))),{success:value=>resolve({kind:'success',value}),error:(code,message)=>resolve({kind:'error',code,message}),notImplemented:()=>resolve({kind:'unknown'})}));
  assert.equal((await invoke('install')).kind,'success');assert.equal((await invoke('start',{mode:'normal',env:new Map()})).kind,'success');
- native.state.phase='running';const realNow=Date.now,now=realNow();
+ native.state.phase='running';native.state.baseUrl='http://127.0.0.1:3080';native.state.token='fixture-linux-control';const realNow=Date.now,now=realNow();
  try{
   Date.now=()=>now;c.controller.collect();
   await fs.writeFile(packagePath,JSON.stringify({name:'web',other:123,dependencies:{},dsh:{profile:{bundles:['not-booted']}}}));await fs.writeFile(patchPath,'notBooted: true\n');
@@ -1743,15 +1827,15 @@ test('public normal healthy boot restores its launch profile through RuntimePlug
 
 test('active native cannot restore or import during pending restore',async()=>{
  const c=await controllerCase('lkg-admission');await c.controller.install(false);await c.controller.start(null,false,'safe',true);
- native.state.phase='running';await assert.rejects(c.controller.restoreLastKnownGood(),{code:'ohos_lkg_engine_active'});
+ native.state.phase='running';native.state.baseUrl='http://127.0.0.1:3080';native.state.token='fixture-linux-control';await assert.rejects(c.controller.restoreLastKnownGood(),{code:'ohos_lkg_engine_active'});
  native.state.phase='stopping';await assert.rejects(c.controller.lastKnownGood(),{code:'ohos_lkg_engine_active'});
  c.controller.pending='restore';await assert.rejects(nativeHostModule.loadNativeHost(),{code:'ohos_lkg_pending'});await assert.rejects(c.controller.start(null,false,'normal',true),{code:'start_busy'});await assert.rejects(c.controller.install(false),{code:'install_busy'});await assert.rejects(c.controller.reset([],false),{code:'ohos_lkg_pending'});c.controller.pending=null;
- c.controller.stop();native.state.phase='exited';c.controller.collect();await c.controller.recovery.pending;
+ await c.controller.stop();native.state.phase='exited';c.controller.collect();await c.controller.recovery.pending;
 });
 for(const mode of ['safe','normal']) test(''+mode+' mode with first missing profile never pins after two minutes',async()=>{
-  const c=await controllerCase('lkg-no-pin-'+mode);await c.controller.install(false);await c.controller.start(null,false,mode,true);native.state.phase='running';const realNow=Date.now,now=realNow();
+  const c=await controllerCase('lkg-no-pin-'+mode);await c.controller.install(false);await c.controller.start(null,false,mode,true);native.state.phase='running';native.state.baseUrl='http://127.0.0.1:3080';native.state.token='fixture-linux-control';const realNow=Date.now,now=realNow();
   try{Date.now=()=>now;c.controller.collect();Date.now=()=>now+120001;c.controller.collect();await c.controller.lkgPin;}finally{Date.now=realNow;}
-  assert.equal(await fs.stat(path.join(c.dir,'dsh-recovery/lkg.json')).then(()=>true,()=>false),false);c.controller.stop();native.state.phase='exited';c.controller.collect();await c.controller.recovery.pending;
+  assert.equal(await fs.stat(path.join(c.dir,'dsh-recovery/lkg.json')).then(()=>true,()=>false),false);await c.controller.stop();native.state.phase='exited';c.controller.collect();await c.controller.recovery.pending;
 });
 
 
@@ -1762,11 +1846,11 @@ test('public safe-running preview is read-only; pending intent blocks and stoppe
  const home=path.join(c.dir,'runtime/rootfs/root/.dsh/profiles/web');await fs.mkdir(home,{recursive:true});
  const packagePath=path.join(home,'package.json'),patchPath=path.join(home,'cordis.patch.yml');
  await fs.writeFile(packagePath,JSON.stringify({name:'web',other:123,dependencies:{},dsh:{profile:{bundles:['good']}}}));await fs.writeFile(patchPath,'started: true\n');
- await c.controller.install(false);await c.controller.start(null,false,'normal',true);native.state.phase='running';
+ await c.controller.install(false);await c.controller.start(null,false,'normal',true);native.state.phase='running';native.state.baseUrl='http://127.0.0.1:3080';native.state.token='fixture-linux-control';
  const realNow=Date.now,now=realNow();try{Date.now=()=>now;c.controller.collect();Date.now=()=>now+120000;c.controller.collect();await c.controller.lkgPin;}finally{Date.now=realNow;}
- c.controller.stop();native.state.phase='exited';native.state.exitCode=0;c.controller.collect();await c.controller.recovery.pending;
+ await c.controller.stop();native.state.phase='exited';native.state.exitCode=0;c.controller.collect();await c.controller.recovery.pending;
  await fs.writeFile(packagePath,JSON.stringify({name:'web',other:456,dependencies:{},dsh:{profile:{bundles:['broken']}}}));await fs.writeFile(patchPath,'later: true\n');
- c=await reopenCase(c);await c.controller.start(null,false,'safe',true);native.state.phase='running';
+ c=await reopenCase(c);await c.controller.start(null,false,'safe',true);native.state.phase='running';native.state.baseUrl='http://127.0.0.1:3080';native.state.token='fixture-linux-control';
  const plugin=new RuntimePlugin();plugin.onAttachedToEngine({getApplicationContext:()=>c.context,getBinaryMessenger:()=>({setMessageHandler(){}})});
  const invoke=method=>new Promise(resolve=>plugin.onMethodCall(new MethodCall(method,new Map()),{success:value=>resolve({kind:'success',value}),error:(code,message)=>resolve({kind:'error',code,message}),notImplemented:()=>resolve({kind:'unknown'})}));
  const before=[await fs.readFile(packagePath,'utf8'),await fs.readFile(patchPath,'utf8')];
@@ -1778,7 +1862,7 @@ test('public safe-running preview is read-only; pending intent blocks and stoppe
  assert.equal((await invoke('lastKnownGood')).code,'ohos_lkg_pending');assert.equal(initCalls,0);assert.equal(await fs.readFile(intent,'utf8'),'{}');
  assert.deepEqual([await fs.readFile(packagePath,'utf8'),await fs.readFile(patchPath,'utf8')],before);await fs.unlink(intent);
  c.controller.lastGood.pending=true;assert.equal((await invoke('lastKnownGood')).code,'ohos_lkg_pending');c.controller.lastGood.pending=false;
- c.controller.stop();native.state.phase='exited';native.state.exitCode=0;c.controller.collect();await c.controller.recovery.pending;
+ await c.controller.stop();native.state.phase='exited';native.state.exitCode=0;c.controller.collect();await c.controller.recovery.pending;
  await fs.writeFile(packagePath,JSON.stringify({name:'web',other:789,dependencies:{},dsh:{profile:{bundles:['changed-after-preview']}}}));
  const restored=await invoke('restoreLastKnownGood');assert.equal(restored.kind,'success',JSON.stringify(restored));assert.deepEqual(restored.value.get('disable'),['changed-after-preview']);
  const actual=JSON.parse(await fs.readFile(packagePath,'utf8'));assert.deepEqual(actual.dsh.profile.bundles,['good']);assert.equal(actual.other,789);assert.equal(await fs.readFile(patchPath,'utf8'),'started: true\n');
@@ -1825,4 +1909,308 @@ test('no restore starts once a reset has been committed', async () => {
   await c.controller.install(false);
   await assert.rejects(c.controller.reset([], false), { code: 'ohos_reset_committed' });
   await assert.rejects(c.controller.restoreLastKnownGood(), { code: 'ohos_restart_required' });
+});
+
+// 813: observe one real, already-parsed record without replacing the comparison
+// algorithm or a global built-in. Node can read this private field after type
+// erasure; the probe only delegates the original data value and is restored.
+const manifestCurrentObservations813 = [];
+function manifestReadProbe813(controller) {
+  const manifest = controller.manifest;
+  assert(manifest !== null && manifest.files.length > 0);
+  const file = manifest.files[0];
+  const descriptor = Object.getOwnPropertyDescriptor(file, 'path');
+  assert(descriptor && typeof descriptor.value === 'string' && descriptor.configurable);
+  let reads = 0;
+  Object.defineProperty(file, 'path', {
+    configurable: descriptor.configurable, enumerable: descriptor.enumerable,
+    get() { reads++; return descriptor.value; }
+  });
+  return { count: () => reads, restore: () => Object.defineProperty(file, 'path', descriptor) };
+}
+function snapshotPhases813(controller, count = 20) {
+  return Array.from({ length: count }, () => controller.snapshot().get('phase'));
+}
+after(async () => {
+  if (process.env.OHOS_MANIFEST_CURRENT_WIRE) {
+    await fs.writeFile(process.env.OHOS_MANIFEST_CURRENT_WIRE,
+      JSON.stringify({ boundary: 'Actual Controller/installer methods; explicit per-record read probe and SDK fixtures, not ArkTS/HBN',
+        observations: manifestCurrentObservations813 }, null, 2) + '\n');
+  }
+});
+
+test('813 current cache: repeated real snapshots reuse a matched object pair', async () => {
+  const c = await controllerCase('current-cache-hot');
+  await c.controller.install(false);
+  assert.equal(c.controller.snapshot().get('phase'), 'installed');
+  const probe = manifestReadProbe813(c.controller);
+  try {
+    const before = probe.count();
+    const phases = snapshotPhases813(c.controller);
+    const reads = probe.count() - before;
+    manifestCurrentObservations813.push({ name: 'matched-hot', queries: phases.length, reads, phases,
+      nativeStarts: native.starts.length });
+    assert(phases.every(phase => phase === 'installed'));
+    assert.equal(native.starts.length, 0);
+    assert.equal(reads, 0, 'an unchanged parsed manifest pair must not be scanned for every snapshot');
+  } finally { probe.restore(); }
+});
+
+test('813 current cache: actual start rereads same-version changed hashes and later repair', async () => {
+  const c = await controllerCase('current-cache-reread');
+  await c.controller.install(false);
+  const record = c.dir + '/dsh-runtime/installed.json';
+  const original = await fs.readFile(record, 'utf8');
+  const installedBefore = c.controller.installed;
+  const wrong = JSON.parse(original);
+  const hash = wrong.files[0].sha256;
+  wrong.files[0].sha256 = (hash[0] === '0' ? '1' : '0') + hash.slice(1);
+  const probe = manifestReadProbe813(c.controller);
+  try {
+    await fs.writeFile(record, JSON.stringify(wrong));
+    const beforeMismatch = probe.count();
+    await assert.rejects(c.controller.start(null, false, null, false), { code: 'ohos_install_required' });
+    const mismatchReads = probe.count() - beforeMismatch;
+    const installedMismatch = c.controller.installed;
+    assert.notEqual(installedMismatch, installedBefore, 'the actual installer returns a fresh parsed record');
+    assert.equal(installedMismatch.runtimeVersion, installedBefore.runtimeVersion);
+    assert.equal(native.starts.length, 0);
+    assert(mismatchReads > 0, 'the changed object pair must be compared before refusing start');
+    const beforeHot = probe.count();
+    const phases = snapshotPhases813(c.controller);
+    const negativeHotReads = probe.count() - beforeHot;
+    assert(phases.every(phase => phase === 'error'));
+    assert.equal(await c.controller.publishDiagnostics('# must remain unavailable'), null);
+    await fs.writeFile(record, original);
+    const beforeRepair = probe.count();
+    await c.controller.start(null, false, null, false);
+    const repairReads = probe.count() - beforeRepair;
+    assert.notEqual(c.controller.installed, installedMismatch);
+    assert.equal(native.starts.length, 1, 'restored data may start through the original native boundary');
+    assert(repairReads > 0, 'repair must compare the newly parsed record rather than retain false');
+    manifestCurrentObservations813.push({ name: 'same-version-reread', mismatchCode: 'ohos_install_required',
+      sameVersion: true, mismatchReads, negativeHotQueries: phases.length, negativeHotReads,
+      repairReads, nativeStarts: native.starts.length });
+    assert.equal(negativeHotReads, 0, 'an unchanged mismatching object pair must also reuse its result');
+  } finally { probe.restore(); c.controller.stop(); }
+});
+
+test('813 current cache: actual missing record and install journal override a former match', async () => {
+  const c = await controllerCase('current-cache-null');
+  await c.controller.install(false);
+  assert.equal(c.controller.snapshot().get('phase'), 'installed');
+  const record = c.dir + '/dsh-runtime/installed.json';
+  const journal = c.dir + '/dsh-runtime/installing.json';
+  const original = await fs.readFile(record, 'utf8');
+  await fs.unlink(record);
+  await assert.rejects(c.controller.start(null, false, null, false), { code: 'ohos_install_required' });
+  assert.equal(c.controller.installed, null);
+  assert.equal(await c.controller.publishDiagnostics('# missing record'), null);
+  assert.equal(native.starts.length, 0);
+  await fs.writeFile(record, original);
+  const parsed = JSON.parse(original);
+  await fs.writeFile(journal, JSON.stringify({ schema: 1, runtimeVersion: parsed.runtimeVersion,
+    ownedPaths: parsed.files.map(file => file.path), stagingHashes: [...new Set(parsed.files.map(file => file.sha256))] }));
+  await assert.rejects(c.controller.start(null, false, null, false), { code: 'ohos_install_required' });
+  assert.equal(c.controller.installed, null);
+  assert.equal(await c.controller.publishDiagnostics('# incomplete install'), null);
+  assert.equal(native.starts.length, 0);
+  await fs.unlink(journal);
+  try {
+    await c.controller.start(null, false, null, false);
+    assert.equal(native.starts.length, 1);
+    manifestCurrentObservations813.push({ name: 'real-null-boundaries', missingRecordCode: 'ohos_install_required',
+      journalCode: 'ohos_install_required', diagnosticsDuringNull: null, repairedNativeStarts: native.starts.length });
+  } finally { c.controller.stop(); }
+});
+
+test('813 current cache: failed real install clears the old match and the same Controller retries', async () => {
+  const c = await controllerCase('current-cache-install-retry');
+  await c.controller.install(false);
+  assert.equal(c.controller.snapshot().get('phase'), 'installed');
+  const installedBefore = c.controller.installed;
+  const record = c.dir + '/dsh-runtime/installed.json';
+  const journal = c.dir + '/dsh-runtime/installing.json';
+  const open = fileIo.open;
+  const failure = new Error('813 injected installed record open failure');
+  let injected = false;
+  fileIo.open = async (...args) => {
+    if (!injected && String(args[0]) === record + '.tmp') { injected = true; throw failure; }
+    return open(...args);
+  };
+  try {
+    await assert.rejects(c.controller.install(false), error => error === failure);
+  } finally { fileIo.open = open; }
+  assert.equal(injected, true);
+  assert.equal(c.controller.installed, null);
+  assert.equal(c.controller.snapshot().get('phase'), 'error');
+  assert.equal(await c.controller.publishDiagnostics('# incomplete installation'), null);
+  await fs.access(record); await fs.access(journal);
+  await c.controller.install(false);
+  assert.notEqual(c.controller.installed, installedBefore);
+  assert.equal(c.controller.snapshot().get('phase'), 'installed');
+  assert.equal(c.controller.snapshot().get('error'), null);
+  await assert.rejects(fs.access(journal), { code: 'ENOENT' });
+  const published = await c.controller.publishDiagnostics('# retry completed');
+  assert.equal(await fs.readFile(published.get('path'), 'utf8'), '# retry completed');
+  assert.equal(native.starts.length, 0);
+  manifestCurrentObservations813.push({ name: 'actual-install-retry', injected, originalErrorPreserved: true,
+    diagnosticsDuringNull: null, repairedPhase: c.controller.snapshot().get('phase'), nativeStarts: native.starts.length });
+});
+
+
+// 942: ordinary optional diagnostics through the real RuntimePlugin. The clock
+// fixture advances only the existing interval scheduler, not Date or product code.
+const idleDiagnosticsObservations942 = [];
+after(async () => {
+  if (process.env.OHOS_IDLE_DIAGNOSTICS_WIRE) {
+    await fs.writeFile(process.env.OHOS_IDLE_DIAGNOSTICS_WIRE, JSON.stringify({
+      boundary: 'Actual Controller/Plugin bodies and existing SDK/Native fixtures; MockTimers dispatches the original 100 ms interval; no device cadence/CPU claim',
+      observations: idleDiagnosticsObservations942,
+    }, null, 2) + '\n');
+  }
+});
+const idleCounterKeys942 = ['pollTicks', 'collectCalls', 'snapshotCalls', 'emitStatusCalls',
+  'lifecycleRefreshRequests', 'manifestPairChecks'];
+function idlePlain942(value) {
+  if (value instanceof Map) return Object.fromEntries([...value].map(([key, item]) => [key, idlePlain942(item)]));
+  return value;
+}
+function idleValue942(reply) {
+  assert.equal(reply.kind, 'success', 'the actual RuntimePlugin must implement the diagnostics method');
+  assert(reply.value instanceof Map);
+  assert.deepEqual([...reply.value.keys()].sort(), ['schema', 'enabled', 'observedAtMs', 'window'].sort());
+  const value = idlePlain942(reply.value);
+  assert.equal(value.schema, 1); assert.equal(typeof value.enabled, 'boolean');
+  assert(Number.isInteger(value.observedAtMs));
+  if (value.window !== null) {
+    assert.deepEqual(Object.keys(value.window).sort(), ['id', 'startedAtMs', 'stoppedAtMs', 'counters'].sort());
+    assert.equal(typeof value.window.id, 'string'); assert(value.window.id.length > 0);
+    assert(Number.isInteger(value.window.startedAtMs));
+    assert(value.window.stoppedAtMs === null || Number.isInteger(value.window.stoppedAtMs));
+    assert.deepEqual(Object.keys(value.window.counters).sort(), [...idleCounterKeys942].sort());
+    for (const number of Object.values(value.window.counters)) assert(Number.isSafeInteger(number) && number >= 0);
+  }
+  return value;
+}
+function idleChannel942(context) {
+  const binding = { getApplicationContext: () => context, getBinaryMessenger: () => ({ setMessageHandler() {} }) };
+  const plugin = new RuntimePlugin(); plugin.onAttachedToEngine(binding);
+  return {
+    invoke: (method, args = {}) => new Promise(resolve => plugin.onMethodCall(
+      new MethodCall(method, new Map(Object.entries(args))), {
+        success: value => resolve({ kind: 'success', value }),
+        error: (code, message) => resolve({ kind: 'error', code, message }),
+        notImplemented: () => resolve({ kind: 'notImplemented' }),
+      })),
+    close: () => plugin.onDetachedFromEngine(binding),
+  };
+}
+function idleZero942() { return Object.fromEntries(idleCounterKeys942.map(key => [key, 0])); }
+
+test('942 idle diagnostics: cold channel keeps optional window transitions independent of initialization', async () => {
+  native.reset();
+  const c = await makeCase('idle-diagnostics-cold');
+  const cacheDir = path.join(c.dir, 'cache'); await fs.mkdir(cacheDir);
+  const context = { filesDir: c.dir, cacheDir, resourceManager: c.resources,
+    bundleCodeDir: '/private/hap', applicationInfo: { nativeLibraryPath: 'libs/arm64/' } };
+  const controller = RuntimeController.get(context); controllers.push(controller);
+  const initialize = controller.initialize;
+  let initializeCalls = 0;
+  controller.initialize = function (...args) { initializeCalls++; return Reflect.apply(initialize, this, args); };
+  const channel = idleChannel942(context);
+  const before = { files: (await fs.readdir(c.dir, { recursive: true })).sort(), reads: c.resources.reads.length,
+    nativeLoads: nativeModuleLoads, nativeStarts: native.starts.length };
+  try {
+    const reply = await channel.invoke('getIdleDiagnostics');
+    idleDiagnosticsObservations942.push({ name: 'cold-entry', reply: idlePlain942(reply.value) ?? reply,
+      initializeCalls, resourceReads: c.resources.reads.length - before.reads });
+    const initial = idleValue942(reply);
+    assert.equal(initial.enabled, false); assert.equal(initial.window, null);
+    const stillOff = idleValue942(await channel.invoke('setIdleDiagnosticsEnabled', { enabled: false }));
+    assert.equal(stillOff.enabled, false); assert.equal(stillOff.window, null);
+    const opened = idleValue942(await channel.invoke('setIdleDiagnosticsEnabled', { enabled: true }));
+    assert.equal(opened.enabled, true); assert.equal(opened.window.stoppedAtMs, null);
+    assert.deepEqual(opened.window.counters, idleZero942());
+    const repeated = idleValue942(await channel.invoke('setIdleDiagnosticsEnabled', { enabled: true }));
+    assert.deepEqual(repeated.window, opened.window);
+    const read = idleValue942(await channel.invoke('getIdleDiagnostics'));
+    assert.deepEqual(read.window, opened.window);
+    const stopped = idleValue942(await channel.invoke('setIdleDiagnosticsEnabled', { enabled: false }));
+    assert.equal(stopped.enabled, false); assert(Number.isInteger(stopped.window.stoppedAtMs));
+    assert.equal(stopped.window.id, opened.window.id);
+    assert.equal(stopped.window.startedAtMs, opened.window.startedAtMs);
+    assert.deepEqual(stopped.window.counters, idleZero942());
+    const repeatedStop = idleValue942(await channel.invoke('setIdleDiagnosticsEnabled', { enabled: false }));
+    assert.deepEqual(repeatedStop.window, stopped.window);
+    const next = idleValue942(await channel.invoke('setIdleDiagnosticsEnabled', { enabled: true }));
+    assert.equal(next.enabled, true); assert.notEqual(next.window.id, opened.window.id);
+    assert.equal(next.window.stoppedAtMs, null); assert.deepEqual(next.window.counters, idleZero942());
+    const invalid = await channel.invoke('setIdleDiagnosticsEnabled', { enabled: 'true' });
+    assert.equal(invalid.kind, 'error'); assert.equal(invalid.code, 'ohos_idle_diagnostics_arguments');
+    assert.deepEqual(idleValue942(await channel.invoke('getIdleDiagnostics')).window, next.window);
+    await channel.invoke('setIdleDiagnosticsEnabled', { enabled: false });
+    assert.equal(initializeCalls, 0); assert.equal(controller.initialized, null);
+    assert.equal(controller.timer, null);
+    assert.equal(c.resources.reads.length, before.reads); assert.equal(c.resources.opened.size, 0);
+    assert.equal(nativeModuleLoads, before.nativeLoads); assert.equal(native.starts.length, before.nativeStarts);
+    assert.deepEqual((await fs.readdir(c.dir, { recursive: true })).sort(), before.files);
+    idleDiagnosticsObservations942.push({ name: 'cold-windows', initial, opened, repeated, stopped, repeatedStop, next,
+      invalidCode: invalid.code, initializeCalls, resourceReads: 0, nativeLoads: 0, nativeStarts: 0, timer: controller.timer });
+  } finally { controller.initialize = initialize; channel.close(); }
+});
+
+test('942 idle diagnostics: existing poll and collect paths count calls while enabled and freeze while disabled', async t => {
+  t.mock.timers.enable({ apis: ['setInterval'] });
+  const c = await controllerCase('idle-diagnostics-counts');
+  await c.controller.install(false);
+  const channel = idleChannel942(c.context);
+  const oracle = { collectCalls: 0, snapshotCalls: 0, emitStatusCalls: 0, lifecycleRefreshRequests: 0 };
+  const restore = [];
+  for (const [object, key, count] of [[c.controller, 'collect', 'collectCalls'],
+    [c.controller, 'snapshot', 'snapshotCalls'], [c.controller, 'emitStatus', 'emitStatusCalls'],
+    [c.controller.lifecycle, 'refresh', 'lifecycleRefreshRequests']]) {
+    const original = object[key];
+    object[key] = function (...args) { oracle[count]++; return Reflect.apply(original, this, args); };
+    restore.push(() => { object[key] = original; });
+  }
+  const probe = manifestReadProbe813(c.controller);
+  let accepted = false;
+  try {
+    const reply = await channel.invoke('setIdleDiagnosticsEnabled', { enabled: true });
+    idleDiagnosticsObservations942.push({ name: 'count-entry', reply: idlePlain942(reply.value) ?? reply });
+    const opened = idleValue942(reply); accepted = true;
+    assert.deepEqual(opened.window.counters, idleZero942());
+    await c.controller.start(null, false, null, false);
+    assert.equal(native.starts.length, 1); assert.notEqual(c.controller.timer, null);
+    c.controller.snapshot();
+    const beforeTicks = { ...oracle };
+    t.mock.timers.tick(1000);
+    await Promise.resolve(); await new Promise(setImmediate);
+    assert.equal(oracle.collectCalls - beforeTicks.collectCalls, 10, 'ten deliveries of the original interval callback');
+    const observed = idleValue942(await channel.invoke('getIdleDiagnostics'));
+    const expected = { pollTicks: 10, ...oracle, manifestPairChecks: probe.count() };
+    assert.equal(expected.manifestPairChecks, 1, 'normal start rereads a new parsed installed record once');
+    assert.equal(expected.lifecycleRefreshRequests, 1, 'one request at the original ten-collect boundary');
+    assert.deepEqual(observed.window.counters, expected);
+    const reread = idleValue942(await channel.invoke('getIdleDiagnostics'));
+    assert.deepEqual(reread.window, observed.window, 'diagnostic reads must not collect or take ordinary snapshots');
+    const disabled = idleValue942(await channel.invoke('setIdleDiagnosticsEnabled', { enabled: false }));
+    assert.equal(disabled.enabled, false); assert.deepEqual(disabled.window.counters, expected);
+    c.controller.collect(); c.controller.snapshot(); c.controller.emitStatus(); c.controller.lifecycle.refresh();
+    t.mock.timers.tick(100);
+    await Promise.resolve(); await new Promise(setImmediate);
+    const frozen = idleValue942(await channel.invoke('getIdleDiagnostics'));
+    assert.deepEqual(frozen.window, disabled.window);
+    assert(oracle.collectCalls > expected.collectCalls && oracle.snapshotCalls > expected.snapshotCalls);
+    idleDiagnosticsObservations942.push({ name: 'actual-counts', opened, observed, expected, disabled, frozen,
+      callbackDriver: { api: 'node:test MockTimers(setInterval)', firstAdvanceMs: 1000, firstCallbackCount: 10,
+        disabledAdvanceMs: 100, DateMocked: false }, oracleAfterDisabled: { ...oracle } });
+  } finally {
+    if (accepted) await channel.invoke('setIdleDiagnosticsEnabled', { enabled: false });
+    probe.restore();
+    await c.controller.stop(); native.state.phase = 'idle'; c.controller.collect();
+    for (const undo of restore) undo();
+    channel.close(); t.mock.timers.reset();
+  }
 });

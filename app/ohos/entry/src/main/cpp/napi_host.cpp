@@ -3,6 +3,7 @@
 // rename header here. The runner inside libnode crosses only a C ABI.
 #include "host_core.h"
 #include "file_access.h"
+#include "workspace_grants.h"
 #include <napi/native_api.h>
 #include <hilog/log.h>
 #include <dlfcn.h>
@@ -60,6 +61,7 @@ dsh::HostOptions Options(napi_env env, napi_value value) {
   options.dsh_home = String(env, Property(env, value, "dshHome"));
   options.cache_dir = String(env, Property(env, value, "cacheDir"));
   options.native_library_dir = String(env, Property(env, value, "nativeLibraryDir"));
+  options.linux_directory = String(env, Property(env, value, "linuxDirectory"));
   napi_value roots = Property(env, value, "workspaceRoots");
   uint32_t count;
   Check(napi_get_array_length(env, roots, &count));
@@ -161,6 +163,36 @@ double SafeNumber(napi_env env, napi_value value) {
     throw dsh::HostError("ERR_OHOS_HOST_ARGUMENT", "Lifecycle values must be safe nonnegative integers");
   return number;
 }
+napi_value WorkspaceStatus(napi_env env, const dsh::WorkspaceGrantStatus& status) {
+  napi_value result, value; Check(napi_create_object(env, &result));
+  Check(napi_get_boolean(env, status.active, &value)); Put(env,result,"active",value);
+  Check(napi_get_boolean(env, status.drained, &value)); Put(env,result,"drained",value);
+  Check(napi_get_boolean(env, status.writable, &value)); Put(env,result,"writable",value);
+  Check(napi_create_double(env, status.generation, &value)); Put(env,result,"generation",value);
+  Check(napi_create_double(env, status.leases, &value)); Put(env,result,"leases",value);
+  return result;
+}
+napi_value WorkspaceCall(napi_env env, napi_callback_info info) {
+  try {
+    size_t count=5; napi_value args[5]; Check(napi_get_cb_info(env,info,&count,args,nullptr,nullptr));
+    if(count<3) throw dsh::HostError("ERR_OHOS_HOST_ARGUMENT","Workspace operation, identity and generation required");
+    const auto operation=String(env,args[0]), id=String(env,args[1]);
+    const auto generation=static_cast<uint64_t>(SafeNumber(env,args[2]));
+    auto& grants=dsh::WorkspaceGrantOwner();
+    if(operation=="publish") {
+      if(count!=5) throw dsh::HostError("ERR_OHOS_HOST_ARGUMENT","Borrowed directory descriptor and mode required");
+      int32_t fd; bool writable; Check(napi_get_value_int32(env,args[3],&fd));Check(napi_get_value_bool(env,args[4],&writable));
+      grants.Publish(id,generation,fd,writable);
+      try { return WorkspaceStatus(env,grants.Status(id,generation)); }
+      catch (...) { grants.Retire(id,generation); throw; }
+    } else if(operation=="retire") return WorkspaceStatus(env,grants.Retire(id,generation));
+    else if(operation!="status") throw dsh::HostError("ERR_OHOS_HOST_ARGUMENT","Unknown workspace operation");
+    return WorkspaceStatus(env,grants.Status(id,generation));
+  } catch(const dsh::GrantError& error) { napi_throw_error(env,error.code.c_str(),"Workspace grant is unavailable");return nullptr;
+  } catch(const std::system_error&) { napi_throw_error(env,"ERR_WORKSPACE_IO","Workspace descriptor operation failed");return nullptr;
+  } catch(const std::exception& error) {return Throw(env,error);}
+}
+
 napi_value LifecycleUpdate(napi_env env, napi_callback_info info) {
   try {
     size_t count=4; napi_value args[4]; Check(napi_get_cb_info(env,info,&count,args,nullptr,nullptr));
@@ -258,10 +290,11 @@ napi_value Initialize(napi_env env, napi_value exports) {
     {"getState", nullptr, GetState, nullptr, nullptr, nullptr, napi_default, nullptr},
     {"drainEvents", nullptr, Drain, nullptr, nullptr, nullptr, napi_default, nullptr},
     {"openUserFile", nullptr, OpenUserFile, nullptr, nullptr, nullptr, napi_default, nullptr},
+    {"workspaceGrant", nullptr, WorkspaceCall, nullptr, nullptr, nullptr, napi_default, nullptr},
     {"lifecycleUpdate", nullptr, LifecycleUpdate, nullptr, nullptr, nullptr, napi_default, nullptr},
     {"lifecycleSnapshot", nullptr, LifecycleSnapshot, nullptr, nullptr, nullptr, napi_default, nullptr},
   };
-  if (napi_define_properties(env, exports, 11, properties) != napi_ok) return nullptr;
+  if (napi_define_properties(env, exports, 12, properties) != napi_ok) return nullptr;
   return exports;
 }
 

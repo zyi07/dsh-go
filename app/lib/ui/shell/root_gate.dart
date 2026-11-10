@@ -16,6 +16,7 @@ import '../../state/android_features.dart';
 import '../../state/engine_control.dart';
 import '../../state/hosts_state.dart';
 import '../../state/notify_state.dart';
+import '../../state/ohos_linux_state.dart';
 import '../../state/onboarding_state.dart';
 import '../../state/settings_state.dart';
 import '../../ui_config/ui_skill.dart';
@@ -319,6 +320,8 @@ class _RootGateState extends ConsumerState<RootGate> {
     ref.listen(localRuntimeProvider.select((s) => s.status.phase), (_, next) {
       if (next == RuntimePhase.running) {
         _publishDiagnostics();
+        // The engine forgets the Linux switch and proxy on every start.
+        if (ref.read(operatingSystemProvider) == 'ohos') unawaited(ref.read(ohosLinuxProvider.notifier).restore());
       } else {
         _publishedDiagnostics = false;
       }

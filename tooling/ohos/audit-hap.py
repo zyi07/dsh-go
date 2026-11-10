@@ -4,6 +4,7 @@
 import argparse
 import hashlib
 import importlib.util
+import io
 import json
 from pathlib import Path
 import shutil
@@ -81,11 +82,20 @@ def main():
     read = zipped.read
     report['entries'] = len(entries)
 
+    # Python is opt-in through a complete native input pair, never arbitrary HAP entries.
+    python_pair = {'libdsh_python.so', 'libpython3.14.so'}
+    supplied = {name for name in python_pair if (args.native / name).is_file()}
+    optional = {name for name in ('libdsh_linux.so', 'libdsh_workspace_grants.so')
+                if (args.native / name).is_file()}
+    expected_libs = LIBS | (python_pair if supplied else set()) | optional
+    if supplied and supplied != python_pair:
+        problems.append('Incomplete native Python input pair')
     # Every library, as packaged, against what went in.
     libs = {name[len(LIB_DIR):] for name in entries if name.startswith(LIB_DIR)}
-    if libs != LIBS:
-        problems.append(f'libs: missing {sorted(LIBS - libs)}, extra {sorted(libs - LIBS)}')
+    if libs != expected_libs:
+        problems.append(f'libs: missing {sorted(expected_libs - libs)}, extra {sorted(libs - expected_libs)}')
     inputs = {name: args.native / name for name in ('libnode.so', 'libdsh_flock.so', 'libdsh_require_builtin.so')}
+    inputs.update({name: args.native / name for name in supplied | optional})
     inputs['libapp.so'] = args.aot / 'arm64-v8a/app.so'
     table = {}
     with args.hap.open('rb') as raw:
@@ -202,6 +212,23 @@ def main():
     spec.loader.exec_module(runtime_audit)
     report['runtime'], runtime_problems = runtime_audit.audit_runtime(zipped, args.runtime)
     problems += runtime_problems
+    spec = importlib.util.spec_from_file_location('linux_assets', ROOT / 'runtime/ohos/package/linux-assets.py')
+    linux_assets = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(linux_assets)
+    with zipfile.ZipFile(io.BytesIO(read('resources/rawfile/dsh-runtime/runtime.zip'))) as payload:
+        has_python = 'files/runtime/ohos/python/assets/manifest.json' in payload.namelist()
+        if has_python != bool(supplied):
+            problems.append('Python stdlib payload and native library pair must be enabled together')
+        try:
+            report['linuxAssets'] = linux_assets.verify_runtime_archive(payload, libs)
+        except (ValueError, OSError, zipfile.BadZipFile) as error:
+            problems.append(f'Packaged Linux assets: {error}')
+    if supplied:
+        python_info = report['nativeSetAudit']['libraries'].get('libpython3.14.so', {})
+        if any(name != 'libz.so' and name.startswith(('libssl.', 'libcrypto.', 'libffi.', 'libsqlite3.', 'libz.'))
+               for name in python_info.get('needed', [])):
+            problems.append('Python extension dependencies must be static in libpython3.14.so')
+
     rawfile = [info for info in zipped.infolist() if info.filename.startswith(RAWFILE)]
     deflated = [info.filename for info in rawfile if info.compress_type != zipfile.ZIP_STORED]
     report['rawfile'] = {'entries': len(rawfile), 'bytes': sum(info.file_size for info in rawfile), 'deflated': len(deflated)}

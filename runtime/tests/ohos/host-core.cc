@@ -69,11 +69,12 @@ int main(int argc, char** argv) {
   options.guest_root = (base / "中文 guest\"root/runtime/rootfs").string();
   options.dsh_home = options.guest_root + "/root/.dsh"; options.cache_dir = (base / "cache").string();
   options.native_library_dir = (base / "libs").string();
+  options.linux_directory = (base / "linux-tools").string();
   options.workspace_roots = {options.guest_root + "/root/workspace"};
   options.env = {{"DEEPSEEK_API_KEY", "fixture_SECRET"}};
   if (scenario == "multiline-secret") options.env["TEST_PASSWORD"] = "fixture_FIRST\r\nfixture_SECOND";
   for (const auto& path : {options.runtime_root, options.dsh_home, options.cache_dir,
-                           options.native_library_dir, options.workspace_roots[0], options.guest_root + "/root/.agents"}) {
+                           options.native_library_dir, options.linux_directory, options.workspace_roots[0], options.guest_root + "/root/.agents"}) {
     std::filesystem::create_directories(path);
   }
   for (const char* name : {"libdsh_flock.so", "libdsh_require_builtin.so"})

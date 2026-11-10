@@ -226,6 +226,13 @@ void Host::Start(HostOptions options, StartNode start_node, StopNode stop_node) 
   options.dsh_home = Directory(options.dsh_home);
   options.cache_dir = Directory(options.cache_dir);
   options.native_library_dir = NativeDirectory(options.native_library_dir);
+  Require(Directory(options.linux_directory, "ERR_OHOS_LINUX_DIRECTORY") == options.linux_directory,
+          "ERR_OHOS_LINUX_DIRECTORY", "Linux data must not be redirected by symlinks");
+  for (const auto& root : {options.runtime_root, options.guest_root}) {
+    Require(options.linux_directory != root && options.linux_directory.rfind(root + "/", 0) != 0 &&
+                root.rfind(options.linux_directory + "/", 0) != 0,
+            "ERR_OHOS_LINUX_DIRECTORY", "Linux data must be separate from the runtime and host workspace");
+  }
   Require(options.workspace_roots.size() == 1, "ERR_OHOS_HOST_WORKSPACES", "The single authorized guest workspace is required");
   for (auto& root : options.workspace_roots) root = Directory(root);
   const auto user_home = options.guest_root + "/root";
@@ -318,6 +325,7 @@ void Host::Run(HostOptions options, StartNode start_node) {
       environment.Set("NODE_COMPILE_CACHE", cache);
       environment.Set("NARB_DISABLE_NATIVE_CACHE", "1");
       environment.Set("DSH_GO_OHOS_NATIVE_LIBRARY_DIR", options.native_library_dir);
+      environment.Set("DSH_GO_OHOS_LINUX_DIRECTORY", options.linux_directory);
       environment.Set("DSH_PERMISSION_MODE", mode);
       std::vector<std::string> argv{"dsh-node", "--jitless", "--import",
         File(options.runtime_root, "runtime/ohos/preload.mjs"),

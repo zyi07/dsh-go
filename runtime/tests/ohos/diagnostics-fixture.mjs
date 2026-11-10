@@ -111,6 +111,7 @@ export async function diagnosticsFixture(t, options = {}) {
     // Diagnostics never requests an OS background grant; actual task-owner code is loaded.
     '@ohos.resourceschedule.backgroundTaskManager':{default:{requestSuspendDelay(){throw Error('background grant outside diagnostics scope');},cancelSuspendDelay(){throw Error('background cancel outside diagnostics scope');}}},
     '@ohos.net.connection':{default:{getDefaultNet(){throw Error('network outside diagnostics test scope');}}},
+    '@ohos.net.http':{default:{createHttp(){throw Error('http outside diagnostics test scope');}}},
     '@ohos.util':{default:{TextEncoder:class {encodeInto(value){return new TextEncoder().encode(value);}},
       TextDecoder:{create:(label,options) => ({decodeToString:bytes => new TextDecoder(label,options).decode(bytes)})}}},
     '@ohos.hidebug':{default:{getSystemMemInfo(){operations.push({op:'memory'});if(opt.memoryError)throw Error('memory');return {totalMem:opt.memoryKb ?? 8n*1024n*1024n};}}},

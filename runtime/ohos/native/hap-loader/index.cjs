@@ -4,6 +4,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const libraries = Object.freeze({
   flock: 'libdsh_flock.so',
+  python: 'libdsh_python.so',
+  'workspace-grants': 'libdsh_workspace_grants.so',
   'require-builtin': 'libdsh_require_builtin.so',
 });
 const loaded = new Map();

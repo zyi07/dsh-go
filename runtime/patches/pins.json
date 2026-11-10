@@ -81,6 +81,14 @@
         }
       }
     },
+    "ohos-effect-dispose-completion.diff": {
+      "0.2.2-rc.1": {
+        "node_modules/@deepseek-ai/cordis/lib/index.js": {
+          "after": "b8b87360ebc67df2d0aabea214b8ed30d4bde3767e354ebb1b85fc6c15b45a05",
+          "before": "627409afa06a265f7253200d3bc4648e88805c39fd3768568eb9b9518a31fe8f"
+        }
+      }
+    },
     "ohos-forge-github-unavailable.diff": {
       "0.2.2-rc.1": {
         "node_modules/@deepseek-ai/dsh-experimental-forge-github/lib/index.js": {
@@ -114,6 +122,22 @@
         "node_modules/@deepseek-ai/dsh-plugin-market/lib/index.js": {
           "after": "b1db85d1fe34de0feb5e48401e798eaf668769afafdd605d5bff6fef5788bb5d",
           "before": "28ea59098d0d46f2732f80c70dd361177b4dc79f9b5f7ff95b6d9aa80ddc9697"
+        }
+      }
+    },
+    "ohos-mcp-command-router.diff": {
+      "0.2.2-rc.1": {
+        "node_modules/@deepseek-ai/dsh-mcp-client/lib/index.js": {
+          "after": "c29db61ad3505940daa5a37b2a7b1c71954f965c0106d2f0bba38b2a06d58d63",
+          "before": "73689d6f918f621dd18a74cd01a45f0b33e552193662ebd7703bd657a1d7b449"
+        },
+        "node_modules/@modelcontextprotocol/client/dist/stdio.cjs": {
+          "after": "4addd12b80580f18a024a14ee55d9007da6df937c594a07a590f731d6bef8d1d",
+          "before": "a969d41733f483c4b520bd479d70efb0a12908d42d4287f601e16ece74234b19"
+        },
+        "node_modules/@modelcontextprotocol/client/dist/stdio.mjs": {
+          "after": "b04d2db0feb4a733b68bab98abc15ae85d8ba81bd474fd9e30bd5e04b5ba50ea",
+          "before": "26bba09797abb03929888ce234141ab89e5456a8ff3cdf5fadcb522d42f4ba3e"
         }
       }
     },
@@ -230,6 +254,34 @@
         "node_modules/@deepseek-ai/dsh-workspace-changes/lib/index.js": {
           "after": "0640af53762c8b2ebbdc5c38412fcd75badfe36edef12875d8d87969415f04ed",
           "before": "b73138187c8b251cf1da086fddf959fe3cca46df9c68d3aaca95bad01f3e9a62"
+        }
+      }
+    },
+    "ohos-workspace-edit.diff": {
+      "0.2.2-rc.1": {
+        "node_modules/@deepseek-ai/dsh-fs-local/lib/index.js": {
+          "before": "509e5a9fab8b33473ce7193443321b04244fd8f9e6250549d12fd336ce448bb0",
+          "after": "c9a0e9fd114af53f4cdef087dc9365193a88623a68fa39cb4c854d18f50a9f67"
+        },
+        "node_modules/@deepseek-ai/dsh-fs-sandbox/lib/index.js": {
+          "before": "f4edd14bf48f8d5bfdea10a61c6651ccde99f2d08a79855746ad2a8d89c6fb73",
+          "after": "08cca0535fa5368693e0f5141d92d0704c823dd1f331ddd9299e376ab49f2ac0"
+        }
+      }
+    },
+    "ohos-workspace-grant-paths.diff": {
+      "0.2.2-rc.1": {
+        "node_modules/@deepseek-ai/dsh-workspace/lib/index.js": {
+          "before": "97d891ee0bc2ee8a1867a3c2420cf3ea8787b8000293771244f923de3b362658",
+          "after": "6413e6c3a6d14a5518e3121ab936b599a2a46f40ab603eab39fd383c4067b72a"
+        },
+        "node_modules/@deepseek-ai/dsh-working-directory/lib/index.js": {
+          "before": "ee0876bbfa11c8d52dcdb663810d6a042c65274f1088bca3f6dd7b8446ed8e09",
+          "after": "167c67034bde5de5862e99ddd27a42d6d690fc42d2cc8748ed58cedf06c01b50"
+        },
+        "node_modules/@deepseek-ai/dsh-fs-local/lib/index.js": {
+          "before": "abb3a2fbb7beb840504a28c011bf00652fe048638ea547a47468106052c37b7a",
+          "after": "509e5a9fab8b33473ce7193443321b04244fd8f9e6250549d12fd336ce448bb0"
         }
       }
     },
@@ -2129,17 +2181,18 @@
       "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz-phone-run-end-live-retry.diff"
     ],
     "ohos": [
-      "cordis-effect-dispose-completion.diff",
       "credentials-decimal-refs.diff",
       "fs-create-exclusive.diff",
       "install-log-redaction.diff",
       "ohos-attachment-diagnostic.diff",
       "ohos-attachment-publication.diff",
       "ohos-discovery-response-cleanup.diff",
+      "ohos-effect-dispose-completion.diff",
       "ohos-forge-github-unavailable.diff",
       "ohos-hap-native-libraries.diff",
       "ohos-liveshare-owner-unavailable.diff",
       "ohos-market-git-unavailable.diff",
+      "ohos-mcp-command-router.diff",
       "ohos-mcp-stdio-unavailable.diff",
       "ohos-network-transport.diff",
       "ohos-output-utf8.diff",
@@ -2152,6 +2205,8 @@
       "ohos-provider-stream-body-timeout.diff",
       "ohos-virtual-process.diff",
       "ohos-workspace-changes.diff",
+      "ohos-workspace-edit.diff",
+      "ohos-workspace-grant-paths.diff",
       "piai-google-openai-store.diff",
       "plugin-manager-active-run-guard.diff",
       "plugin-manager-cancel-tree-confirmation.diff",

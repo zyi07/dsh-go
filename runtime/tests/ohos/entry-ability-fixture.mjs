@@ -14,6 +14,7 @@ export const entryAbilityImports = Object.freeze({
   '../runtime/RuntimeController': ['RuntimeController'],
   '../plugins/FilesMediaPlugin': ['default'],
   '../plugins/NativeFilesPlugin': ['default'],
+  '../plugins/AuthorizedWorkspacesPlugin': ['default'],
   '../plugins/NativeMediaPlugin': ['default'],
   '../plugins/NativeVoiceStopControl': ['NativeVoiceStopControl'],
   '../plugins/PerformancePlugin': ['default'],

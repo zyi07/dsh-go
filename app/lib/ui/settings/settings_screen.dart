@@ -57,6 +57,7 @@ import 'background_guide_page.dart';
 import 'diagnostics_page.dart';
 import 'interface_page.dart';
 import 'language_tile.dart';
+import 'linux_environment_page.dart';
 import 'notification_settings.dart';
 import 'performance_page.dart';
 import 'personalization_page.dart';
@@ -201,6 +202,7 @@ class SettingsScreen extends ConsumerWidget {
               spot: SettingsIndex.entry(SettingsPageId.media),
               onTap: () => _push(context, const MediaSettingsPage()),
             ),
+            if (ref.watch(operatingSystemProvider) == 'ohos') const LinuxEnvironmentTile(tint: SettingsHues.abilities),
             SettingsTile(
               icon: AppIcons.plugin,
               tint: SettingsHues.abilities,

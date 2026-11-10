@@ -2,7 +2,10 @@
 import type { HostState, HostEvent, HostOptions, HostLifecycleSnapshot, HostPhoneSnapshot, HostPhoneKey } from 'libdsh_host.so';
 import { RuntimeChannelError } from './RuntimeCore';
 
+export interface WorkspaceGrantStatus { active: boolean; drained: boolean; writable: boolean; leases: number; generation: number; }
+
 export interface NativeHostModule {
+  workspaceGrant(operation: string, id: string, generation: number, fd?: number, writable?: boolean): WorkspaceGrantStatus;
   start(options: HostOptions): void;
   phoneAttach(ownerHash: string, engine: number, owner: number): number;
   phoneSnapshot(): HostPhoneSnapshot;

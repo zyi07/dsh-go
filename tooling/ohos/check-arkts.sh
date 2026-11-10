@@ -369,6 +369,7 @@ if [ "$FULL" = 1 ]; then
   done
   # libdsh_host.so is hvigor's to build; libc++_shared.so is its to add.
   cp "$NATIVE/libnode.so" "$NATIVE/libdsh_flock.so" "$NATIVE/libdsh_require_builtin.so" "$LIBS/"
+  if [ -f "$NATIVE/libdsh_linux.so" ]; then cp "$NATIVE/libdsh_linux.so" "$LIBS/"; fi
   # The transport contains exactly one Stored asset; never expand its members.
   python3 -I - "$RUNTIME" "$RAWFILE" <<'PY_RUNTIME_ARCHIVE'
 import pathlib, sys, zipfile

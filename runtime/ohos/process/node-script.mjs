@@ -68,7 +68,7 @@ function inlineEntry(source, mode, cwd) {
 }
 
 /** Native script entries preserve CJS/ESM main semantics; inline code uses the same guarded Worker. */
-export function createNodeScriptWorker({ args, cwd, roots, workspaceRoots, readOnly = false, env, stdin = '' }) {
+export function createNodeScriptWorker({ args, cwd, roots, workspaceRoots, readOnly = false, env, stdin = '', streamStdin = false }) {
   if (!nodeScriptAvailable()) throw failure('ERR_OHOS_NODE_PRELOAD_REQUIRED', 'Node scripts require the inherited OHOS product preload');
   if (!Array.isArray(args) || args.some(value => typeof value !== 'string' || value.includes('\0'))) throw new TypeError('Node script arguments must be NUL-free strings');
   if (args[0] === '--') args = args.slice(1);
@@ -84,6 +84,7 @@ export function createNodeScriptWorker({ args, cwd, roots, workspaceRoots, readO
   if (input.length > 64 * 1024 * 1024) throw failure('ERR_OHOS_NODE_INPUT_LIMIT', 'Node script batch stdin exceeds 64 MiB');
   let entry, argv, inline;
   if (!args.length || args[0] === '-') {
+    if (streamStdin) throw failure('ERR_OHOS_NODE_SCRIPT_ARGUMENTS', 'Streaming stdin requires a script or -e; streaming program source is not supported');
     inline = inlineEntry(input.toString('utf8'), 'stdin', canonicalCwd); entry = inlineBootstrap; argv = args.slice(1); input = Buffer.alloc(0);
   } else if (['-e', '--eval', '-p', '--print'].includes(args[0])) {
     if (args.length < 2) throw failure('ERR_OHOS_NODE_SCRIPT_ARGUMENTS', 'Node eval/print requires source text');
@@ -102,8 +103,8 @@ export function createNodeScriptWorker({ args, cwd, roots, workspaceRoots, readO
   }
   return new Worker(entry, {
     workerData: { dshOhosNodeScript: { protocol: 1, cwd: canonicalCwd, roots: canonicalRoots,
-      workspaceRoots: canonicalWorkspaces, readOnly, stdin: input, inline } },
-    argv, env, stdout: true, stderr: true,
+      workspaceRoots: canonicalWorkspaces, readOnly, stdin: input, streamStdin, inline } },
+    argv, env, stdin: streamStdin, stdout: true, stderr: true,
     resourceLimits: { maxOldGenerationSizeMb: 256 },
     // Preserve inherited --jitless and the sole product --import.
   });
