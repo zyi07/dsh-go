@@ -244,7 +244,7 @@ def main():
             raise ValueError('fork missing from package config: ' + name)
         output = args.output / name
         prepare(name, roots[name], output, config, config_sha)
-        relative = os.path.relpath(output / 'package', args.overrides.parent)
+        relative = (output / 'package').resolve().as_posix()
         additions.append(f'  {name}:\n    path: {json.dumps(relative)}\n')
     if args.overrides.read_text() != original:
         raise ValueError('overrides changed while preparing')

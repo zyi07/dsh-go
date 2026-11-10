@@ -80,7 +80,7 @@ PREPARED=""
 restore() {
   if [[ -n "$ENGINE_KEPT" ]]; then mv -f "$ENGINE_KEPT" "$ENGINE_HAR"; fi
   if [[ -n "$PREPARED" ]]; then rm -rf "$PREPARED"; fi
-  rm -rf pubspec_overrides.yaml ohos/.vendor
+  rm -rf pubspec_overrides.yaml .vendor ohos/.vendor
   for lib in "${PREBUILT[@]}"; do rm -f "$LIBS/$lib"; done
   rmdir "$LIBS" ohos/entry/libs 2>/dev/null || true
   rm -rf "$RAWFILE/dsh-runtime"
@@ -152,10 +152,10 @@ cp ohos/pubspec_overrides.ohos.yaml pubspec_overrides.yaml
 python3 "$APP/../tooling/ohos/vendor_platform_switches.py"
 python3 -I -B "$APP/../tooling/ohos/prepare-forks.py" \
   --package-config "$APP/.dart_tool/package_config.json" \
-  --output "$APP/ohos/.vendor/forks" --overrides "$APP/pubspec_overrides.yaml"
+  --output "$APP/.vendor/forks" --overrides "$APP/pubspec_overrides.yaml"
 "$FLUTTER" pub get
 python3 -I -B "$APP/../tooling/ohos/prepare-forks.py" \
-  --verify-package-config "$APP/.dart_tool/package_config.json" --output "$APP/ohos/.vendor/forks"
+  --verify-package-config "$APP/.dart_tool/package_config.json" --output "$APP/.vendor/forks"
 # No icon tree shaking: oh-flutter's const_finder fails on its own Dart ("Invalid SDK hash").
 # ENABLE_FLEX_OVERFLOW: oh-flutter's release-only strategy shrinks the whole app's
 # device pixel ratio when a Column overflows. Android clips the overflow and carries on.
@@ -165,7 +165,7 @@ UNSIGNED=()
 if [[ "$SIGN" == 0 ]]; then UNSIGNED=(--no-codesign); fi
 "$FLUTTER" build hap "$MODE" --target-platform ohos-arm64 --no-tree-shake-icons "${UNSIGNED[@]}" --dart-define=ENABLE_FLEX_OVERFLOW=false
 python3 -I -B "$APP/../tooling/ohos/prepare-forks.py" \
-  --verify-package-config "$APP/.dart_tool/package_config.json" --output "$APP/ohos/.vendor/forks" --after-build
+  --verify-package-config "$APP/.dart_tool/package_config.json" --output "$APP/.vendor/forks" --after-build
 python3 -I -B "$APP/../tooling/ohos/prepare-forks.py" --verify-installed "$APP/ohos"
 if [[ "$MODE" == --release ]]; then
   # What ohpm installed is what hvigor compiled.

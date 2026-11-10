@@ -3,7 +3,7 @@
 
 oh-flutter adds TargetPlatform.ohos, so an exhaustive switch in a pub.dev package
 without a default stops compiling, and these packages have no OHOS fork. After a
-first `pub get` this copies each one into app/ohos/.vendor (gitignored), sends ohos
+first `pub get` this copies each one into app/.vendor (gitignored), sends ohos
 down the android branch of every such switch, and points pubspec_overrides.yaml at
 the copy. Run `pub get` again afterwards. See tooling/ohos/build-hap.sh.
 """
@@ -17,7 +17,7 @@ from urllib.request import url2pathname
 PACKAGES = ('cupertino_ui', 'gpt_markdown', 'material_ui', 'xterm')
 
 APP = pathlib.Path(__file__).resolve().parents[2] / 'app'
-VENDOR = APP / 'ohos' / '.vendor'
+VENDOR = APP / '.vendor'
 OVERRIDES = APP / 'pubspec_overrides.yaml'
 
 # Patterns only: `platform == TargetPlatform.android || ...` is a boolean and stays.
@@ -54,7 +54,7 @@ def main():
                 path.write_text(source, encoding='utf-8')
                 total += count
         print(f'{name}: {total} patterns')
-        entries.append(f'  {name}:\n    path: ohos/.vendor/{name}\n')
+        entries.append(f'  {name}:\n    path: {VENDOR.as_posix()}/{name}\n')
     with OVERRIDES.open('a') as overrides:
         overrides.writelines(entries)
 
