@@ -100,12 +100,6 @@ class L10nZh extends L10n {
   String get accessFeatureVoiceNeeds => '需要麦克风权限';
 
   @override
-  String get accessFeatureAlerts => '回复提醒';
-
-  @override
-  String get accessFeatureAlertsNeeds => '需要通知权限';
-
-  @override
   String accessVoiceModel(int size) {
     return '离线识别，需下载约 $size MB 语音模型';
   }
@@ -2580,6 +2574,109 @@ class L10nZh extends L10n {
   String get botsPetSource => '来自 DSH-TUI';
 
   @override
+  String get botsPetImport => '导入';
+
+  @override
+  String get botsPetImportHint => '导入你自己的像素宠物：一个 zip，里面是 pack.json 和序列帧 PNG，格式见仓库里的 docs/design/pets.md。长按导入的宠物可以删除。';
+
+  @override
+  String botsPetImportDone(String name) {
+    return '「$name」来了';
+  }
+
+  @override
+  String botsPetCodexTitle(String name) {
+    return '「$name」是从 Codex 宠物转过来的';
+  }
+
+  @override
+  String get botsPetCodexBody => '大部分照原样，有几处不完全一样：';
+
+  @override
+  String get botsPetCodexOk => '知道了';
+
+  @override
+  String get botsPetCodexLoops => '动作会一直循环到状态变化，不像 Codex 里跑几遍就回到待机';
+
+  @override
+  String get botsPetCodexRoamLeft => '往左走用的是往右走那一行的镜像';
+
+  @override
+  String get botsPetCodexDrag => '拖着它时一律用朝右的那一行';
+
+  @override
+  String get botsPetCodexSleep => '睡觉时用待机的第一帧';
+
+  @override
+  String get botsPetCodexLook => '看向不同方向的那些格子没用上';
+
+  @override
+  String get botsPetCodexWebp => 'WebP 图转成了 PNG';
+
+  @override
+  String get botsPetCodexCustomTracks => '自定义的动作行没接到任何状态上';
+
+  @override
+  String get botsPetCodexFps => '帧率换算成毫秒时取了整';
+
+  @override
+  String get botsPetCodexOneShot => '只播一次的动作，播完回到哪里由 DSH 决定';
+
+  @override
+  String get botsPetCodexMissingAuthor => '包里没写作者';
+
+  @override
+  String get botsPetCodexMissingLicense => '包里没写授权';
+
+  @override
+  String get botsPetCodexMissingSource => '包里没写来源';
+
+  @override
+  String botsPetImportReplaced(String name) {
+    return '「$name」换成了新的';
+  }
+
+  @override
+  String get botsPetImportNotZip => '这不是 zip 文件';
+
+  @override
+  String get botsPetImportNoPack => 'zip 里没有 pack.json';
+
+  @override
+  String botsPetImportBadPack(String detail) {
+    return 'pack.json 有问题：$detail';
+  }
+
+  @override
+  String botsPetImportMissingSheet(String name) {
+    return 'zip 里少了序列帧图 $name';
+  }
+
+  @override
+  String botsPetImportBadSheet(String name) {
+    return '序列帧图不对：$name（要完整的 PNG，每边不超过 4096 像素，每一帧都在图内）';
+  }
+
+  @override
+  String get botsPetImportTooLarge => '这个宠物包太大了';
+
+  @override
+  String get botsPetImportStorage => '没能存到手机上，再试一次';
+
+  @override
+  String botsPetRemoveTitle(String name) {
+    return '删除「$name」？';
+  }
+
+  @override
+  String get botsPetRemoveBody => '删除后可以再导入。';
+
+  @override
+  String botsPetRemoveFailed(String name) {
+    return '没能删除「$name」，再试一次';
+  }
+
+  @override
   String get botsPetSize => '大小';
 
   @override
@@ -2650,7 +2747,7 @@ class L10nZh extends L10n {
   String get botsTerminalUnsupported => '这个连接用不了终端';
 
   @override
-  String get botsTerminalSupportedHosts => '在本机或 SSH 主机上可用';
+  String get botsTerminalSupportedHosts => '在本机、SSH 主机或 Remote 电脑上可用';
 
   @override
   String get botsTerminalOpening => '正在打开终端…';
@@ -4162,9 +4259,6 @@ class L10nZh extends L10n {
   String get chatErrApiKey => 'API Key 无效或已过期';
 
   @override
-  String get chatErrForbidden => '凭据不可用或权限不足';
-
-  @override
   String get chatErrBalance => '余额不足';
 
   @override
@@ -4518,7 +4612,22 @@ class L10nZh extends L10n {
   String get companionSendFailed => '这句话没送出去，要不要再说一次？';
 
   @override
-  String get companionNeedsAttention => '有件事要你确认，点这里去看';
+  String get companionLogTitle => '聊天记录';
+
+  @override
+  String get companionContextUnsupported => '这台主机的伙伴还不支持上下文：她的名字、设定和刚才发生的事传不过去，只发你说的话。升级主机或换成轻量模式就好。';
+
+  @override
+  String get companionLogEmpty => '还没有说过话。';
+
+  @override
+  String get companionLogYou => '你';
+
+  @override
+  String get companionLogOpenChat => '在主对话里看';
+
+  @override
+  String get companionLogOlder => '加载更早的记录';
 
   @override
   String get companionMenuHistory => '查看聊天记录';
@@ -4570,7 +4679,7 @@ class L10nZh extends L10n {
   String get companionPackNoRuntime => '这个包只有角色，手机上还没有运行库。先导入完整的素材包。';
 
   @override
-  String get companionPackNoModel => '包里没有找到 Live2D 模型（.model3.json）。';
+  String get companionPackNoModel => '包里没有找到 Live2D 模型（.model3.json）。把模型的整个文件夹打成 zip 再试。';
 
   @override
   String get companionPackUnsafe => '包里有不允许的文件或路径，没有导入。';
@@ -4835,16 +4944,40 @@ class L10nZh extends L10n {
   String get companionInviteYes2 => '那我先躺好啦，你也放松点。';
 
   @override
-  String get companionMenuInvite => '主动邀请';
+  String get companionMenuPace => '她多主动';
 
   @override
-  String get companionMenuInviteHint => '你安静陪着她时，她偶尔会邀你一起歇一会儿';
+  String get companionPaceHint => '她只在你安静陪着她时开口：邀你歇一会儿，或提一句别的对话。深夜不说，每次进门最多邀一次。';
+
+  @override
+  String get companionPaceQuiet => '安静';
+
+  @override
+  String get companionPaceQuietHint => '不主动开口，你找她时才说话';
+
+  @override
+  String get companionPaceRare => '偶尔';
+
+  @override
+  String get companionPaceRareHint => '一天最多 2 次，至少隔 6 小时';
+
+  @override
+  String get companionPaceOften => '常常';
+
+  @override
+  String get companionPaceOftenHint => '一天最多 6 次，至少隔 2 小时';
+
+  @override
+  String get companionPaceChatty => '话多';
+
+  @override
+  String get companionPaceChattyHint => '一天最多 12 次，至少隔半小时';
 
   @override
   String get companionSetupBundled => '接她回家';
 
   @override
-  String get companionSetupBodyBundled => '她就在 App 里，点一下就到，素材只解压到这台手机上。也可以导入别的素材包（zip）。';
+  String get companionSetupBodyBundled => '她就在 App 里，点一下就到，素材只解压到这台手机上。也可以导入别的素材包，或者把 Live2D 模型的文件夹打成 zip 直接导入。';
 
   @override
   String get companionSetupImportOther => '导入别的素材包';
@@ -4892,39 +5025,80 @@ class L10nZh extends L10n {
   String get companionHugClose => '抱紧一点也没关系哦。';
 
   @override
-  String companionTaskDone(String title) {
-    return '「$title」那边跑完啦。';
-  }
-
-  @override
   String get companionTaskDoneUntitled => '你那边的任务跑完啦。';
-
-  @override
-  String companionTaskFailed(String title) {
-    return '「$title」好像出错了，要去看看吗？';
-  }
 
   @override
   String get companionTaskFailedUntitled => '你那边的任务好像出错了，要去看看吗？';
 
   @override
-  String companionTaskApproval(String title) {
-    return '「$title」在等你批准。';
-  }
-
-  @override
-  String get companionTaskApprovalUntitled => '你那边有件事在等你批准。';
-
-  @override
-  String companionTaskQuestion(String title) {
-    return '「$title」有事想问你。';
-  }
-
-  @override
-  String get companionTaskQuestionUntitled => '你那边有个问题在等你回答。';
-
-  @override
   String get companionTaskOpen => '去看看';
+
+  @override
+  String get companionMenuSignals => '她会提起什么';
+
+  @override
+  String get companionSignalsHint => '这些只在小屋里说给你听，不会发给模型。说多说少跟着「她多主动」，和邀请共用次数，深夜不说；选「安静」她也不说。';
+
+  @override
+  String get companionSignalState => '留意别的对话';
+
+  @override
+  String get companionSignalStateHint => '这台主机上别的对话跑完或出错时，她心里有数';
+
+  @override
+  String get companionSignalSpeech => '提一句';
+
+  @override
+  String get companionSignalSpeechHint => '挑你安静的时候说一句';
+
+  @override
+  String get companionSignalVoice => '用声音说出来';
+
+  @override
+  String get companionSignalVoiceHint => '她的声音开着时，把这句读出来';
+
+  @override
+  String get companionSignalNight => '深夜提醒你休息';
+
+  @override
+  String get companionSignalNightHint => '深夜在小屋里待了一阵，她轻轻提醒一次';
+
+  @override
+  String get companionSignalLateUse => '这么晚了还陪着我……要不要早点歇一会儿？';
+
+  @override
+  String get companionRecallTitle => '完整模式里自动想起记忆';
+
+  @override
+  String get companionRecallHint => '打开时换一段新对话；改动她记得的事会自动关掉';
+
+  @override
+  String get companionRecallConfirm =>
+      '打开后，她确认过的记忆（最多 12 条）会跟着完整模式里她的每次回复一起发给模型。会开始一段新对话，现在这段留在主对话列表里。改动记忆后会自动关掉，到时可以再打开。';
+
+  @override
+  String get companionRecallTurnOn => '打开';
+
+  @override
+  String get companionRecallOn => '好，从这段新对话起，我会想着你让我记住的事。';
+
+  @override
+  String get companionRecallBusy => '另一个对话正在用自动想起记忆，先在那边关掉再来';
+
+  @override
+  String get companionRecallUnsupported => '这台主机现在开不了自动想起记忆';
+
+  @override
+  String get companionRecallFailed => '自动想起记忆没打开，再试一次吧';
+
+  @override
+  String get companionRecallOff => '自动想起记忆关了，下一句会开始一段新对话';
+
+  @override
+  String get companionRecallOffFailed => '自动想起记忆没关掉，再试一次吧';
+
+  @override
+  String get companionRecallStopped => '自动想起记忆停了（她记得的事有改动），换成了一段新对话。想要的话可以在菜单里再打开。';
 
   @override
   String get companionMenuVoice => '她的声音';
@@ -5157,6 +5331,92 @@ class L10nZh extends L10n {
 
   @override
   String get companionPersonaFooter => '轻量模式下一句就生效；完整模式会在你下一条消息里把新设定告诉她。';
+
+  @override
+  String get companionMenuMoves => '动作和表情';
+
+  @override
+  String get companionMovesHint => '这些是模型自带的。开着的会交给 AI（表情、动作各最多 24 个，按列表顺序），她回复时会自己用；点名字改个好懂的叫法，点 ▶ 先在她身上试试。';
+
+  @override
+  String get companionMovesNone => '这个模型没有自带的表情和动作，她用的是内置的那些。';
+
+  @override
+  String get companionMovesRename => '改个叫法';
+
+  @override
+  String get companionMovesTry => '试一下';
+
+  @override
+  String get companionPackLegacyModel =>
+      '这是 Cubism 2 的旧模型（.moc 和 model.json），手机上的运行库只认 Cubism 3 以后的 .moc3。用 Cubism Editor 打开后导出成 moc3 再导入就行。';
+
+  @override
+  String companionFailedMocVersion(String version, String latest) {
+    return '这个模型是用更新版本的 Cubism 导出的（moc 版本 $version），手机上的运行库最高只认到 $latest。在 Cubism Editor 里导出成旧一点的版本再导入就行。';
+  }
+
+  @override
+  String get companionMenuAdapt => '适配这个模型';
+
+  @override
+  String get companionAdaptHint =>
+      '用你配好的模型（你的 Key，按次计费）看一遍这个角色，把转头、眨眼、表情和摸哪里对上。会发出去的：模型名、参数名单、表情动作和部件的名字、你下面写的话和现在的适配表；模型文件和贴图不发。';
+
+  @override
+  String get companionAdaptOffer => '这个模型要适配一下：用你配好的模型看一遍它的参数名单和表情动作的名字（不发模型文件），会用你的 Key 调用一次。以后的新模型就自动来，菜单里能关。';
+
+  @override
+  String get companionAdaptOfferYes => '适配';
+
+  @override
+  String get companionAdaptOfferNo => '不用了';
+
+  @override
+  String get companionAdaptNote => '哪里不对？（可以不填）';
+
+  @override
+  String get companionAdaptNoteHint => '比如：摸头没反应，开心的时候脸是黑的';
+
+  @override
+  String get companionAdaptRun => '让 AI 适配';
+
+  @override
+  String get companionAdaptUndo => '撤销适配';
+
+  @override
+  String get companionAdaptAuto => '导入新模型时自动适配';
+
+  @override
+  String get companionAdaptStart => '让我适应一下这个新身体……';
+
+  @override
+  String get companionAdaptDone => '好啦，这个身体我会用了。';
+
+  @override
+  String companionAdaptDoneNote(String note) {
+    return '好啦，这个身体我会用了。$note';
+  }
+
+  @override
+  String get companionAdaptUndone => '好，换回原来的样子了。';
+
+  @override
+  String get companionAdaptNoKey => '要用你的模型帮我适配，先在设置里填上 API Key。';
+
+  @override
+  String companionAdaptFailed(String reason) {
+    return '这次没适应好（$reason），可以在菜单的「适配这个模型」里再试一次。';
+  }
+
+  @override
+  String get companionAdaptUnreadable => '模型的回答看不懂';
+
+  @override
+  String get companionAdaptEmpty => '模型没找到能用的对应';
+
+  @override
+  String get companionAdaptNetwork => '网络不通';
 
   @override
   String get systemImeTitle => '系统输入法诊断';
@@ -7647,328 +7907,23 @@ class L10nZh extends L10n {
   String get fileChatFallback => '对话';
 
   @override
-  String get harmonyAccessSubtitle => '各项功能用到的系统权限';
+  String get fileUploadToHost => '传文件到电脑';
 
   @override
-  String get harmonyNotifyWhy => '应用在运行时，回复跑完、需要确认会提醒你';
+  String get fileUploadToHostHint => '放进这个对话在电脑上的工作区，原文件不压缩';
 
   @override
-  String get harmonyKwSystemAccess => '权限一览,授权,麦克风,通知权限,回复提醒,语音输入,补开权限';
-
-  @override
-  String get harmonyBackgroundSubtitle => '应用离开屏幕后，本机的对话很快会暂停';
-
-  @override
-  String get harmonyBackgroundAway => '离开屏幕后';
-
-  @override
-  String get harmonyBackgroundLocal => '正在跑的对话可能还能跑一小会儿，多久由系统决定。之后跟着应用暂停，回到应用后会尽量接着跑';
-
-  @override
-  String get harmonyBackgroundRemoteTitle => '已连接的远程主机';
-
-  @override
-  String get harmonyBackgroundRemote => '上面的回复继续跑，不受影响';
-
-  @override
-  String get harmonyBackgroundLong => '长任务';
-
-  @override
-  String get harmonyBackgroundStay => '把应用留在屏幕上';
-
-  @override
-  String get harmonyBackgroundUseRemote => '或者放到已连接的远程主机上跑';
-
-  @override
-  String get harmonyEngineBackgroundHint => '离开屏幕后本机引擎很快会暂停';
-
-  @override
-  String get harmonyKwBackground => '后台,保活,挂起,暂停,被杀,杀后台';
-
-  @override
-  String get harmonyPausedInBackground => '对话在后台可能暂停过';
-
-  @override
-  String get harmonyAlertsRequirement => '提醒要应用在运行才发得出：离开屏幕后系统很快会挂起应用，挂起期间没有提醒';
-
-  @override
-  String get harmonyLiveUnavailable => '这个版本没有进度通知';
-
-  @override
-  String get harmonySchedulesLocal => '本机的任务只在应用运行时触发：应用被系统挂起时，到点不会运行';
-
-  @override
-  String get harmonyPageUnavailable => '鸿蒙不支持这项功能';
-
-  @override
-  String get harmonyNotificationSettingsFailed => '没能打开系统设置。到「设置 → 通知和状态栏 → DSH Go」里开启';
-
-  @override
-  String get harmonySearchUnavailable => '鸿蒙版没有这项功能';
-
-  @override
-  String get harmonyCredentialsSection => '密钥';
-
-  @override
-  String get harmonyCredentialsUnreadable => '已保存的密钥无法读取';
-
-  @override
-  String get harmonyCredentialsUnreadableHint => '已保存的密钥无法读取。到「设置 → 隐私与分享」清除后再试';
-
-  @override
-  String get harmonyCredentialsClear => '清除已保存的密钥';
-
-  @override
-  String get harmonyCredentialsClearBody =>
-      '重试没有用。清除后，App 保存的 API key、DSH Remote 登录、SSH 密码和私钥、论坛登录都会被删除，需要重新填写或登录。已发布的分享链接还在，但这台手机上删不掉了。对话和主机列表会保留。此操作无法撤销。';
-
-  @override
-  String get harmonyCredentialsClearAction => '清除密钥';
-
-  @override
-  String get harmonyCredentialsCleared => '已清除，请重新填写或登录';
-
-  @override
-  String get harmonyCredentialsClearFailed => '没能清除，再试一次';
-
-  @override
-  String get harmonyIconChangeFailed => '没能更换。使用自定义主题或应用分身时不能换桌面图标';
-
-  @override
-  String get harmonyEngineUnclean => '没有正常退出';
-
-  @override
-  String get harmonyFailureUnclean => '引擎没有正常退出';
-
-  @override
-  String get harmonyFailureUncleanHint => '原因不明：可能是系统回收了应用或应用被关掉，也可能是引擎出了错。';
-
-  @override
-  String get harmonyFailureHeld => '连续几次都这样，引擎不会自己启动了。可以再试一次，或换一种方式启动。';
-
-  @override
-  String get harmonyResetKept => '主机列表、App 设置和已保存的密钥不受影响。确认后 App 会重新打开，在打开时完成重置。';
-
-  @override
-  String get harmonyResetReopening => '重置已记下，App 正在重新打开';
-
-  @override
-  String get harmonyResetCommittedTitle => '还差重新打开 App';
-
-  @override
-  String get harmonyResetCommittedBody => '重置已经记下，下次打开 App 时完成。可以现在重新打开，也可以自己关掉再打开。';
-
-  @override
-  String get harmonyResetUnknownTitle => '不确定重置有没有记下';
-
-  @override
-  String get harmonyResetUnknownBody => '重新打开 App：记下了就会完成重置，没记下对话和文件都还在。';
-
-  @override
-  String get harmonyResetNotCommittedTitle => '没有重置';
-
-  @override
-  String get harmonyResetNotCommittedBody => '对话和文件都还在。引擎已经停了，重新打开 App 后恢复。';
-
-  @override
-  String get harmonyResetInstalling => '正在安装运行环境，装完再试';
-
-  @override
-  String get harmonyResetOlderPendingTitle => '已经有一次重置在等';
-
-  @override
-  String get harmonyResetOlderPendingBody => '重新打开 App 完成它。这次的选择没有生效。';
-
-  @override
-  String get harmonyReopenApp => '重新打开';
-
-  @override
-  String get harmonyResetPendingTitle => '重置还没完成';
-
-  @override
-  String get harmonyResetPendingBody => '重新打开 App 继续。在这之前本机引擎不会启动。';
-
-  @override
-  String get harmonyResetFinishing => '正在完成重置';
-
-  @override
-  String get harmonyResetDone => '运行环境已重置';
-
-  @override
-  String get harmonyResetMaybeDone => 'App 已重新打开。如果对话还在，说明这次重置没有生效，可以再试一次。';
-
-  @override
-  String get harmonyUninstallHint => '删除已解压的运行环境和本机数据';
-
-  @override
-  String get harmonyUninstallBody => '本机的对话、工作区、插件、设置、界面配置和技能会一并删除，App 会重新打开。安装包里自带的那份运行环境还在，只有卸载 App 才会释放。';
-
-  @override
-  String get harmonyKwEngineUninstall => '卸载,删除运行环境,清理本机数据';
-
-  @override
-  String get harmonyUpdateNoticeTitle => '到发布页看获取方式';
-
-  @override
-  String get harmonyUpdateNoticeText => '鸿蒙版不能在应用内更新。发布页可能还没有鸿蒙安装包。';
-
-  @override
-  String get harmonyUpdateNoticeNoPage => '这个版本没有给出下载页，过些时候再看看。';
-
-  @override
-  String get harmonyLiveTitle => '进度通知';
-
-  @override
-  String get harmonyLiveSwitch => '显示进度通知';
-
-  @override
-  String get harmonyLiveSubtitle => '对话进行中，在通知栏显示一条状态';
-
-  @override
-  String get harmonyLiveFooter => '这是普通通知，应用被系统挂起后不再更新。';
-
-  @override
-  String get harmonyLockScreenPrivacy => '锁屏是否显示对话内容由系统决定：设置 › 通知和状态栏 › 锁屏通知';
-
-  @override
-  String get harmonyLiveBlockedTitle => '系统没有允许进度通知';
-
-  @override
-  String get harmonyLiveBlockedText => '在系统设置里为 DSH Go 打开通知';
-
-  @override
-  String get harmonyAlertsOffTitle => '提醒通知已关闭';
-
-  @override
-  String get harmonyAlertsOffText => '回复跑完和等你确认都不会提醒';
-
-  @override
-  String get harmonyEnableBanner => '横幅默认关闭，要弹出来请开启「横幅通知」';
-
-  @override
-  String get harmonyKwNotifyLive => '进度通知,通知栏进度,状态栏进度';
-
-  @override
-  String get harmonyTerminalNoPty => '这个引擎没有交互终端，可连 SSH 主机';
-
-  @override
-  String get harmonyTerminalSupportedHosts => '在 SSH 主机上可用';
-
-  @override
-  String get harmonyPluginRemoveRefused => '这个引擎不能卸载插件';
-
-  @override
-  String get harmonyPluginRefusedHint => '可以开关随包插件，或连接电脑管理插件';
-
-  @override
-  String get harmonyVoiceLocalLine => '鸿蒙本机用系统识别，没有语音模型';
-
-  @override
-  String get harmonyPasswordStorageHelp => '只保存在这台手机上，由系统密钥库加密';
-
-  @override
-  String get harmonyKeyStorageHelp => '只保存在这台手机上，由系统密钥库加密。支持 Ed25519、RSA、ECDSA';
-
-  @override
-  String get harmonyUsageNotSent => '鸿蒙版暂不发送使用统计';
-
-  @override
-  String get harmonyVoiceSystemHint => '使用系统的语音识别';
-
-  @override
-  String get harmonyVoiceSystemHintChinese => '使用系统的语音识别，只认中文';
-
-  @override
-  String get harmonyVoiceAutoHint => '用系统的语音识别';
-
-  @override
-  String get harmonyVoiceSystemUnavailable => '系统语音识别不可用';
-
-  @override
-  String get harmonyNetworkRelayOnly => '当前版本走 Relay 中继，全程端到端加密。';
-
-  @override
-  String get harmonyNetworkFallbackRelayOnly => '当前版本只走 Relay 中继';
-
-  @override
-  String get harmonySetupStay => '安装时请留在这个页面';
-
-  @override
-  String get harmonyLaunchEmbedded => '应用内启动';
-
-  @override
-  String get harmonyLaunchNodeExited => '引擎已退出';
-
-  @override
-  String get harmonyKwAccent => '颜色,主题色,强调色';
-
-  @override
-  String get harmonyKwPets => '宠物,小鲸,桌宠,鲸鱼';
-
-  @override
-  String get harmonyBackgroundSubtitleLong => '应用离开屏幕后，正在跑的对话会尽量继续';
-
-  @override
-  String get harmonyBackgroundLocalLong => '这个版本可以申请长时任务：对话留在后台继续跑，通知栏会有一条提示。系统不批准或中途收回时，对话跟着应用暂停，回到应用后会尽量接着跑';
-
-  @override
-  String get harmonyEngineBackgroundHintLong => '离开屏幕后，正在跑的对话会尽量继续';
-
-  @override
-  String get harmonyAlertsRequirementLong => '提醒要应用在运行才发得出：对话在后台继续时会提醒，应用被系统挂起后就没有了';
-
-  @override
-  String get harmonySaveToFile => '保存到文件';
-
-  @override
-  String get harmonySaveChooseLocation => '选择保存位置';
-
-  @override
-  String get harmonySaving => '正在保存…';
-
-  @override
-  String get harmonySaved => '已保存';
-
-  @override
-  String get harmonyCommandExportDescription => '把这个对话的完整记录打包成 ZIP，分享或保存到文件';
-
-  @override
-  String get harmonySafeEnterTitle => '以安全模式启动？';
-
-  @override
-  String get harmonySafeEnterBody => '用随包的默认配置启动，不加载你装的插件。对话都在，原来的配置不会改动。';
-
-  @override
-  String get harmonySafeReopenNote => '进行中的回复会中断，App 会重新打开。';
-
-  @override
-  String get harmonyRestoredReopening => '已恢复上次正常的配置，App 正在重新打开';
-
-  @override
-  String harmonySafeRepairPrompt(String what) {
-    return '我的 DSH 正常模式出了问题（$what）。现在是安全模式，用的是随包的默认配置，我原来的配置没有动。请帮我找原因，动手改之前先告诉我要改什么。';
+  String fileUploadProgress(int done, int total, String name) {
+    return '正在传 $done/$total：$name';
   }
 
   @override
-  String get harmonyRemindersTitle => '闹钟和计时器';
+  String fileUploadDone(String names) {
+    return '已传到电脑：$names';
+  }
 
   @override
-  String get harmonyRemindersCanHint => '到点由系统提醒，引擎不会因此运行。系统也可能不接受，AI 会告诉你';
-
-  @override
-  String get harmonyRemindersNoBuild => '这个版本没有开通系统提醒';
-
-  @override
-  String get harmonyRemindersNoDevice => '这台设备没有系统提醒';
-
-  @override
-  String get harmonyReminderSet => '已设提醒';
-
-  @override
-  String get harmonyReminderRefused => '系统没有接受提醒，没有设置。';
-
-  @override
-  String get harmonyPluginVoiceUnavailable => '这台设备不能听你开口';
+  String get fileUploadFailed => '没能传到电脑';
 
   @override
   String get hostDetailsConnectionType => '连接方式';
@@ -8755,12 +8710,6 @@ class L10nZh extends L10n {
   String get localEnvRemoteDetail => '连接电脑或服务器上的 DSH';
 
   @override
-  String get localEnvUnavailable => '这台设备暂时不能在本机运行 DSH';
-
-  @override
-  String get localEnvUnsupported => '暂不支持';
-
-  @override
   String get localEnvRecommended => '推荐';
 
   @override
@@ -8811,47 +8760,6 @@ class L10nZh extends L10n {
 
   @override
   String get localEnvSignInInstallFirst => '安装后即可登录';
-
-  @override
-  String get engineStartReopensApp => '引擎每次打开 App 只能启动一次，再启动会重新打开 App。';
-
-  @override
-  String get engineReopenFailed => '引擎要重新打开 App 才能再启动，请手动重开一次。';
-
-  @override
-  String get engineCapShell => '命令行';
-
-  @override
-  String engineCapShellBuiltin(int count) {
-    return '内置 $count 个命令';
-  }
-
-  @override
-  String get engineCapShellSystem => '系统';
-
-  @override
-  String get engineCapNodeScripts => 'Node 脚本';
-
-  @override
-  String get engineCapMarket => '安装市场插件';
-
-  @override
-  String get engineCapBackground => '切到后台时';
-
-  @override
-  String get engineCapMayFreeze => '可能被系统暂停';
-
-  @override
-  String get engineCapKeepsRunning => '继续运行';
-
-  @override
-  String get engineCapYes => '可以';
-
-  @override
-  String get engineCapNone => '不可用';
-
-  @override
-  String get marketInstallRefused => '这个引擎不能安装市场插件';
 
   @override
   String get marketSectionOfficial => '官方';
@@ -9655,15 +9563,6 @@ class L10nZh extends L10n {
 
   @override
   String get performanceRefreshHint => '自动：动时用最高刷新率，停下交回系统；系统：完全由系统决定。';
-
-  @override
-  String get performanceRefreshHintOhos => '自动：动画和滚动时用最高刷新率，停下交回系统；最高：一直最高，更耗电也更热；系统：不额外要求。';
-
-  @override
-  String get performanceFrameCache => '帧缓存';
-
-  @override
-  String get performanceFrameCacheHint => '更顺滑，触摸响应略慢一点';
 
   @override
   String get searchKwRefreshRate => '刷新率 高刷 120Hz 90Hz 流畅';
@@ -11102,6 +11001,371 @@ class L10nZh extends L10n {
   String get phoneDndConnectPortHint => '在系统「无线调试」首页查看「IP 地址和端口」，填写冒号后的端口。请不要使用配对码页面的端口。';
 
   @override
+  String get phonePreviewTitle => '实时查看后台屏';
+
+  @override
+  String get phonePreviewDescription => '仅在预览可见时取帧。画面只留在本机；预览不可点击。';
+
+  @override
+  String get phonePreviewOpen => '查看后台屏';
+
+  @override
+  String phonePreviewTask(String taskId) {
+    return '预览任务 $taskId';
+  }
+
+  @override
+  String get phonePreviewInUse => '正在预览另一任务';
+
+  @override
+  String get phonePreviewOff => '任务已结束或预览已关闭';
+
+  @override
+  String get phonePreviewUnavailable => '画面暂不可预览，或受到保护';
+
+  @override
+  String get phonePreviewWaiting => '等待后台屏的新画面';
+
+  @override
+  String get phoneViewportTitle => '后台视口';
+
+  @override
+  String get phoneViewportDescription => '下次新建后台屏时生效；当前后台屏不变，交还后重建会采用新设置。视口方向不会强制应用旋转。';
+
+  @override
+  String get phoneViewportPortrait => '竖屏';
+
+  @override
+  String get phoneViewportLandscape => '横屏';
+
+  @override
+  String get phoneResumeTask => '重新允许手机操控';
+
+  @override
+  String get phoneResumeTaskHint => '允许此对话之后的手机操作，不重放已经结束的动作。';
+
+  @override
+  String get phoneResumeTaskFailed => '暂时没能恢复，上一动作可能仍在收尾。';
+
+  @override
+  String phoneStoppedTask(int task) {
+    return '手机任务 $task 已停止';
+  }
+
+  @override
+  String get phoneTaskDrainingHint => '正在等待上一动作退出并清理后台屏。';
+
+  @override
+  String get phoneTaskCleanupFailedHint => '未能确认后台屏已清理，手机操控仍被阻挡。';
+
+  @override
+  String phoneFinishingTask(int task) {
+    return '手机任务 $task 正在收尾';
+  }
+
+  @override
+  String get phoneCleanupRetry => '重试清理';
+
+  @override
+  String get phoneCleanupRetryFailed => '仍未能确认上一后台屏已清理，屏幕占用继续保留。';
+
+  @override
+  String get phoneSelfCheckTitle => '本机手机自检';
+
+  @override
+  String get phoneSelfCheckPartial => '部分自检：仅已观察的项目有结果';
+
+  @override
+  String get phoneSelfCheckScope => '使用已选择并连接的通道和临时展示屏。应用启动、文字输入、截图、OCR及主屏受扰情况均未测试。清理通过不代表展示屏创建成功。';
+
+  @override
+  String get phoneSelfCheckStart => '开始部分自检';
+
+  @override
+  String get phoneSelfCheckCancel => '请求取消';
+
+  @override
+  String get phoneSelfCheckRetry => '仅重试清理';
+
+  @override
+  String get phoneSelfCheckRefresh => '刷新状态';
+
+  @override
+  String get phoneSelfCheckSave => '保存脱敏报告';
+
+  @override
+  String get phoneSelfCheckSaving => '保存中…';
+
+  @override
+  String get phoneSelfCheckSaved => '报告已存入下载/DSH-Go。';
+
+  @override
+  String get phoneSelfCheckSaveFailed => '报告保存失败。';
+
+  @override
+  String get phoneSelfCheckReportHint => '仅在你点击保存时导出。本机报告只含固定结果，不含截图、识别文字、日志、账户数据或运行标识。';
+
+  @override
+  String phoneSelfCheckRunState(String state) {
+    String _temp0 = intl.Intl.selectLogic(state, {
+      'idle': '尚未开始',
+      'running': '部分自检进行中',
+      'cleaning': '正在清理；取消不代表已撤销派发的输入',
+      'done': '执行和清理已结束，请逐项查看下方结果',
+      'cancelled': '已取消，已观察到的操作仍保留',
+      'cleanup_pending': '清理尚未确认，资源仍保留',
+      'other': '状态不可用',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String phoneSelfCheckStepState(String state) {
+    String _temp0 = intl.Intl.selectLogic(state, {
+      'not_run': '未运行／无观察',
+      'running': '进行中',
+      'pass': '已观察通过',
+      'fail': '失败',
+      'skipped': '已跳过',
+      'unknown': '未确认',
+      'cancelled': '已取消',
+      'other': '未确认',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String phoneSelfCheckStage(String stage) {
+    String _temp0 = intl.Intl.selectLogic(stage, {
+      'device': '设备前置条件',
+      'channel': '已选通道',
+      'display': '临时后台屏创建',
+      'input_probe': '触摸接收核验',
+      'launch': '应用启动',
+      'tree': '控件树',
+      'tap': '应用按钮点按',
+      'scroll': '应用滚动',
+      'back': '应用返回',
+      'text_ascii': '固定 ASCII 输入',
+      'text_zh': '固定中文输入',
+      'capture': '本地图样截图',
+      'continuity': '有限受控刷新',
+      'main': '有限主屏观察',
+      'ocr': '本机OCR',
+      'cleanup': '严格清理',
+      'other': '未知项目',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String phoneSelfCheckReason(String reason) {
+    String _temp0 = intl.Intl.selectLogic(reason, {
+      'busy': '手机或通道正忙。',
+      'unsupported': '设备或特权端不支持这项自检。',
+      'cancelled': '本次请求已取消或退役。',
+      'disabled': '手机操控尚未开启。',
+      'locked': '设备已锁定。',
+      'identity': '原运行或通道身份已改变。',
+      'invalid': '请求或结果无法验证。',
+      'display': '临时展示屏未能确认。',
+      'input': '输入受理或送达未确认，不会重放已派发输入。',
+      'cleanup': '资源清理未确认，仅可重试清理。',
+      'denied': '系统拒绝了操作。',
+      'timeout': '操作超时，已派发工作仍可能完成。',
+      'unavailable': '本机状态或已选通道不可用。',
+      'target_unavailable': '无法核实固定目标，请完成清理后再开始。',
+      'target_changed': '原目标已变化，请仅继续清理。',
+      'target_cleanup': '目标清理未确认，请仅重试清理。',
+      'target_main': '目标曾出现在主屏，已停止后续步骤，请完成清理。',
+      'target_readback': '固定目标计数或文本回读不符，不要重复操作，请完成清理。',
+      'tree_cleanup': '树连接清理未确认，请仅重试清理。',
+      'target_launch': '目标启动被拒绝或未确认，请检查设备并完成清理。',
+      'frame_unavailable': '未取得可用的本地图样帧，请完成清理后再开始新的自检。',
+      'frame_mismatch': '实际画面与本次目标及阶段不符，请完成清理。',
+      'continuity': '有限受控刷新序列未确认；这不是帧率结果。',
+      'main_changed': '主屏采样点发生变化，也可能包含用户操作；请完成清理，不能据此判定原因。',
+      'main_unchanged': '这些有限采样点未见变化，采样之间是否受扰仍未知。',
+      'main_incomplete': '主屏样本不完整，不能据此证明没有受扰。',
+      'not_installed': '本自检未接入 OCR，未执行识别测试。',
+      'other': '收到无法识别的结果。',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String get phoneSelfCheckTargetScope =>
+      '使用普通临时后台屏和固定本地目标，检查启动、控件树及一次按钮点击。文字、滚动、截图和 OCR 未测试；主屏只记录实际观察到的受扰失败，不提供通过结论。仅清理完成不证明曾创建后台屏。';
+
+  @override
+  String get phoneSelfCheckProfileChoice => '选择下次自检（不会改变下方报告）';
+
+  @override
+  String phoneSelfCheckProfile(String profile) {
+    String _temp0 = intl.Intl.selectLogic(profile, {
+      'probe_b': '输入接收探针（B）',
+      'target_c1': '固定目标自检（C1）',
+      'target_c2': '固定输入与画面自检（C2）',
+      'other': '未知模式',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String phoneSelfCheckReportProfile(String profile) {
+    String _temp0 = intl.Intl.selectLogic(profile, {
+      'probe_b': '本次报告：输入接收探针（B）',
+      'target_c1': '本次报告：固定目标（C1）',
+      'target_c2': '本次报告：固定输入与画面（C2）',
+      'other': '本次报告模式未确认',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String get phoneSelfCheckTargetC2Scope =>
+      '使用固定本机目标核验启动、控件树、单次按钮点按、ASCII／中文 ACTION_SET_TEXT 整框替换与回读、本地图样截图和有限受控刷新；不衡量 FPS 或流畅度。有限主屏样本不能证明采样间全程无扰。OCR、触摸接收探针、滚动和返回不在本次范围。仅清理完成也不证明曾创建展示屏。';
+
+  @override
+  String phoneTaskWaiting(int taskId) {
+    return '任务 $taskId · 等待资源';
+  }
+
+  @override
+  String phoneTaskWaitingApp(String packageName, int seconds) {
+    return '等待应用 $packageName，已等待 $seconds 秒。';
+  }
+
+  @override
+  String phoneTaskWaitingUnknown(int seconds) {
+    return '等待界面资源（应用身份未确认），已等待 $seconds 秒。';
+  }
+
+  @override
+  String phoneTaskWaitingScreen(String screen, int seconds) {
+    return '等待$screen，已等待 $seconds 秒。';
+  }
+
+  @override
+  String get phoneTaskMainResource => '主屏';
+
+  @override
+  String get phoneTaskBackgroundResource => '后台屏';
+
+  @override
+  String get phoneInterruptionTitle => '上次手机任务未确认结束';
+
+  @override
+  String get phoneInterruptionLoading => '正在读取任务中断记录…';
+
+  @override
+  String get phoneInterruptionStorageError => '无法保存或读取任务结束记录。请重试；这不表示后台资源已清理。';
+
+  @override
+  String phoneInterruptionHint(int count) {
+    return '有 $count 个任务中断或未能保存结束状态，操作结果可能已发生。请先核对；确认仅表示看过提示，不会恢复操作或证明后台资源已清理。';
+  }
+
+  @override
+  String get phoneInterruptionAcknowledge => '已核对中断提示';
+
+  @override
+  String get phoneInterruptionRetry => '重试保存或读取';
+
+  @override
+  String get phoneInterruptionActionFailed => '任务记录尚未确认，请重试';
+
+  @override
+  String get phoneLocalOcrTitle => '本机文字识别（ML Kit）';
+
+  @override
+  String get phoneLocalOcrUnknown => '暂时无法读取本机文字识别设置，请刷新后再试。';
+
+  @override
+  String get phoneLocalOcrDisclosure => '识别在本机进行，截图和文字不会发给 Google；Google 的 SDK 会收集机型、应用版本、耗时等使用统计。';
+
+  @override
+  String get phoneLocalOcrDetails =>
+      '默认开启。关闭时，文字识别请求不会触发 SDK 加载或初始化；Remote 扫码配对会独立按需初始化共用的 SDK，不会开启文字识别。截图和识别文字可能发送给你配置的模型。关闭后不再开始新的本机文字识别；已经开始的识别可能仍在收尾。关闭不会卸载 SDK，也不承诺清除或停止发送此前积累的 SDK 统计。';
+
+  @override
+  String get phoneBackgroundParallelTitle => '后台任务上限';
+
+  @override
+  String phoneBackgroundParallelStatus(int configured, int effective, int held) {
+    return '设置上限：$configured · 当前可用上限：$effective · 已占用：$held';
+  }
+
+  @override
+  String get phoneBackgroundParallelDescription => '调低上限会保留已有任务。新任务仍需等待应用和主屏资源可用。';
+
+  @override
+  String phoneBackgroundParallelChoice(int limit) {
+    return '$limit 个后台任务槽位';
+  }
+
+  @override
+  String get phoneBackgroundParallelOff => '后台通道已关闭。保存此偏好不会开启通道。';
+
+  @override
+  String get phoneBackgroundParallelUnsupported => '此设备当前无法使用后台操作。';
+
+  @override
+  String get phoneBackgroundParallelConnection => '建立连接后才能接纳新的后台任务。';
+
+  @override
+  String get phoneBackgroundParallelBusy => '后台通道正在准备或维护，暂不能接纳新任务。';
+
+  @override
+  String get phoneBackgroundParallelRecovery => '请先处理未完成的后台资源恢复，再开始新任务。';
+
+  @override
+  String get phoneBackgroundParallelPeer => '当前连接的服务不支持所需的后台能力。';
+
+  @override
+  String get phoneBackgroundParallelSerial => '此连接支持一个后台槽位，设置偏好仍会保留。';
+
+  @override
+  String get phoneSkillBundlePublishedUnverified => '文件已发布，但尚未通过完整核验。不要重复保存。';
+
+  @override
+  String get phoneSkillBundleUnknown => '保存结果尚未确认，文件可能已经写入。不要重复保存。';
+
+  @override
+  String phoneSkillBundleRevision(String revision) {
+    return '路线版本：$revision';
+  }
+
+  @override
+  String get phoneSkillReplayReview => '核对手机路线';
+
+  @override
+  String get phoneSkillReplaySourceChanged => '本机会话或连接已改变，请返回当前本机会话重新选择。';
+
+  @override
+  String get phoneSkillReplayUnavailable => '此路线尚不能在当前本机安全执行。仍可按普通技能模板使用。';
+
+  @override
+  String get phoneSkillReplayConfirm => '我已核对这条路线与本次选择的 App。';
+
+  @override
+  String get phoneSkillReplayToComposer => '放入当前对话';
+
+  @override
+  String phoneSkillReplayStartText(String request) {
+    return '本机已选择并核对手机路线。请仅调用 mcp__phone__replay，参数 $request。若不可用或被拒绝，交回用户/模型，不要改为普通动作重放。';
+  }
+
+  @override
+  String get phoneSkillReplayQueue => '发送路线（排队）';
+
+  @override
+  String get phoneSkillReplayQueued => '路线消息已被接收或排队，尚不代表路线执行成功。';
+
+  @override
+  String get phoneSkillReplaySendUncertain => '路线消息未确认发送成功；没有自动重新准备或重放。请核对原对话结果。';
+
+  @override
   String get phoneTaskResultReady => '任务完成 · 查看结果';
 
   @override
@@ -11172,6 +11436,24 @@ class L10nZh extends L10n {
       'root 管理器（Magisk、KernelSU 或 APatch）会弹窗问你。允许后，DSH Go 以 root 运行自己的后台服务；只有打开「保持 root 通道」，断开或重启后才会自己再去申请。';
 
   @override
+  String get phoneGateCleanupTitle => '探针清理尚未确认';
+
+  @override
+  String get phoneGateCleanupUnknown => '新后台资源已被阻止。原通道仍可用时，只能重试原清理，不会重跑探针。';
+
+  @override
+  String get phoneGateCleanupRunning => '正在等待原探针及清理完成；清理确认前保留原通道。';
+
+  @override
+  String get phoneGateCleanupRetry => '仅重试清理';
+
+  @override
+  String get phoneGateCleanupDone => '清理已确认。请再次明确选择通道，重新检查。';
+
+  @override
+  String get phoneGateRetest => '重新检查此通道';
+
+  @override
   String phoneKeepTitle(String mode) {
     String _temp0 = intl.Intl.selectLogic(mode, {
       'shizuku': '保持 Shizuku 通道',
@@ -11212,6 +11494,116 @@ class L10nZh extends L10n {
 
   @override
   String get phoneKeepFailed => '没连上；下次打开 App 或开始操控时再试';
+
+  @override
+  String get phoneResourceRecoveryTitle => '后台资源待核验';
+
+  @override
+  String get phoneResourceRecoveryRunning => '正在核对原资源记录，完成前不能开始新的手机任务。';
+
+  @override
+  String get phoneResourceRecoveryStorage => '无法读取或保存资源记录。可重试保存或读取；已确认的释放不会重复执行，也不会重放旧操作。';
+
+  @override
+  String get phoneResourceRecoveryPending =>
+      '旧后台资源尚未核验，新的手机任务暂被阻止。请选择原授权通道后重试；仍无法核验时，可重启设备后再次检查。旧操作结果可能已经发生。确认任务中断提示不会清除这些资源。';
+
+  @override
+  String get phoneResourceRecoveryRetry => '重试资源核验';
+
+  @override
+  String get phoneSkillSectionTitle => '成功任务与技能';
+
+  @override
+  String get phoneSkillAskAfterSuccess => '任务成功后询问是否存成技能';
+
+  @override
+  String get phoneSkillAskAfterSuccessHint => '默认关闭。此页可见时，新完成的任务会询问一次；也可随时手动选择。';
+
+  @override
+  String phoneSkillTask(int taskId, int steps) {
+    return '任务 $taskId · $steps 步';
+  }
+
+  @override
+  String get phoneSkillCandidateHint => '请先核对实际结果；工具返回成功不等于目标已经完成。';
+
+  @override
+  String get phoneSkillSaveAction => '存成技能';
+
+  @override
+  String get phoneSkillConfirmGoal => '这次任务达到了目标吗？';
+
+  @override
+  String get phoneSkillConfirmGoalBody => '请核对实际结果。确认后才会起草，保存前仍可查看和编辑。';
+
+  @override
+  String get phoneSkillGoalDone => '目标已完成，查看草稿';
+
+  @override
+  String get phoneSkillPrivacyHint => '草稿只在本机处理。不要填写密码、密钥或验证码。本阶段自由文字会替换成参数，删除和重排步骤会保留；以最终预览为准。';
+
+  @override
+  String get phoneSkillGoal => '目标';
+
+  @override
+  String get phoneSkillPrerequisites => '前提（应用、版本、登录态）';
+
+  @override
+  String phoneSkillStep(int number) {
+    return '原步骤 $number';
+  }
+
+  @override
+  String get phoneSkillCheckpoint => '这一步之后应看到什么';
+
+  @override
+  String get phoneSkillMoveUp => '上移一步';
+
+  @override
+  String get phoneSkillMoveDown => '下移一步';
+
+  @override
+  String get phoneSkillUpdatePreview => '更新脱敏预览';
+
+  @override
+  String get phoneSkillPreviewTitle => '将保存的完整内容';
+
+  @override
+  String get phoneSkillParameterizedHint => '自由文字已替换成参数；使用技能时需要补充并重新核对。';
+
+  @override
+  String get phoneSkillFinalConfirmation => '我已核对当前完整预览，同意保存这一版本。';
+
+  @override
+  String get phoneSkillSavedBody => '文件已写入本机技能目录。尚未核实引擎技能列表是否已刷新；可在技能页检查。';
+
+  @override
+  String get phoneSkillWriting => '正在写入技能';
+
+  @override
+  String get phoneSkillCannotCancel => '写入可能已进入提交阶段，无法保证撤回。关闭只关闭此页；已经提交的文件仍会保存。';
+
+  @override
+  String get phoneSkillKeepWaiting => '继续查看';
+
+  @override
+  String get phoneSkillCheckWrite => '检查写入结果';
+
+  @override
+  String get phoneSkillStale => '这份草稿已失效。请关闭后重新选择任务。';
+
+  @override
+  String get phoneSkillSensitive => '编辑中包含敏感内容，请移除后再更新预览。';
+
+  @override
+  String get phoneSkillInvalid => '编辑内容或步骤顺序不符合限制。请减少文字，至少保留一个步骤。';
+
+  @override
+  String get phoneSkillWriteFailed => '未能写入。请核对本机运行环境和存储；修改并更新预览后才能再次确认保存。';
+
+  @override
+  String get phoneSkillUnavailable => '当前无法处理技能草稿。请检查本机引擎状态后重试。';
 
   @override
   String get phoneModeTitle => '选择确认方式';
@@ -14748,27 +15140,6 @@ class L10nZh extends L10n {
   String get remoteNetworkObservedAt => '最近观测';
 
   @override
-  String get remoteHostedLoadFailed => '无法读取已保存的分享链接，请重试。';
-
-  @override
-  String get remoteHostedSaveFailed => '分享链接的更改尚未保存，请重试。';
-
-  @override
-  String get remoteHostedDeleteSaveFailed => '删除未完成，链接仍然有效。请重试。';
-
-  @override
-  String get remoteHostedUndoUnsaved => '本次删除已取消，但撤销尚未保存。重启后可能继续删除，请到“我的分享链接”重试保存。';
-
-  @override
-  String get remoteHostedUndoFailed => '无法恢复分享，删除可能已开始。请检查“我的分享链接”。';
-
-  @override
-  String get remoteHostedCreatedUnsaved => '链接已创建，可以复制使用，但尚未保存到本机。请保留链接，并到“我的分享链接”重试保存。';
-
-  @override
-  String get remoteHostedStopFailed => '未能停止分享，链接仍然有效。请重试。';
-
-  @override
   String get remoteNetworkLocalIpVersion => '手机 ICE IP 版本';
 
   @override
@@ -14793,83 +15164,167 @@ class L10nZh extends L10n {
   String get searchKwRemoteCompactHistory => '精简 简洁 历史 工具 传输 流量 远程 compact slim lite';
 
   @override
-  String get remoteDirectSection => '直连服务器';
+  String get remotePairEntry => '扫码配对电脑';
 
   @override
-  String get remoteDirectSectionHint => '服务器地址 + 访问 Token（nginx 反向代理）';
+  String get remotePairEntryHint => '扫电脑上 Remote 插件显示的二维码，不用注册 Remote 账号（需要先登录 DeepSeek）';
 
   @override
-  String get remoteDirectAdd => '添加直连服务器';
+  String get remotePairAddComputer => '扫码添加电脑';
 
   @override
-  String get remoteDirectEmpty => '还没有直连服务器';
+  String get remotePairTitle => '扫码配对电脑';
 
   @override
-  String get remoteDirectName => '连接名称';
+  String get remotePairSubtitle => '不用注册 Remote 账号，也不会传 DeepSeek 密码或登录凭据';
 
   @override
-  String get remoteDirectNameHint => '家里的电脑';
+  String get remotePairNeedsDeepSeek => '先登录 DeepSeek 账号';
 
   @override
-  String get remoteDirectUrl => '服务器地址';
+  String get remotePairNeedsDeepSeekBody => '扫码配对要先在 DSH Go 里登录 DeepSeek 账号。配对时只附带账号 ID 用来标记这台手机，不传密码、Cookie 或 Token。';
 
   @override
-  String get remoteDirectUrlHint => 'https://dsh.example.com';
+  String get remotePairScanHint => '对准电脑上 Remote 插件显示的配对二维码';
 
   @override
-  String get remoteDirectUrlNote => '支持 https:// 或 wss://';
+  String get remotePairPasteLink => '粘贴配对链接';
 
   @override
-  String get remoteDirectUrlInvalid => '服务器地址无效';
+  String get remotePairPasteEmpty => '剪贴板里没有配对链接';
 
   @override
-  String get remoteDirectToken => '访问 Token';
+  String get remotePairScannerFailed => '二维码识别器不可用。可以粘贴配对链接继续配对。';
 
   @override
-  String get remoteDirectTokenHint => '粘贴访问 Token';
+  String get remotePairFromImage => '从相册识别';
 
   @override
-  String get remoteDirectPaste => '从剪贴板粘贴';
+  String get remotePairImageNoCode => '这张图里没找到二维码';
 
   @override
-  String get remoteDirectTokenRequired => '请填写访问 Token';
+  String get remotePairCameraDenied => '没有相机权限。可以在系统设置里打开，或者用「从相册识别」「粘贴配对链接」';
 
   @override
-  String get remoteDirectShowToken => '显示 Token';
+  String get remotePairCameraFailed => '相机打不开。可以用「从相册识别」或「粘贴配对链接」';
 
   @override
-  String get remoteDirectHideToken => '隐藏 Token';
+  String get remotePairReading => '正在读取配对信息…';
 
   @override
-  String get remoteDirectEdit => '编辑直连服务器';
+  String get remotePairConfirmTitle => '要连接这台电脑吗？';
 
   @override
-  String get remoteDirectDelete => '删除连接';
+  String get remotePairComputer => '电脑';
 
   @override
-  String remoteDirectDeleteBody(String name) {
-    return '删除「$name」？已保存的 Token 和登录凭据也会删除。';
+  String get remotePairServer => '服务器';
+
+  @override
+  String get remotePairFingerprint => '电脑指纹';
+
+  @override
+  String get remotePairFingerprintHint => '和电脑 Remote 插件上显示的指纹核对一致再继续。';
+
+  @override
+  String get remotePairConfirm => '确认是这台电脑，开始配对';
+
+  @override
+  String get remotePairNotThis => '不是这台，重新扫';
+
+  @override
+  String get remotePairClaiming => '正在生成验证码…';
+
+  @override
+  String get remotePairCodeTitle => '在电脑上输入这 8 位验证码';
+
+  @override
+  String remotePairCodeSemantics(String digits) {
+    return '验证码 $digits';
   }
 
   @override
-  String get remoteDirectTesting => '正在测试连接';
+  String get remotePairCodeHint => '在电脑的 Remote 插件里输入，点「确认绑定」。手机不用再操作。';
 
   @override
-  String remoteDirectTestOk(int ms) {
-    return '连接成功 · $ms ms';
+  String get remotePairOneAttempt => '只有一次机会：输错后这次配对作废，要在电脑上重新生成二维码再扫。';
+
+  @override
+  String remotePairWaiting(String countdown) {
+    return '等电脑确认 · 剩余 $countdown';
   }
 
   @override
-  String get remoteDirectTestFail => '连接失败';
+  String get remotePairApproved => '电脑已确认，正在完成绑定…';
 
   @override
-  String get remoteDirectSaved => '已保存';
+  String get remotePairCodeExpired => '验证码已过期，请在电脑上重新生成二维码';
 
   @override
-  String get remoteDirectHelp => '在服务器上运行 dsh web，用 nginx 把公网 443 反代到 127.0.0.1:3080，再把域名和 dsh web 打印的访问 Token 填在这里。';
+  String remotePairConnecting(String name) {
+    return '配对完成，正在连接 $name…';
+  }
 
   @override
-  String get webDirectUnavailable => '直连服务器请在对话和文件页里使用';
+  String get remotePairFailedTitle => '没能配对';
+
+  @override
+  String remotePairOtherServerBody(String server) {
+    return '这个二维码来自 $server，和 DSH Go 现在用的 Remote 服务器不同。切换过去继续吗？两个服务器的登录各自保留。';
+  }
+
+  @override
+  String get remotePairSwitchServer => '切换服务器并继续';
+
+  @override
+  String get remotePairScanAgain => '重新扫码';
+
+  @override
+  String get remotePairErrInvalidCode => '这不是 DSH Go 的配对二维码';
+
+  @override
+  String get remotePairErrOtherServer => '这个二维码来自另一个 Remote 服务器';
+
+  @override
+  String get remotePairErrUnsupported => '这个 Remote 服务器还不支持扫码配对';
+
+  @override
+  String get remotePairErrExpired => '二维码已过期或已经用过了。请在电脑上重新生成二维码';
+
+  @override
+  String get remotePairErrCodeRejected => '电脑上输入的验证码不对，这次配对已作废。请在电脑上重新生成二维码再扫';
+
+  @override
+  String get remotePairErrCancelled => '配对已取消';
+
+  @override
+  String get remotePairErrAccountConflict => '这台手机已经登录了另一个 Remote 账号，和这台电脑的账号不一致。原来的登录保持不变；要换绑请先在 Remote 里退出登录';
+
+  @override
+  String get remotePairErrIdentity => '配对信息和这台电脑或这台手机对不上，已经停止。请在电脑上重新生成二维码';
+
+  @override
+  String get remotePairErrHostLimit => '这个账号绑定的电脑已经到上限了';
+
+  @override
+  String get remotePairErrNetwork => '连不上 Remote 服务器，检查网络后重试';
+
+  @override
+  String get remotePairErrFailed => '配对没有完成，请重新扫码';
+
+  @override
+  String remotePairSwitchFailedTitle(String name) {
+    return '已和 $name 配对';
+  }
+
+  @override
+  String get remotePairSwitchFailedBody => '但没能切换到这台电脑。可以重试，或者回到「远程主机」里点这台电脑。';
+
+  @override
+  String get remotePairDone => '完成';
+
+  @override
+  String get remotePairErrPinSave => '已经配对，但没能在手机上保存这台电脑的指纹。请在电脑上重新生成二维码，再扫一次';
 
   @override
   String get stateWorkspaceFilesHint => '已上传到当前工作区的文件：';
@@ -14973,6 +15428,21 @@ class L10nZh extends L10n {
 
   @override
   String get askAiQuestionRemote => '怎么连接自己的电脑或服务器？和用本机有什么不同？';
+
+  @override
+  String get phoneRuntimeUpgradeBase => '新引擎与现有 Linux 环境不能确认兼容，更新已停止。原环境和已装工具没有删除。请先完整备份，再联系维护者迁移；不要直接重置或卸载 App。';
+
+  @override
+  String get phoneRuntimeUpgradeManifest => '无法安全识别运行时更新清单，更新已停止，原环境保留。请核对安装包并联系维护者，不要直接重置。';
+
+  @override
+  String get phoneRuntimeUpgradeInterrupted => '运行时升级尚未完成，数据与恢复现场已保留。请重试安装；仍失败时导出诊断并联系维护者，不要重置或删除恢复目录。';
+
+  @override
+  String get phoneRuntimeUpgradeSymlink => '现有环境的系统路径已被自定义链接替换，无法安全更新。原环境保留，请先备份并联系维护者处理。';
+
+  @override
+  String get phoneRuntimeUpgradeRunning => '引擎或遗留进程尚未确认停止，更新未开始。请先停止本机引擎，等待清理完成后重试；不要重置环境。';
 
   @override
   String get schemaDocumentationTitle => '字段说明';
@@ -15256,9 +15726,6 @@ class L10nZh extends L10n {
 
   @override
   String get searchKwAddSshHost => 'SSH,添加主机,连接电脑';
-
-  @override
-  String get searchKwAddDirectHost => '直连,直连服务器,HTTPS,令牌';
 
   @override
   String get searchKwRemoteAutoConnect => '自动连接,启动时连接';
@@ -17304,6 +17771,9 @@ class L10nZh extends L10n {
   String get stateTerminalStartFailed => '没能启动终端';
 
   @override
+  String get stateTerminalDisabledOnHost => '这台电脑关掉了远程终端。在电脑上打开 Remote 设置里的「终端」，再回来重试';
+
+  @override
   String get stateTileDuotone => '扁平双色';
 
   @override
@@ -17611,239 +18081,6 @@ class L10nZh extends L10n {
   String get appSlogan => '随时随刻，想go就Go！';
 
   @override
-  String get statePasteEmpty => '剪贴板中没有可粘贴的文本。';
-
-  @override
-  String get statePasteDenied => '系统未授予粘贴权限，请重新点击粘贴按钮。';
-
-  @override
-  String get statePasteBusy => '粘贴窗口尚未结束或仍在关闭，请完成或取消后重试。';
-
-  @override
-  String get statePasteFailed => '无法读取剪贴板，请重试或手动输入。';
-
-  @override
-  String get stateDirectHost => '直连服务器';
-
-  @override
-  String stateHostDirectLabel(String name) {
-    return '$name · 直连';
-  }
-
-  @override
-  String get systemActionsTitle => '系统操作';
-
-  @override
-  String get systemActionsSubtitle => '让 AI 帮你打开应用和系统页面，随时可以关';
-
-  @override
-  String get systemActionsReady => '已开启';
-
-  @override
-  String get systemActionsWaitingEngine => '已开启，等本机引擎启动';
-
-  @override
-  String get systemActionsOffScreen => '已开启，回到 DSH Go 才能用';
-
-  @override
-  String get systemActionsConnecting => '正在连接';
-
-  @override
-  String get systemActionsUnavailable => '已开启，暂时连不上，正在重试';
-
-  @override
-  String get systemActionsUnsupported => '这个版本用不了';
-
-  @override
-  String get systemActionsToggleFailed => '没能保存，再试一次';
-
-  @override
-  String get systemActionsRemoteTitle => '当前连的是远程主机';
-
-  @override
-  String get systemActionsRemoteHint => '系统操作只在本机引擎的对话里有效';
-
-  @override
-  String get systemActionsOnScreenTitle => '只在 DSH Go 在屏幕上时有效';
-
-  @override
-  String get systemActionsOnScreenBody => '系统不让后台应用做这些。AI 打开别的应用后，要等你回到 DSH Go 才能接着做。';
-
-  @override
-  String get systemActionsCanTitle => '能做的';
-
-  @override
-  String get systemActionsCanOpen => '打开应用或链接';
-
-  @override
-  String get systemActionsCanOpenHint => '应用要写包名，不能按名字找';
-
-  @override
-  String get systemActionsCanPages => '日历、拨号、分享、导航';
-
-  @override
-  String get systemActionsCanPagesHint => '打开系统界面，最后一步由你确认';
-
-  @override
-  String get systemActionsCanSettings => '部分系统设置页';
-
-  @override
-  String get systemActionsCanSettingsHint => '移动网络、显示、声音、NFC 和本应用的通知';
-
-  @override
-  String get systemActionsCanNotify => '发通知';
-
-  @override
-  String get systemActionsCanNotifyHint => '发出去不代表你已经看到';
-
-  @override
-  String get systemActionsCanClipboard => '写剪贴板';
-
-  @override
-  String get systemActionsCanClipboardHint => '只写不读';
-
-  @override
-  String get systemActionsCanHandoff => '交还给你';
-
-  @override
-  String get systemActionsCanHandoffHint => '登录、验证码这类步骤你来做，做完点继续';
-
-  @override
-  String get systemActionsCannotTitle => '做不到的';
-
-  @override
-  String get systemActionsCannotScreen => '看屏幕、点按其他应用';
-
-  @override
-  String get systemActionsCannotScreenHint => '系统不允许';
-
-  @override
-  String get systemActionsCannotOther => '读剪贴板、按名字找应用、短信';
-
-  @override
-  String get systemActionsCannotOtherHint => '没有可靠的公开接口，AI 会直接告诉你不支持';
-
-  @override
-  String get systemActionsConfirmTitle => '确认方式';
-
-  @override
-  String get systemActionsConfirmValue => '跟随权限';
-
-  @override
-  String get systemActionsConfirmHint => '按对话的权限来：一般每次先问你，完全权限时不问';
-
-  @override
-  String get systemActionsPermissionNote => '系统操作也按这里的权限询问：完全权限时不问，其他情况每次先问你。';
-
-  @override
-  String get systemActionsLogHint => '只记做了什么和结果，不记内容';
-
-  @override
-  String get systemActionsLogEmptyHint => 'AI 用过的系统操作都会记在这里';
-
-  @override
-  String get systemActionsOpenedUi => '已打开界面';
-
-  @override
-  String get systemActionsResultUnknown => '结果未知';
-
-  @override
-  String get systemActionsNotSupported => '不支持';
-
-  @override
-  String get systemActionsNotRun => '没有执行';
-
-  @override
-  String get systemActionsDisclosureTitle => '开启系统操作前';
-
-  @override
-  String get systemActionsDisclosureIntro => '开启后，AI 可以在对话里替你打开应用和系统页面。先了解这几点：';
-
-  @override
-  String get systemActionsDisclosureWhatTitle => '能做什么';
-
-  @override
-  String get systemActionsDisclosureWhatBody => '打开应用或链接，打开日历、拨号、分享、导航界面，发通知，写剪贴板，把步骤交还给你。这个版本开通了系统提醒时，还能设闹钟和计时器。';
-
-  @override
-  String get systemActionsDisclosureWhenTitle => '什么时候做';
-
-  @override
-  String get systemActionsDisclosureWhenBody => '只在对话用到、DSH Go 在屏幕上时。默认每次先问你，选了完全权限的对话不问。';
-
-  @override
-  String get systemActionsDisclosureWhoTitle => '发给谁';
-
-  @override
-  String get systemActionsDisclosureWhoBody => '动作的结果会回到对话，发给你选的模型。';
-
-  @override
-  String get systemActionsDisclosureNeverTitle => '不会做什么';
-
-  @override
-  String get systemActionsDisclosureNeverBody => '不看屏幕，不点按其他应用，不读剪贴板。打电话、分享、建日程的最后一步由你确认。';
-
-  @override
-  String get systemActionsDisclosureStopTitle => '怎么停';
-
-  @override
-  String get systemActionsDisclosureStopBody => '随时在这里关掉。交还提示可以点停止。';
-
-  @override
-  String get systemActionsHandoffTitle => '轮到你来操作';
-
-  @override
-  String get systemActionsHandoffNote => '做完回到 DSH Go 点继续。继续只表示你确认了，AI 看不到其他应用里发生了什么。';
-
-  @override
-  String get systemActionsHandoffFailed => '这次没算上，提示如果还在可以再点一次';
-
-  @override
-  String get systemActionsResultOpened => '已打开界面，还没确认里面的事办完。';
-
-  @override
-  String get systemActionsResultContinued => '你点了继续。这只说明你确认了，不代表其他应用里的操作完成了。';
-
-  @override
-  String get systemActionsResultNotified => '通知已发出，不确定你有没有看到。';
-
-  @override
-  String get systemActionsResultReminder => '已交给系统提醒，到点由系统响。引擎不会因此运行。';
-
-  @override
-  String get systemActionsResultClipboard => '文字已写入剪贴板。';
-
-  @override
-  String get systemActionsResultUnknownDetail => '系统调用可能已经发出，结果未知。不会自动重试，请自己看一下实际状态。';
-
-  @override
-  String get systemActionsResultUnsupported => '鸿蒙版不支持这个动作，没有执行。';
-
-  @override
-  String get systemActionsResultOffScreen => 'DSH Go 不在屏幕上，没有执行。';
-
-  @override
-  String get systemActionsResultUnavailable => '系统操作没开或暂时连不上，没有执行。到「设置 → 系统操作」看看。';
-
-  @override
-  String get systemActionsResultStopped => '已停止。';
-
-  @override
-  String get systemActionsResultTimeout => '等待超时，没有结果。';
-
-  @override
-  String get systemActionsResultNotRun => '没有执行。';
-
-  @override
-  String get catalogSystemActions => '系统操作';
-
-  @override
-  String get catalogSystemActionsSummary => '打开应用和系统页面';
-
-  @override
-  String get searchKwSystemActions => '手机操控,操作手机,代操作,打开应用,打开链接,日历,拨号,分享,导航,发通知,写剪贴板,交还,闹钟,计时器';
-
-  @override
   String get updateCheck => '检查更新';
 
   @override
@@ -18107,7 +18344,7 @@ class L10nZh extends L10n {
   String get usageStatsSection => '改进 DSH Go';
 
   @override
-  String get usageStatsFooter => '只含使用次数、版本和手机品牌，不含对话、文件和账号。';
+  String get usageStatsFooter => '这个开关只控制 dsh-go 自身的使用次数、版本、手机品牌和型号、系统版本统计，不含对话、文件和账号；它不控制 Google ML Kit SDK 的统计。';
 
   @override
   String get usageNoticeBody => '不含对话和个人信息，可随时关闭';
