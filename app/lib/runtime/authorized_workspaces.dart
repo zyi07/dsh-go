@@ -15,8 +15,9 @@ enum WorkspaceNativeGrant { unattached, ready, draining, drained, quarantined }
 enum WorkspacePersistencePermission { unknown, granted, denied }
 
 Map<Object?, Object?> _map(Object? value) {
-  if (value is! Map)
+  if (value is! Map) {
     throw const FormatException('Invalid authorized workspace response');
+  }
   return Map<Object?, Object?>.from(value);
 }
 

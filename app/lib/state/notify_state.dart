@@ -533,7 +533,7 @@ class ChatAlertsController extends Notifier<ChatAlert?> {
         if (attached()) _onSessionGone(host, session);
       },
       onReannounce: (alert) {
-        if (attached()) _offerPhonePrompt(alert);
+        if (attached()) _onReannounce(alert);
       },
       onRequestEpochChanged: (host) {
         if (attached()) _cancelPhonePrompt(host: host);
