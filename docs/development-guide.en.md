@@ -88,9 +88,9 @@ flutter pub get
 flutter analyze
 flutter test
 # Build release APK
-bash tooling/build-apk.sh --build-name 1.0.13
+bash tooling/build-apk.sh --build-name 1.0.14
 ```
-Output: `dist/dsh-go-1.0.13-android-arm64.apk`.
+Output: `dist/dsh-go-1.0.14-android-arm64.apk`.
 
 ---
 
@@ -128,7 +128,7 @@ On Windows:
 tooling/ohos/build-hap.sh --debug
 # Repack HAP ensuring resources/rawfile/dsh-runtime/runtime.zip is stored with ZIP_STORED (0)
 ```
-Output: `dist/dsh-go-1.0.13-ohos-unsigned-debug-full.hap`.
+Output: `dist/dsh-go-1.0.14-ohos-unsigned-debug-full.hap`.
 
 ---
 

@@ -123,9 +123,9 @@ flutter run -d <device-id>
 ### 4.2 正式打包
 执行构建脚本生成正式 APK：
 ```bash
-bash tooling/build-apk.sh --build-name 1.0.13
+bash tooling/build-apk.sh --build-name 1.0.14
 ```
-产物输出在 `dist/dsh-go-1.0.13-android-arm64.apk`。
+产物输出在 `dist/dsh-go-1.0.14-android-arm64.apk`。
 
 ---
 
@@ -183,7 +183,7 @@ import zipfile
 # 详见 _work/repack_hap_v2.py 逻辑
 "
 ```
-产物输出在 `dist/dsh-go-1.0.13-ohos-unsigned-debug-full.hap`。
+产物输出在 `dist/dsh-go-1.0.14-ohos-unsigned-debug-full.hap`。
 
 ---
 
