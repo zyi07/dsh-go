@@ -30,7 +30,7 @@
 
 `check-arkts.sh --with-forks` 从既有固定 overrides 取上游，把需修补的 fork 扩展到完整包树，再调用准备器；编译副本来自准备后的 `package/ohos`。普通不带 `--with-forks` 的检查不编这些 fork，不能拿它证明 fork 编译通过。
 
-`build-hap.sh` 在第一次 pub get 和既有平台 switch vendoring 后，从实际 package_config 找到 fork，准备到 `app/ohos/.vendor/forks`，向本次临时 overrides 追加修补包路径，再执行 pub get。随后要求实际解析根精确指向准备包，且完整输出 SHA 相同。build 后仍要求根与所有受保护源文件相同，仅允许清单声明的 `ohos/build`、`ohos/oh_modules`、`ohos/.hvigor`、`ohos/oh-package-lock.json5` 新产物；127 个原文件不在这些路径下，新增或篡改其他源码仍失败。再检查 `entry/oh_modules` 实际安装的修改文件。原来的退出清理继续恢复 Android lock，移除本次 overrides 和 `.vendor`。没有修改 Android 构建入口、锁文件、依赖声明或引擎补丁。
+`build-hap.sh` 在第一次 pub get 和既有平台 switch vendoring 后，从实际 package_config 找到 fork，准备到 `app/.vendor/forks`，向本次临时 overrides 追加修补包路径，再执行 pub get。随后要求实际解析根精确指向准备包，且完整输出 SHA 相同。build 后仍要求根与所有受保护源文件相同，仅允许清单声明的 `ohos/build`、`ohos/oh_modules`、`ohos/.hvigor`、`ohos/oh-package-lock.json5` 新产物；127 个原文件不在这些路径下，新增或篡改其他源码仍失败。再检查 `entry/oh_modules` 实际安装的修改文件。原来的退出清理继续恢复 Android lock，移除本次 overrides 和 `.vendor`。没有修改 Android 构建入口、锁文件、依赖声明或引擎补丁。
 
 ## 独立复核
 
