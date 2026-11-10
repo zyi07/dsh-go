@@ -1,5 +1,4 @@
 {
-  "schema": 2,
   "patches": {
     "cordis-effect-dispose-completion.diff": {
       "0.2.2-rc.1": {
@@ -128,8 +127,8 @@
     "ohos-mcp-command-router.diff": {
       "0.2.2-rc.1": {
         "node_modules/@deepseek-ai/dsh-mcp-client/lib/index.js": {
-          "after": "c29db61ad3505940daa5a37b2a7b1c71954f965c0106d2f0bba38b2a06d58d63",
-          "before": "73689d6f918f621dd18a74cd01a45f0b33e552193662ebd7703bd657a1d7b449"
+          "after": "04fb41ee85ceabc11948fade57eb70f66c6dd9182102cd188da0b92d78df1fff",
+          "before": "00e0f6f5fed9adaeb78000cd0f00ae37037c48a88d441586be936b142178d343"
         },
         "node_modules/@modelcontextprotocol/client/dist/stdio.cjs": {
           "after": "4addd12b80580f18a024a14ee55d9007da6df937c594a07a590f731d6bef8d1d",
@@ -138,14 +137,6 @@
         "node_modules/@modelcontextprotocol/client/dist/stdio.mjs": {
           "after": "b04d2db0feb4a733b68bab98abc15ae85d8ba81bd474fd9e30bd5e04b5ba50ea",
           "before": "26bba09797abb03929888ce234141ab89e5456a8ff3cdf5fadcb522d42f4ba3e"
-        }
-      }
-    },
-    "ohos-mcp-stdio-unavailable.diff": {
-      "0.2.2-rc.1": {
-        "node_modules/@deepseek-ai/dsh-mcp-client/lib/index.js": {
-          "after": "73689d6f918f621dd18a74cd01a45f0b33e552193662ebd7703bd657a1d7b449",
-          "before": "64dfc9127a47d9d453d72022b47d3b8d8a5c82cad756ac1114b09faf1a956120"
         }
       }
     },
@@ -240,8 +231,8 @@
     "ohos-virtual-process.diff": {
       "0.2.2-rc.1": {
         "node_modules/@deepseek-ai/dsh-tool-bash/lib/index.js": {
-          "after": "20071ddb9d142bbc60962d2e30a889da80129784777658e8b7026b756ce74c71",
-          "before": "ae6be2d8b287b5e410d026acd2fdfc553ebb95565f7b361029c7fb5bcda5fd27"
+          "after": "1774c13dca648dbffc7449f226de9a2f11a696eae3dbc18aaf729d996438d74d",
+          "before": "7f5a2c438a9b32eb5c7beac97a6e589e1908b3df79b18abebb22ea192300cad1"
         },
         "node_modules/@deepseek-ai/dsh-tool-fs-search/lib/index.js": {
           "after": "30ca4f076ea12e9b2fbaadd2f0e555186a56e495993db9bd401a1c2e4d7aaffc",
@@ -260,28 +251,28 @@
     "ohos-workspace-edit.diff": {
       "0.2.2-rc.1": {
         "node_modules/@deepseek-ai/dsh-fs-local/lib/index.js": {
-          "before": "509e5a9fab8b33473ce7193443321b04244fd8f9e6250549d12fd336ce448bb0",
-          "after": "c9a0e9fd114af53f4cdef087dc9365193a88623a68fa39cb4c854d18f50a9f67"
+          "after": "c9a0e9fd114af53f4cdef087dc9365193a88623a68fa39cb4c854d18f50a9f67",
+          "before": "509e5a9fab8b33473ce7193443321b04244fd8f9e6250549d12fd336ce448bb0"
         },
         "node_modules/@deepseek-ai/dsh-fs-sandbox/lib/index.js": {
-          "before": "f4edd14bf48f8d5bfdea10a61c6651ccde99f2d08a79855746ad2a8d89c6fb73",
-          "after": "08cca0535fa5368693e0f5141d92d0704c823dd1f331ddd9299e376ab49f2ac0"
+          "after": "08cca0535fa5368693e0f5141d92d0704c823dd1f331ddd9299e376ab49f2ac0",
+          "before": "f4edd14bf48f8d5bfdea10a61c6651ccde99f2d08a79855746ad2a8d89c6fb73"
         }
       }
     },
     "ohos-workspace-grant-paths.diff": {
       "0.2.2-rc.1": {
-        "node_modules/@deepseek-ai/dsh-workspace/lib/index.js": {
-          "before": "97d891ee0bc2ee8a1867a3c2420cf3ea8787b8000293771244f923de3b362658",
-          "after": "6413e6c3a6d14a5518e3121ab936b599a2a46f40ab603eab39fd383c4067b72a"
+        "node_modules/@deepseek-ai/dsh-fs-local/lib/index.js": {
+          "after": "509e5a9fab8b33473ce7193443321b04244fd8f9e6250549d12fd336ce448bb0",
+          "before": "abb3a2fbb7beb840504a28c011bf00652fe048638ea547a47468106052c37b7a"
         },
         "node_modules/@deepseek-ai/dsh-working-directory/lib/index.js": {
-          "before": "ee0876bbfa11c8d52dcdb663810d6a042c65274f1088bca3f6dd7b8446ed8e09",
-          "after": "167c67034bde5de5862e99ddd27a42d6d690fc42d2cc8748ed58cedf06c01b50"
+          "after": "167c67034bde5de5862e99ddd27a42d6d690fc42d2cc8748ed58cedf06c01b50",
+          "before": "ee0876bbfa11c8d52dcdb663810d6a042c65274f1088bca3f6dd7b8446ed8e09"
         },
-        "node_modules/@deepseek-ai/dsh-fs-local/lib/index.js": {
-          "before": "abb3a2fbb7beb840504a28c011bf00652fe048638ea547a47468106052c37b7a",
-          "after": "509e5a9fab8b33473ce7193443321b04244fd8f9e6250549d12fd336ce448bb0"
+        "node_modules/@deepseek-ai/dsh-workspace/lib/index.js": {
+          "after": "6413e6c3a6d14a5518e3121ab936b599a2a46f40ab603eab39fd383c4067b72a",
+          "before": "97d891ee0bc2ee8a1867a3c2420cf3ea8787b8000293771244f923de3b362658"
         }
       }
     },
@@ -1424,8 +1415,8 @@
     "zzzzzzzzzz-ohos-shell-limit-description.diff": {
       "0.2.2-rc.1": {
         "node_modules/@deepseek-ai/dsh-tool-bash/lib/index.js": {
-          "after": "8c337b3bcd8cd6b609d5fa4e1d9a23e7e4fc8939a72fed2bb303df0141755bb3",
-          "before": "20071ddb9d142bbc60962d2e30a889da80129784777658e8b7026b756ce74c71"
+          "after": "165a6be735c9268d1918a7345f975e2b47c90f452457388dbeef48dceff9c8a7",
+          "before": "1774c13dca648dbffc7449f226de9a2f11a696eae3dbc18aaf729d996438d74d"
         }
       }
     },
@@ -1544,8 +1535,8 @@
     "zzzzzzzzzzzzz-ohos-lifecycle.diff": {
       "0.2.2-rc.1": {
         "node_modules/@deepseek-ai/dsh-agent-loop/lib/index.js": {
-          "after": "edf486790c64ce75feea979cedd15fd985b41846a652ecb4d6feddb9f80e76d9",
-          "before": "927efc78e67b6203502892f1ebef4d198c9b95dfc8f8432692ba28f41eb511bf"
+          "after": "5b75193fdc8376b1b0f056b85816d58f2825d54a59628059a3e9e63d7ed8c587",
+          "before": "999a751912797e94773d224cd8fe69766815c5e75845a9d04295fd13acaf599d"
         },
         "node_modules/@deepseek-ai/dsh-http-proxy/lib/index.js": {
           "after": "61254bcefd6a84084c021ca83b69834790347d56ee8f154554cb86b74869ba4d",
@@ -1564,8 +1555,8 @@
           "before": "42ab78974030a7287b73d02700a914225fb3cfad0fc7dc8d62b35d66864ea3ee"
         },
         "node_modules/@deepseek-ai/dsh-tools/lib/pipeline.js": {
-          "after": "21e796d8f06c36826e5d6ad013f116b477f0e85c6f6e5d57837786dc3c2e94d9",
-          "before": "f6c850cefce30831c4c5f160e831856b105935331bacd1ae0823129001614bc6"
+          "after": "541f5c565369f4a7cf9e6df8bfc380341e0727e4dde8ddf5333d6caf2719d830",
+          "before": "ffc614ba600aaf9f3c2a4497dff441c8e8c228c22212741b9de43a0958b0b907"
         }
       }
     },
@@ -2054,6 +2045,7 @@
       }
     }
   },
+  "schema": 2,
   "targetSets": {
     "android": [
       "cordis-effect-dispose-completion.diff",
@@ -2184,29 +2176,6 @@
       "credentials-decimal-refs.diff",
       "fs-create-exclusive.diff",
       "install-log-redaction.diff",
-      "ohos-attachment-diagnostic.diff",
-      "ohos-attachment-publication.diff",
-      "ohos-discovery-response-cleanup.diff",
-      "ohos-effect-dispose-completion.diff",
-      "ohos-forge-github-unavailable.diff",
-      "ohos-hap-native-libraries.diff",
-      "ohos-liveshare-owner-unavailable.diff",
-      "ohos-market-git-unavailable.diff",
-      "ohos-mcp-command-router.diff",
-      "ohos-mcp-stdio-unavailable.diff",
-      "ohos-network-transport.diff",
-      "ohos-output-utf8.diff",
-      "ohos-plugin-hmr-transaction.diff",
-      "ohos-plugin-linkless.diff",
-      "ohos-plugin-locale-bom.diff",
-      "ohos-plugin-manifest-bom.diff",
-      "ohos-plugin-remove-rollback.diff",
-      "ohos-provider-body-timeout.diff",
-      "ohos-provider-stream-body-timeout.diff",
-      "ohos-virtual-process.diff",
-      "ohos-workspace-changes.diff",
-      "ohos-workspace-edit.diff",
-      "ohos-workspace-grant-paths.diff",
       "piai-google-openai-store.diff",
       "plugin-manager-active-run-guard.diff",
       "plugin-manager-cancel-tree-confirmation.diff",
@@ -2235,8 +2204,6 @@
       "zzzzzzz-job-ring-trim.diff",
       "zzzzzzz-jsonl-root-check-retry.diff",
       "zzzzzzz-mcp-resource-lookup.diff",
-      "zzzzzzz-ohos-fs-exclusive.diff",
-      "zzzzzzz-ohos-session-publication.diff",
       "zzzzzzz-piai-developer-tools.diff",
       "zzzzzzz-plugin-list-index.diff",
       "zzzzzzz-preset-owner-dispose.diff",
@@ -2253,13 +2220,11 @@
       "zzzzzzz-web-fetch-redirect-cleanup.diff",
       "zzzzzzz-workspace-observation-queue.diff",
       "zzzzzzzz-model-defaults.diff",
-      "zzzzzzzz-ohos-atomic-publication.diff",
       "zzzzzzzz-schedule-authorization.diff",
       "zzzzzzzzz-credentials-disposal.diff",
       "zzzzzzzzz-developer-header-lookup.diff",
       "zzzzzzzzz-job-result-bytes.diff",
       "zzzzzzzzz-materialize-temp.diff",
-      "zzzzzzzzz-ohos-search-confinement.diff",
       "zzzzzzzzz-plugin-detail-body-cancel.diff",
       "zzzzzzzzz-plugin-manager-metadata-inventory.diff",
       "zzzzzzzzz-prompt-admission.diff",
@@ -2277,25 +2242,17 @@
       "zzzzzzzzz-tool-history-lookup.diff",
       "zzzzzzzzz-workspace-domain-close.diff",
       "zzzzzzzzzz-agent-team-input-recovery.diff",
-      "zzzzzzzzzz-ohos-shell-limit-description.diff",
       "zzzzzzzzzz-plugin-manager-log-write-all.diff",
       "zzzzzzzzzz-plugin-update-selection.diff",
       "zzzzzzzzzz-session-export-descendant-refs.diff",
       "zzzzzzzzzz-terminal-readiness-clock.diff",
       "zzzzzzzzzz-workspace-watch-error.diff",
-      "zzzzzzzzzzz-ohos-search-ignore-description.diff",
       "zzzzzzzzzzz-plugin-operations-log-utf8.diff",
       "zzzzzzzzzzz-plugin-update-precondition.diff",
-      "zzzzzzzzzzzz-ohos-composition.diff",
-      "zzzzzzzzzzzz-ohos-runtime-capabilities.diff",
       "zzzzzzzzzzzz-plan-pending-restore.diff",
       "zzzzzzzzzzzz-plugin-update-hmr-selection.diff",
-      "zzzzzzzzzzzzz-ohos-lifecycle.diff",
-      "zzzzzzzzzzzzz-ohos-plugin-install-refusal.diff",
       "zzzzzzzzzzzzz-plan-failed-command-pending.diff",
       "zzzzzzzzzzzzz-plugin-update-hmr-precondition.diff",
-      "zzzzzzzzzzzzzz-ohos-composition-imports.diff",
-      "zzzzzzzzzzzzzz-ohos-plugin-packages.diff",
       "zzzzzzzzzzzzzz-plugin-manager-lock-lifetime.diff",
       "zzzzzzzzzzzzzzz-read-line-surrogate.diff",
       "zzzzzzzzzzzzzzz-workflow-result-unicode.diff",
@@ -2337,7 +2294,41 @@
       "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz-phone-run-end.diff",
       "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz-phone-run-end-schema.diff",
       "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz-phone-run-end-retry.diff",
-      "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz-phone-run-end-live-retry.diff"
+      "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz-phone-run-end-live-retry.diff",
+      "ohos-attachment-publication.diff",
+      "ohos-discovery-response-cleanup.diff",
+      "ohos-attachment-diagnostic.diff",
+      "ohos-effect-dispose-completion.diff",
+      "ohos-forge-github-unavailable.diff",
+      "ohos-hap-native-libraries.diff",
+      "ohos-liveshare-owner-unavailable.diff",
+      "ohos-market-git-unavailable.diff",
+      "ohos-mcp-command-router.diff",
+      "ohos-network-transport.diff",
+      "ohos-output-utf8.diff",
+      "ohos-provider-body-timeout.diff",
+      "ohos-provider-stream-body-timeout.diff",
+      "ohos-virtual-process.diff",
+      "ohos-workspace-changes.diff",
+      "zzzzzzz-ohos-fs-exclusive.diff",
+      "ohos-workspace-grant-paths.diff",
+      "ohos-workspace-edit.diff",
+      "zzzzzzz-ohos-session-publication.diff",
+      "zzzzzzzz-ohos-atomic-publication.diff",
+      "zzzzzzzzz-ohos-search-confinement.diff",
+      "zzzzzzzzzz-ohos-shell-limit-description.diff",
+      "zzzzzzzzzzz-ohos-search-ignore-description.diff",
+      "zzzzzzzzzzzz-ohos-composition.diff",
+      "zzzzzzzzzzzz-ohos-runtime-capabilities.diff",
+      "zzzzzzzzzzzzz-ohos-lifecycle.diff",
+      "zzzzzzzzzzzzz-ohos-plugin-install-refusal.diff",
+      "zzzzzzzzzzzzzz-ohos-composition-imports.diff",
+      "zzzzzzzzzzzzzz-ohos-plugin-packages.diff",
+      "ohos-plugin-hmr-transaction.diff",
+      "ohos-plugin-manifest-bom.diff",
+      "ohos-plugin-locale-bom.diff",
+      "ohos-plugin-linkless.diff",
+      "ohos-plugin-remove-rollback.diff"
     ]
   }
 }
