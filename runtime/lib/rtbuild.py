@@ -415,6 +415,20 @@ def select_dsh_patches(pins, directory, target):
 
 
 
+def dsh_patch_inputs(pins, directory, names, target, version):
+    """Identity of the exact patch set a target applied (patch bytes + pinned hashes)."""
+    inputs = {"schema": 1, "target": target, "dshVersion": version, "patches": []}
+    for name in names:
+        inputs["patches"].append({"name": name,
+            "sha256": hashlib.sha256(open(os.path.join(directory, name), "rb").read()).hexdigest(),
+            "pins": pins["patches"][name][version]})
+    if "zzzzzz-session-deletion.diff" in names:
+        source = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "session-deletion", "core.mjs")
+        inputs["companionSha256"] = hashlib.sha256(open(source, "rb").read()).hexdigest()
+    encoded = json.dumps(inputs, sort_keys=True, separators=(",", ":")).encode()
+    return inputs, hashlib.sha256(encoded).hexdigest()
+
+
 def cmd_patch_dsh(args):
     """Apply runtime/patches/*.diff to a DSH npm prefix, refusing anything not pinned for this DSH version.
 
@@ -494,8 +508,11 @@ def cmd_patch_dsh(args):
         with open(args.out, "w") as f:
             json.dump(applied, f)
     if args.target_report:
+        inputs, input_hash = dsh_patch_inputs(pins, args.patches, names, args.target, args.dsh_version)
         with open(args.target_report, "w") as f:
-            json.dump({"target": args.target, "selected": names, "all": all_names}, f, indent=2)
+            json.dump({"schema": 1, "target": args.target, "dshVersion": args.dsh_version,
+                       "selected": names, "excluded": sorted(set(all_names) - set(names)),
+                       "inputSha256": input_hash, "inputs": inputs}, f, indent=2)
             f.write("\n")
 
 

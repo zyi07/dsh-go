@@ -25,7 +25,7 @@
 @@ -107,6 +119,12 @@
    };
    return {
-     version: 1, pending, deleted, assertAdmit, assertParent, withMutation: mutation,
+     version: 2, pending, deleted, assertAdmit, assertParent, withMutation: mutation,
 +    get supported() {
 +      if (process.platform !== 'openharmony') return true;
 +      const publication = globalThis[Symbol.for('dsh.go.ohos.publication')];
