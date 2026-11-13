@@ -138,9 +138,7 @@ session-format-error.diff
 session-queue-steer-deletion.diff
 webserver-resource-abort.diff
 ohos-attachment-publication.diff
-ohos-discovery-response-cleanup.diff
 ohos-attachment-diagnostic.diff
-ohos-effect-dispose-completion.diff
 ohos-forge-github-unavailable.diff
 ohos-hap-native-libraries.diff
 ohos-liveshare-owner-unavailable.diff
@@ -152,7 +150,6 @@ ohos-provider-body-timeout.diff
 ohos-provider-stream-body-timeout.diff
 ohos-virtual-process.diff
 ohos-workspace-changes.diff
-zzzzzzz-ohos-fs-exclusive.diff
 ohos-workspace-grant-paths.diff
 ohos-workspace-edit.diff
 zzzzzzz-ohos-session-publication.diff

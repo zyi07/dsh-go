@@ -86,23 +86,3 @@
  				} catch (error) {
  					if (isLockContention(error)) throw new SessionAlreadyOwnedError(id);
  					throw error;
-@@ -2037,7 +2098,8 @@
- 		throw error;
- 	}
- 	try {
--		await internals.fs.link(staged, currentPath);
-+		if (internals.platform === "openharmony") await publishOhosExclusive(staged, currentPath, internals.fs);
-+		else await internals.fs.link(staged, currentPath);
- 	} catch (error) {
- 		/* v8 ignore else -- a non-collision filesystem error propagates unchanged. */
- 		if (isEEXIST(error)) return false;
-@@ -3246,7 +3308,8 @@
- 		const tmp = await this.writeSyncedTempFile(finalPath, content);
- 		let linked = false;
- 		try {
--			await link(tmp, finalPath);
-+			if (process.platform === "openharmony") await publishOhosExclusive(tmp, finalPath);
-+			else await link(tmp, finalPath);
- 			linked = true;
- 		} finally {
- 			/* v8 ignore next -- link failure is the TOCTOU/IO race guarded above; not reachable in test */
