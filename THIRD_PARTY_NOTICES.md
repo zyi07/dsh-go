@@ -71,6 +71,12 @@ used with the author's permission.
 - `shell/`：`drawer_drag.dart`、`home_shell.dart`、`sessions_drawer.dart`
 - `theme/`：`accent.dart`、`app_theme.dart`、`backdrop.dart`、`highlight_theme.dart`、`motion.dart`、`palette.dart`、`semantic_colors.dart`、`shapes.dart`、`squircle.dart`、`typography.dart`
 
+### dartssh2（MIT，已修改）
+
+- 来源：dartssh2 4.1.0（https://pub.dev/packages/dartssh2/versions/4.1.0），上游 https://github.com/vicajilau/dartssh2。
+- 本仓库位置：`packages/dartssh2/`；保留包内原始 `LICENSE`，Flutter 按本地依赖收集许可。
+- 本地改动：增加认证后启用的 `zlib@openssh.com` 压缩、关闭选项、重协商时的压缩流切换及对应测试；不修改密码算法。来源归档校验与维护说明见包内说明。
+
 ### DeepSeek Harness（MIT）
 
 | 项 | 内容 |
@@ -233,6 +239,13 @@ DS Bot 的 NOTICE 原文附在文末。
 | mobile_scanner（pub 包，含 Android 插件代码） | 7.5.0 | BSD-3-Clause | Copyright (c) 2022, Julian Steenbakker | Remote「扫码配对电脑」的相机扫码和相册识图 |
 | ML Kit Barcode Scanning（`com.google.mlkit:barcode-scanning`，模型随 APK 打包） | 17.3.0 | [ML Kit 服务条款](https://developers.google.com/ml-kit/terms)（Google 免费分发的二进制，非开源） | Google LLC | mobile_scanner 的二维码识别，在手机本地运行，不需要 Google Play 服务 |
 | CameraX（`androidx.camera:*`，mobile_scanner 的依赖） | 随 mobile_scanner 7.5.0 | Apache-2.0 | The Android Open Source Project | 扫码时的相机预览 |
+
+### tawcroot（tawc，MIT）
+
+「tawcroot 加速启动」（设置 → 开发者选项，默认关闭）用的 `libtawcroot.so`，由 `runtime/tawcroot/build.py` 从 [tawc](https://github.com/wmww/tawc) 固定提交 `a49a4075228f4801dadc1eee584aed33fe8ea4ce`（源码归档 SHA-256 `74487243bde86c303e786e79cd4a13e98c3279cae4ab7725dcf5fa51c0b530c1`）的 `tawcroot/src`、`tawcroot/include` 原样编译，没有修改上游源码。tawc 的 README 写明 `deps/` 以外的代码都是 MIT（[LICENSE.MIT](https://github.com/wmww/tawc/blob/a49a4075228f4801dadc1eee584aed33fe8ea4ce/LICENSE.MIT)）；整个项目因 `deps/` 里的 GPLv3 代码按 GPLv3 发布，那部分我们不编译、不分发。
+
+- 版权：Copyright (c) 2026 Sophie Winter
+- 许可：MIT（全文见文末「MIT License」），App 内「开源许可」页的 `tawcroot (tawc)` 条目附全文
 
 ### WebRTC 150.7871.04 核对记录（2026-10-30）
 

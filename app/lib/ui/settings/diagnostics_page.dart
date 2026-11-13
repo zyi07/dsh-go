@@ -163,8 +163,7 @@ class SystemImeDiagnosticsSection extends ConsumerStatefulWidget {
   ConsumerState<SystemImeDiagnosticsSection> createState() => _SystemImeDiagnosticsSectionState();
 }
 
-class _SystemImeDiagnosticsSectionState extends ConsumerState<SystemImeDiagnosticsSection>
-    with WidgetsBindingObserver {
+class _SystemImeDiagnosticsSectionState extends ConsumerState<SystemImeDiagnosticsSection> with WidgetsBindingObserver {
   late final SystemImeDiagnostics _diagnostics;
   ModalRoute<dynamic>? _route;
 
@@ -204,19 +203,21 @@ class _SystemImeDiagnosticsSectionState extends ConsumerState<SystemImeDiagnosti
     builder: (context, _) {
       final l10n = context.l10n;
       final evidence = _diagnostics.evidence;
-      final status = _diagnostics.collecting ? l10n.systemImeCollecting : switch (evidence?.code) {
-        null => l10n.systemImeNotCollected,
-        'ok' => l10n.systemImeRetained,
-        'noEvents' => l10n.systemImeNoEvents,
-        'unavailable' => l10n.systemImeUnavailable,
-        'unsupported' => l10n.systemImeUnsupported,
-        'denied' => l10n.systemImeDenied,
-        'cancelled' => l10n.systemImeCancelled,
-        'busy' => l10n.systemImeBusy,
-        'timeout' => l10n.systemImeTimeout,
-        'limitExceeded' => l10n.systemImeLimitExceeded,
-        _ => l10n.systemImeFailed,
-      };
+      final status = _diagnostics.collecting
+          ? l10n.systemImeCollecting
+          : switch (evidence?.code) {
+              null => l10n.systemImeNotCollected,
+              'ok' => l10n.systemImeRetained,
+              'noEvents' => l10n.systemImeNoEvents,
+              'unavailable' => l10n.systemImeUnavailable,
+              'unsupported' => l10n.systemImeUnsupported,
+              'denied' => l10n.systemImeDenied,
+              'cancelled' => l10n.systemImeCancelled,
+              'busy' => l10n.systemImeBusy,
+              'timeout' => l10n.systemImeTimeout,
+              'limitExceeded' => l10n.systemImeLimitExceeded,
+              _ => l10n.systemImeFailed,
+            };
       return SettingsSection(
         title: l10n.systemImeTitle,
         children: [
@@ -224,9 +225,9 @@ class _SystemImeDiagnosticsSectionState extends ConsumerState<SystemImeDiagnosti
             icon: AppIcons.exportLog,
             title: l10n.systemImeCollect,
             subtitle: l10n.systemImePrivacy,
-            onTap: _diagnostics.collecting ? null : () => _diagnostics.collect(
-              isCurrent: () => mounted && (_route?.isCurrent ?? true),
-            ),
+            onTap: _diagnostics.collecting
+                ? null
+                : () => _diagnostics.collect(isCurrent: () => mounted && (_route?.isCurrent ?? true)),
             tinted: false,
           ),
           SettingsTile(title: status, subtitle: l10n.systemImeEvidenceLimits),
@@ -273,6 +274,7 @@ class RuntimeLaunchFacts extends StatelessWidget {
       'direct' => l10n.phoneLaunchDirect,
       'proot' => l10n.phoneLaunchCompatible,
       'ohos-embedded' => l10n.harmonyLaunchEmbedded,
+      'tawcroot' => l10n.phoneLaunchTawcroot,
       _ => mode,
     };
     // One child of the card: keep SheetGroup's 2dp between its rows.
@@ -298,6 +300,9 @@ class RuntimeLaunchFacts extends StatelessWidget {
               'notEnoughSpace' => l10n.phoneDirectNotEnoughSpace,
               'migrationFailed' => l10n.phoneDirectMigrationFailed,
               'directFailed' => l10n.phoneDirectLaunchFailed,
+              'tawcrootFailed' => l10n.phoneTawcLaunchFailed,
+              'tawcrootUnsupported' => l10n.phoneTawcUnsupported,
+              'tawcrootNotBundled' || 'tawcrootApiTooOld' => l10n.phoneTawcUnavailable,
               'safeRecovery' => l10n.phoneSafeMode,
               _ => reason,
             },

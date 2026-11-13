@@ -234,10 +234,16 @@ class TerminalScreenState extends ConsumerState<TerminalScreen> with FieldPaste<
   }
 
   Future<void> _paste() async {
+    final terminal = _terminal;
     _selection.clearSelection();
     final text = await readClipboard();
     if (text == null || text.isEmpty || !mounted || !_canType) return;
-    _terminal.paste(text);
+    // A reconnect can replace the attachment before this widget rebuilds.
+    final current = ref.read(terminalWorkspaceProvider(widget.sessionId)).selected;
+    if (current == null || current.terminal != terminal || current.phase != TerminalPhase.live || !current.writable) {
+      return;
+    }
+    terminal.paste(text);
     _toBottom();
   }
 
