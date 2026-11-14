@@ -33,7 +33,7 @@ async function fixture(t, declaration = manifest) {
   const ctx = { logger: { warn() {} }, get: n => n === 'loader' ? { entries: () => entries } : n === 'connection' ? connection : services[n],
     provide(n, s) { services[n] = s; }, effect(fn) { const d = fn(); if (typeof d === 'function') disposers.push(d); return d; },
     on(n, fn) { hooks.set(n, fn); }, inject(deps, fn) { fn(ctx); },
-    webServer: { register(r) { routes.push(r); return () => {}; }, registerUpgrade(r) { upgrades.push(r); return () => {}; } } };
+    webServer: { tapIndex() { return () => {}; }, register(r) { routes.push(r); return () => {}; }, registerUpgrade(r) { upgrades.push(r); return () => {}; } } };
   apply(ctx, { persist: false, guardRoutes: false });
   const responses = []; let holdMedia = false, mediaRouteGate;
   const server = createServer(async (req, res) => {

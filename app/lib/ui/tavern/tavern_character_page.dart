@@ -11,6 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/l10n.dart';
 import '../../tavern/tavern_provider.dart';
+import '../../tavern/tavern_settings.dart';
 import '../bots/bot_format.dart' show shortTime;
 import '../chat/render/markdown_body.dart';
 import '../common/app_sheet.dart';
@@ -275,6 +276,34 @@ class _TavernCharacterPageState extends ConsumerState<TavernCharacterPage> {
                   note: l10n.tavernLorebookCharacterNote,
                 ),
                 TavernLive2dTile(character: character),
+                // How its chats show the card: its own, or as 酒馆设置 say.
+                ...switch (ref.watch(tavernCharacterRenderProvider(character.id))) {
+                  final own => [
+                    SettingsSegmentTile<TavernRender>(
+                      key: const ValueKey('tavern-character-render'),
+                      title: l10n.tavernRender,
+                      subtitle: l10n.tavernRenderSubtitle,
+                      tinted: false,
+                      segments: [
+                        PillSegment(TavernRender.text, l10n.tavernRenderText),
+                        PillSegment(TavernRender.islands, l10n.tavernRenderIslands),
+                        PillSegment(TavernRender.canvas, l10n.tavernRenderCanvas),
+                      ],
+                      selected: own ?? tavernRenderOf(ref.watch(tavernSettingsProvider)),
+                      onChanged: (r) =>
+                          unawaited(ref.read(tavernCharacterRenderProvider(character.id).notifier).set(r)),
+                    ),
+                    if (own != null)
+                      SettingsTile(
+                        key: const ValueKey('tavern-character-render-follow'),
+                        icon: AppIcons.restart,
+                        tinted: false,
+                        title: l10n.tavernFollowSettings,
+                        onTap: () =>
+                            unawaited(ref.read(tavernCharacterRenderProvider(character.id).notifier).set(null)),
+                      ),
+                  ],
+                },
                 // What of the card runs here, and what is kept but not run.
                 SettingsTile(
                   key: const ValueKey('tavern-character-report'),

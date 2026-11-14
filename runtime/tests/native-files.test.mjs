@@ -35,7 +35,7 @@ async function fixture(t, declaration = manifest, native = {}) {
   const ctx = { logger: { warn(error) { t.diagnostic(String(error?.stack ?? error)); } }, get: n => n === 'loader' ? { entries: () => entries } : n === 'connection' ? connection : services[n],
     provide(n, s) { services[n] = s; }, effect(fn) { const d = fn(); if (typeof d === 'function') disposers.push(d); return d; },
     on(n, fn) { hooks.set(n, fn); }, inject(deps, fn) { fn(ctx); },
-    webServer: { register(r) { routes.push(r); return () => {}; }, registerUpgrade(r) { upgrades.push(r); return () => {}; } } };
+    webServer: { tapIndex() { return () => {}; }, register(r) { routes.push(r); return () => {}; }, registerUpgrade(r) { upgrades.push(r); return () => {}; } } };
   apply(ctx, { persist: false, guardRoutes: false, native });
   let fileRouteGate;
   const server = createServer(async (req, res) => {

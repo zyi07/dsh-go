@@ -1,6 +1,32 @@
 window.__ModuleLoader__.load({
 	id: "dsh-go-bridge",
 	factory: (require) => {
+		// Boot awaits this factory before mounting Markdown, whose file-link parser
+		// calls URL.canParse. Older WebViews have URL but lack that static method.
+		const URLConstructor = URL;
+		if (typeof URLConstructor.canParse !== "function") {
+			Object.defineProperty(URLConstructor, "canParse", {
+				configurable: true,
+				enumerable: true,
+				writable: true,
+				value: {
+					canParse(url) {
+						if (arguments.length === 0) throw new TypeError("URL.canParse requires a URL argument");
+						// WebIDL converts both arguments before parsing; conversion errors
+						// must escape rather than becoming an invalid-URL result.
+						const urlString = `${url}`;
+						const base = arguments[1];
+						const baseString = base === undefined ? undefined : `${base}`;
+						try {
+							new URLConstructor(urlString, baseString);
+							return true;
+						} catch {
+							return false;
+						}
+					},
+				}.canParse,
+			});
+		}
 		var module = { exports: {} };
 		// dsh-go-bridge, browser half (docs/design/plugin-seams.md §5.2, §6.1).
 		//

@@ -77,6 +77,7 @@ enum SettingsPageId {
   interface,
   notifications,
   voice,
+  voiceReading,
   performance,
   background,
   systemAccess,
@@ -507,6 +508,13 @@ final _pages = <SettingsPageMeta>[
     group: _general,
     keywords: (l) => l.searchKwVoice,
     links: const ['voice'],
+  ),
+  SettingsPageMeta(
+    SettingsPageId.voiceReading,
+    title: (l) => l.speechVoiceTitle,
+    parent: SettingsPageId.voice,
+    keywords: (l) => l.searchKwVoiceReading,
+    links: const ['voice-reading'],
   ),
   SettingsPageMeta(
     SettingsPageId.performance,

@@ -399,7 +399,7 @@ def select_dsh_patches(pins, directory, target):
         if set(ohos) != present:
             sys.exit("patch series mismatch: unlisted=%s unknown=%s"
                      % (sorted(present - set(ohos)), sorted(set(ohos) - present)))
-        names = list(ohos)
+        names = list(ohos) if target == "ohos" else list(android)
     elif target == "ohos":
         sys.exit("%s: missing patch series for target ohos" % ohos_path)
     else:

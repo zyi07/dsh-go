@@ -15,6 +15,9 @@ import '../../notify/chat_alerts.dart' show approvalText, questionText;
 import '../../runtime/local_footprint.dart' show RuntimeMissing;
 import '../../runtime/runtime_bridge.dart' show RuntimePhase;
 import '../../runtime/runtime_state.dart' show localRuntimeProvider;
+import '../../speech/read_aloud.dart';
+import '../../speech/voice_cloud.dart';
+import '../speech/voice_call_page.dart';
 import '../../state/agents_state.dart' show subagentParentProvider;
 import '../../state/attachments.dart';
 import '../../state/balance_state.dart';
@@ -277,7 +280,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
     if (prepared != null && !identical(prepared, _sendingPhoneSkill)) unawaited(prepared.discard());
   }
 
-  bool _phoneSkillCurrent(PreparedPhoneSkill prepared) => mounted &&
+  bool _phoneSkillCurrent(PreparedPhoneSkill prepared) =>
+      mounted &&
       identical(_preparedPhoneSkill, prepared) &&
       prepared.origin.current(ProviderScope.containerOf(context, listen: false));
 
@@ -295,8 +299,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
     try {
       // No ordinary input, quote or attachments are consumed. Queue rather than
       // steer an existing turn; the final predicate runs beside client.prompt.
-      ok = await chat.send(prepared.text, mode: SendMode.queue,
-        deliveryAllowed: () => _phoneSkillCurrent(prepared));
+      ok = await chat.send(prepared.text, mode: SendMode.queue, deliveryAllowed: () => _phoneSkillCurrent(prepared));
     } finally {
       if (!ok) unawaited(prepared.discard());
       if (mounted) {
@@ -358,6 +361,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
         final mode = await ref.read(voiceSettingsProvider.notifier).ready();
         return mounted && ref.read(harmonyLocalVoiceProvider) ? voiceModeOnHarmonyLocal(mode) : mode;
       },
+      cloud: (mode) => ref.read(voiceCloudProvider)(mode),
+      cloudLikely: () => ref.read(voiceCloudLikelyProvider)(),
       harmony: () => ref.read(operatingSystemProvider) == 'ohos',
       // The voice model lives in the on-device engine: it counts for that host only.
       modelReady: () =>
@@ -386,7 +391,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
     _showDraft(ref.read(draftStoreProvider).drafts[_draftKey]);
     _input.addListener(_resetSlashDismissal);
     _input.addListener(_saveDraft);
-    ref.listenManual(currentSessionProvider, (_, next) => _switchDraft(next));
+    ref.listenManual(currentSessionProvider, (_, next) {
+      // Another conversation: nothing of this one is read aloud any more.
+      ref.read(readAloudProvider.notifier).stop();
+      _switchDraft(next);
+    });
     ref.listenManual(activeConnectionProvider.select((c) => c.value?.client), (_, _) {
       _dropPreparedPhoneSkill();
       _draftScope = Object();
@@ -443,7 +452,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
         _composerToast(appL10n.phoneSkillReplaySourceChanged);
         return;
       }
-      setState(() { _dropPreparedPhoneSkill(); _preparedPhoneSkill = prepared; });
+      setState(() {
+        _dropPreparedPhoneSkill();
+        _preparedPhoneSkill = prepared;
+      });
       return;
     }
     if (ref.read(currentSessionProvider) != insert.sessionId) {
@@ -728,6 +740,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
       return;
     }
     setState(() => _drafts = const []);
+    // A new message: the reply being read aloud is old news.
+    ref.read(readAloudProvider.notifier).stop();
     _input.clear();
     ref.read(composerQuoteProvider.notifier).clear(sessionId);
 
@@ -1021,7 +1035,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
         files: canStageFiles(ref.read(activeConnectionProvider).value, ref.read(activeHostProvider)),
         sessionId: ref.read(currentSessionProvider),
         generate: ref.read(mediaPluginProvider) != MediaPluginState.absent,
+        call: true,
       );
+      if (choice is CallChoice) {
+        if (ownsDraft() && mounted) await _startCall(ownsDraft);
+        return;
+      }
       if (choice is GenerateChoice) {
         if (ownsDraft()) _enterGenerate();
         return;
@@ -1422,6 +1441,36 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
 
   void _openUsage(String sessionId, ModelSelection? model) {
     showUsageSheet(context, sessionId: sessionId, model: model);
+  }
+
+  /// 「语音通话」 with this conversation (a new chat gets its conversation
+  /// with the first thing said); [ownsDraft]: still the conversation it was asked from.
+  Future<void> _startCall(bool Function() ownsDraft) async {
+    // Dictation gives the microphone back first (what it heard so far goes, as on a draft switch).
+    await _voice.cancel();
+    if (!mounted || !ownsDraft()) return;
+    final host = ref.read(activeHostProvider);
+    final sessionId = ref.read(currentSessionProvider);
+    final listed = sessionId == null ? null : ref.read(chatProvider(sessionId)).title;
+    final title = listed != null && listed.trim().isNotEmpty ? chatTitleShown(listed.trim()) : appL10n.commonNewChat;
+    // The call stays with the conversation it began in, whatever is opened meanwhile.
+    var pinned = sessionId;
+    unawaited(
+      openChatCall(
+        context,
+        title: title,
+        session: () async {
+          // Another host now: its conversation of the same id is not this call's.
+          if (!mounted || ref.read(activeHostProvider) != host) return null;
+          final id = pinned;
+          if (id == null) return pinned = await _ensureSession(isCurrent: () => mounted);
+          // Picks it still owes (a failed apply on the new-chat screen) are settled before it is spoken to.
+          final owed = ref.read(owedSetupsProvider.notifier).of(host, id);
+          if (owed != null && !await _applyOwedSetup(host, id, owed, () => mounted)) return null;
+          return id;
+        },
+      ),
+    );
   }
 
   /// The stop key; what waits in the inbox goes right away (see
@@ -2084,20 +2133,35 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
                                     ),
                                   ),
                                 if (_preparedPhoneSkill case final prepared?)
-                                  Card(child: Padding(padding: const EdgeInsets.all(12), child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(l10n.phoneSkillReplayReview),
-                                      SelectableText(prepared.text),
-                                      Row(children: [
-                                        TextButton(onPressed: _phoneSkillSending ? null : () => setState(_dropPreparedPhoneSkill),
-                                          child: Text(l10n.commonClose)),
-                                        FilledButton(onPressed: _phoneSkillSending || readOnly || !connected ? null : _sendPhoneSkill,
-                                          child: Text(l10n.phoneSkillReplayQueue)),
-                                      ]),
-                                    ],
-                                  ))),
+                                  Card(
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(12),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(l10n.phoneSkillReplayReview),
+                                          SelectableText(prepared.text),
+                                          Row(
+                                            children: [
+                                              TextButton(
+                                                onPressed: _phoneSkillSending
+                                                    ? null
+                                                    : () => setState(_dropPreparedPhoneSkill),
+                                                child: Text(l10n.commonClose),
+                                              ),
+                                              FilledButton(
+                                                onPressed: _phoneSkillSending || readOnly || !connected
+                                                    ? null
+                                                    : _sendPhoneSkill,
+                                                child: Text(l10n.phoneSkillReplayQueue),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
                                 if (readOnly)
                                   const ReadOnlyBar()
                                 else

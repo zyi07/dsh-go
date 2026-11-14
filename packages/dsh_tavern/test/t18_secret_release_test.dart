@@ -291,7 +291,7 @@ void main() {
       expect(_text(active.call), isNot(contains(_fact)));
       expect((await _trace(h.engine, bound.chatId))['offered'], isEmpty);
       expect((await _saved(h.engine, bound.chatId))[carrier], broken);
-      expect(active.call.body!['tools'], isNull);
+      expect(_maps(active.call.body!['tools']).map((tool) => _map(tool['function'])['name']), ['roll']);
     });
   }
 
@@ -310,7 +310,7 @@ void main() {
       await h.reopen();
       final active = await _reply(h, bound.chatId);
       expect(_text(active.call), isNot(contains(_fact)));
-      expect(active.call.body!['tools'], isNull);
+      expect(_maps(active.call.body!['tools']).map((tool) => _map(tool['function'])['name']), ['roll']);
       final snapshot = await h.engine.readState(bound.chatId);
       expect(snapshot.hiddenPaths, contains('/secret'));
       expect(_map(snapshot.values)['secret'], _fact);

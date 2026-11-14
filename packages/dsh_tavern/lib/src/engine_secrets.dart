@@ -307,7 +307,7 @@ Map<String, Object?> _secretStateSource(Map<String, Object?> saved) {
 /// Current authorization needs the selected saved state, not unrelated later
 /// ancestor bodies or their extra/original JSON. Source provenance is separate.
 Map<String, Object?> _secretAuthorizationSource(TavernEngine engine, String chatId, String? nodeId) {
-  final saved = nodeId == null
+  final saved = nodeId == null && engine._store.groupChat(chatId) == null
       ? _emptyChatState(engine._chatCodec.metadataForNode(engine._store, chatId))
       : engine._stateAt(chatId, nodeId);
   return _secretStateSource(saved);
@@ -544,14 +544,7 @@ Future<void> _runSecretDirector(_DirectorCoordinator coordinator, _DirectorJob j
     'slots': capability.catalog,
   });
   if (utf8.encode(input).length > 1024 * 1024) throw const FormatException('Secret input exceeds 1 MiB.');
-  final original = job.originalConfig;
-  final config = TavernModelConfig(
-    apiKey: original.apiKey,
-    baseUrl: original.baseUrl,
-    model: original.deepseek ? 'deepseek-flash' : original.model,
-    deepseek: original.deepseek,
-    thinking: false,
-  );
+  final config = _auxiliaryModelConfig(job.originalConfig);
   final tool = capability.strictTool();
   if (tool == null) throw const FormatException('No secret slot is available.');
   if (!config.deepseek) tool['function'] = _map(tool['function'])..remove('strict');
@@ -568,12 +561,14 @@ Future<void> _runSecretDirector(_DirectorCoordinator coordinator, _DirectorJob j
     ],
     'stream': false,
     'max_tokens': 4096,
-    if (config.deepseek) 'thinking': {'type': 'disabled'},
+    if (config.deepseek) 'thinking': {'type': config.thinking ? 'enabled' : 'disabled'},
     'tools': [tool],
-    'tool_choice': {
-      'type': 'function',
-      'function': {'name': 'propose_secrets'},
-    },
+    'tool_choice': config.deepseek && config.thinking
+        ? 'auto'
+        : {
+            'type': 'function',
+            'function': {'name': 'propose_secrets'},
+          },
   };
   final batch = await coordinator._receive(job, config, body);
   job.cancellation.check();
@@ -823,19 +818,40 @@ void _bindSecretTurn(
     },
   );
   final committedTrace = <String, Object?>{...turn.secretAttempt!, 'committed': true, 'bindReceiptId': receiptId};
-  engine._store.transaction(
-    () {
-      turn.cancellation.check();
-      if (_secretBindingReason(engine, turn, data, anchor, proposal) != null ||
-          !_stateJsonEqual(engine._store.rawNodeExtra(turn.chat.id, anchor), rawExtra)) {
-        throw StateError('Secret source changed after preparation.');
-      }
-      engine._store.updateMessage(turn.chat.id, anchor, extra: extra);
-      engine._store.writeAgentRun(audit);
-    },
-    onCommitted: () {
-      adopt(generation, restored);
-      turn.secretAttempt = committedTrace;
-    },
-  );
+  void checkBinding() {
+    turn.cancellation.check();
+    if (_secretBindingReason(engine, turn, data, anchor, proposal) != null ||
+        !_stateJsonEqual(engine._store.rawNodeExtra(turn.chat.id, anchor), rawExtra)) {
+      throw StateError('Secret source changed after preparation.');
+    }
+  }
+
+  if (turn.toolOwner case final owner?) {
+    engine._store.commitToolSecretBinding(
+      owner,
+      anchorNodeId: anchor,
+      expectedExtra: rawExtra,
+      extra: extra,
+      audit: audit,
+      checkBinding: checkBinding,
+      prepared: (generation, restored, committedTrace),
+      onCommitted: (committed) {
+        turn.toolPhase = committed.ownership.phase;
+        turn.secretAttempt = committed.value.$3;
+        adopt(committed.value.$1, committed.value.$2);
+      },
+    );
+  } else {
+    engine._store.transaction(
+      () {
+        checkBinding();
+        engine._store.updateMessage(turn.chat.id, anchor, extra: extra);
+        engine._store.writeAgentRun(audit);
+      },
+      onCommitted: () {
+        turn.secretAttempt = committedTrace;
+        adopt(generation, restored);
+      },
+    );
+  }
 }
