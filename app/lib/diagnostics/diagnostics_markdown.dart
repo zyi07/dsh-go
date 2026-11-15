@@ -6,6 +6,7 @@ import 'dart:convert';
 
 import '../state/app_info.dart';
 import 'diagnostics_bundle.dart';
+import 'diagnostics_channel.dart';
 import 'redact.dart';
 
 /// Most lines kept from each log tail (the model reads this file, not a zip).
@@ -28,6 +29,7 @@ String diagnosticsMarkdown(DiagnosticsSnapshot s, {int maxBytes = diagnosticsMar
     ..writeln();
   _systemIme(b, s);
   _environment(b, s);
+  _evidence(b, s);
   _connection(b, s);
   _phone(b, s);
   _performance(b, s);
@@ -69,7 +71,9 @@ void _systemIme(StringBuffer b, DiagnosticsSnapshot s) {
     final recent = evidence.events.reversed.take(diagnosticsSystemImeEvents).toList().reversed;
     b.writeln('- Most recent ${recent.length} events (ZIP contains the full bounded capture):');
     for (final event in recent) {
-      b.writeln('  - ${event.timestamp} ${event.event} fromUser=${event.fromUser} reason=${event.reason} origin=${event.origin}');
+      b.writeln(
+        '  - ${event.timestamp} ${event.event} fromUser=${event.fromUser} reason=${event.reason} origin=${event.origin}',
+      );
     }
   }
   b.writeln();
@@ -175,51 +179,7 @@ void _phone(StringBuffer b, DiagnosticsSnapshot s) {
       ..writeln('- 手机操控开关：${phone.enabled} · 桥接监听：${phone.bridgeListening}')
       ..writeln('- 无障碍开关：${phone.a11y.enabled} · 服务已连接：${phone.a11y.serviceConnected}');
   }
-  _backgroundInputProbe(b, s.native.device['backgroundInputProbe']);
   b.writeln();
-}
-
-/// Last accepted native probe facts, not a fresh test or current connectivity.
-/// Keep this allowlist aligned with native InputProbeDiagnostics; never print a raw map.
-void _backgroundInputProbe(StringBuffer b, Object? raw) {
-  const label = '- 最近接受的后台输入探针事实（不是实时自检）';
-  if (raw is! Map || raw['v'] is! int || raw['v'] != 1 || raw['observed'] is! bool) {
-    b.writeln('$label：不可用或版本未知');
-    return;
-  }
-  final result = raw['result'];
-  final outcome = raw['observed'] == false
-      ? '未运行或无保留观察'
-      : result == 'success'
-      ? '通过'
-      : result == 'failure'
-      ? '失败'
-      : '结果未知';
-  b.writeln('$label：$outcome');
-  final connectionFailure = raw['connectionFailure'];
-  if (connectionFailure is bool) {
-    b.writeln('- 保留连接失败事实：$connectionFailure（不表示当前连接状态）');
-  }
-  if (raw['observed'] != true || result != 'failure') return;
-  const stages = {
-    'precondition', 'ui_dispatch', 'presentation_create', 'presentation_configure',
-    'presentation_show', 'activity_start', 'activity_ready_wait',
-    'view_layout_wait', 'frame_commit_wait', 'target_validate',
-    'input_send', 'receipt_wait', 'cleanup',
-  };
-  const types = {
-    'none', 'SecurityException', 'IllegalStateException', 'IllegalArgumentException',
-    'InvalidDisplayException', 'BadTokenException', 'TimeoutException', 'InterruptedException', 'OtherException',
-  };
-  final stage = raw['stage'];
-  final type = raw['exceptionType'];
-  final elapsed = raw['elapsedMs'];
-  final details = <String>[
-    if (stage is String && stages.contains(stage)) 'stage=$stage',
-    if (type is String && types.contains(type)) 'type=$type',
-    if (elapsed is int && elapsed >= 0 && elapsed <= 60000) 'elapsedMs=$elapsed',
-  ];
-  if (details.isNotEmpty) b.writeln('- 后台输入探针失败细节：${details.join(' · ')}');
 }
 
 void _performance(StringBuffer b, DiagnosticsSnapshot s) {
@@ -237,6 +197,23 @@ void _performance(StringBuffer b, DiagnosticsSnapshot s) {
       }
     }
   }
+  b.writeln();
+}
+
+void _evidence(StringBuffer b, DiagnosticsSnapshot s) {
+  if (s.native.evidence.isEmpty) return;
+  final evidence = diagnosticEvidenceFacts(s.native.evidence);
+  b.writeln('## App 故障证据（跨重启保留）');
+  b.writeln('- 可用性：${jsonEncode(evidence['availability'])}');
+  for (final key in ['processExits', 'appErrors', 'voiceStages']) {
+    final rows = evidence[key];
+    if (rows is! List) continue;
+    final tail = rows.reversed.take(key == 'voiceStages' ? 8 : 3).toList().reversed;
+    for (final row in tail) {
+      b.writeln('- $key：${jsonEncode(row)}');
+    }
+  }
+  b.writeln('- 无记录或系统不提供记录，不代表没有发生故障；退出原因不等于完整崩溃堆栈。');
   b.writeln();
 }
 

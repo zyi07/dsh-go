@@ -5,7 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../companion/companion_voice_source.dart';
 import '../../l10n/l10n.dart';
+import '../../speech/speech_audio.dart';
 import '../../speech/speech_settings.dart';
+import '../../state/streaming_asr_model_state.dart';
 import '../../state/voice_model_state.dart';
 import '../../state/voice_settings.dart';
 import '../common/app_dialog.dart';
@@ -175,6 +177,11 @@ class _VoiceSettingsPageState extends ConsumerState<VoiceSettingsPage> {
           children: const [VoiceModelCard()],
         ),
         SettingsSection(
+          title: l10n.speechLiveSection,
+          footer: Text(l10n.speechLiveFooter),
+          children: const [StreamingAsrModelCard()],
+        ),
+        SettingsSection(
           title: l10n.speechCallSection,
           footer: Text(l10n.speechCallFooter),
           children: [
@@ -193,21 +200,36 @@ class _VoiceSettingsPageState extends ConsumerState<VoiceSettingsPage> {
               title: l10n.speechCallBargeIn,
               subtitle: l10n.speechCallBargeInHint,
               value: call.bargeIn,
-              onChanged: (on) => unawaited(calls.update(call.copyWith(bargeIn: on))),
+              onChanged: (on) => unawaited(calls.edit((saved) => saved.copyWith(bargeIn: on))),
+            ),
+            SettingsSegmentTile<CallPause>(
+              key: const ValueKey('speech-call-pause'),
+              title: l10n.speechCallPause,
+              subtitle: l10n.speechCallPauseHint,
+              segments: callPauseSegments(l10n),
+              selected: call.pause,
+              onChanged: (pause) => unawaited(calls.edit((saved) => saved.copyWith(pause: pause))),
             ),
             SettingsSwitchTile(
               key: const ValueKey('speech-call-spoken'),
               title: l10n.speechCallSpoken,
               subtitle: l10n.speechCallSpokenHint,
               value: call.spoken,
-              onChanged: (on) => unawaited(calls.update(call.copyWith(spoken: on))),
+              onChanged: (on) => unawaited(calls.edit((saved) => saved.copyWith(spoken: on))),
             ),
             SettingsSwitchTile(
               key: const ValueKey('speech-call-speaker'),
               title: l10n.speechCallSpeaker,
               subtitle: l10n.speechCallSpeakerHint,
               value: call.speaker,
-              onChanged: (on) => unawaited(calls.update(call.copyWith(speaker: on))),
+              onChanged: (on) => unawaited(calls.edit((saved) => saved.copyWith(speaker: on))),
+            ),
+            SettingsSwitchTile(
+              key: const ValueKey('speech-call-cue'),
+              title: l10n.speechCallCue,
+              subtitle: l10n.speechCallCueHint,
+              value: call.cue,
+              onChanged: (on) => unawaited(calls.edit((saved) => saved.copyWith(cue: on))),
             ),
           ],
         ),
@@ -500,6 +522,125 @@ class VoiceModelCard extends ConsumerWidget {
       final text = controller.downloadStopping ? l10n.voiceModelDeleteStopping : l10n.voiceModelDeleteFailed;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
     }
+  }
+}
+
+/// The streaming recognizer for live captions: download (about 198 MB), progress, delete.
+class StreamingAsrModelCard extends ConsumerWidget {
+  const StreamingAsrModelCard({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final colors = DshColors.of(context);
+    final model = ref.watch(streamingAsrModelProvider);
+    final controller = ref.read(streamingAsrModelProvider.notifier);
+    final total = voiceModelMegabytes(model.totalBytes);
+    final partial = model.doneBytes > 0 && model.doneBytes < model.totalBytes;
+    final (status, statusColor) = switch (model.status) {
+      StreamingAsrModelStatus.checking ||
+      StreamingAsrModelStatus.cancelling ||
+      StreamingAsrModelStatus.deleting => ('', colors.textTertiary),
+      StreamingAsrModelStatus.absent => (l10n.voiceModelAbsent, theme.colorScheme.onSurfaceVariant),
+      StreamingAsrModelStatus.downloading => ('${(model.fraction * 100).floor()}%', theme.colorScheme.onSurfaceVariant),
+      StreamingAsrModelStatus.verifying => (l10n.voiceModelPreparing, theme.colorScheme.onSurfaceVariant),
+      StreamingAsrModelStatus.ready when model.blocked => (l10n.speechLiveBlocked, colors.danger),
+      StreamingAsrModelStatus.ready => (l10n.voiceModelReady, colors.success),
+      StreamingAsrModelStatus.failed => (l10n.voiceModelFailed, colors.danger),
+    };
+    final note = switch (model.status) {
+      StreamingAsrModelStatus.ready when model.blocked => l10n.speechLiveBlockedNote,
+      StreamingAsrModelStatus.ready => l10n.speechLiveReadyNote(total),
+      StreamingAsrModelStatus.downloading ||
+      StreamingAsrModelStatus.absent when partial => l10n.voiceModelBytes(voiceModelMegabytes(model.doneBytes), total),
+      StreamingAsrModelStatus.absent || StreamingAsrModelStatus.failed => l10n.speechLiveAbsentNote(total),
+      _ => null,
+    };
+    final Widget? action = switch (model.status) {
+      StreamingAsrModelStatus.absent || StreamingAsrModelStatus.failed => FilledButton(
+        key: const ValueKey('live-model-download'),
+        onPressed: () => unawaited(controller.download()),
+        child: Text(partial ? l10n.voiceModelResume : l10n.voiceModelDownload),
+      ),
+      StreamingAsrModelStatus.downloading || StreamingAsrModelStatus.verifying => OutlinedButton(
+        key: const ValueKey('live-model-cancel'),
+        onPressed: () => unawaited(controller.cancel()),
+        child: Text(l10n.commonCancel),
+      ),
+      StreamingAsrModelStatus.ready => OutlinedButton(
+        key: const ValueKey('live-model-delete'),
+        style: OutlinedButton.styleFrom(foregroundColor: colors.danger),
+        onPressed: () => unawaited(_delete(context, controller)),
+        child: Text(l10n.commonDelete),
+      ),
+      _ => null,
+    };
+    return Padding(
+      key: const ValueKey('live-model-card'),
+      padding: VoiceModelCard.padding,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Flexible(child: Text(l10n.speechLiveName, style: settingsTitleStyle(context))),
+              const SizedBox(width: 12),
+              Flexible(
+                child: Text(
+                  status,
+                  textAlign: TextAlign.end,
+                  style: theme.textTheme.bodyMedium?.copyWith(color: statusColor),
+                ),
+              ),
+            ],
+          ),
+          if (model.status == StreamingAsrModelStatus.downloading ||
+              model.status == StreamingAsrModelStatus.verifying) ...[
+            const SizedBox(height: 10),
+            ClipRRect(
+              borderRadius: AppShape.radiusXs,
+              child: LinearProgressIndicator(
+                value: model.status == StreamingAsrModelStatus.downloading ? model.fraction : null,
+                minHeight: 4,
+              ),
+            ),
+          ],
+          if (note != null) ...[
+            const SizedBox(height: 6),
+            Text(note, style: theme.textTheme.bodySmall?.copyWith(color: colors.textTertiary)),
+          ],
+          if (action != null) ...[const SizedBox(height: 14), action],
+        ],
+      ),
+    );
+  }
+
+  static Future<void> _delete(BuildContext context, StreamingAsrModelController controller) async {
+    final l10n = context.l10n;
+    final ok = await showAppDialog<bool>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: Text(l10n.speechLiveDeleteTitle),
+        content: Text(l10n.speechLiveDeleteBody),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialog, false), child: Text(l10n.commonCancel)),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: DshColors.of(dialog).danger,
+              foregroundColor: DshColors.of(dialog).onDanger,
+            ),
+            onPressed: () => Navigator.pop(dialog, true),
+            child: Text(l10n.commonDelete),
+          ),
+        ],
+      ),
+    );
+    if (ok == true) await controller.delete();
   }
 }
 

@@ -8,6 +8,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../fx/gooey/gooey.dart';
 import '../theme/theme.dart';
 
 /// One option of a [SegmentedPill].
@@ -164,22 +165,42 @@ class _SegmentedPillState<T> extends State<SegmentedPill<T>> {
             decoration: ShapeDecoration(color: track, shape: const StadiumBorder()),
             child: Stack(
               children: [
-                AnimatedPositioned(
-                  duration: _drag != null
-                      ? Duration.zero
-                      : fluid
-                      ? AppMotion.thumbCurve.duration
-                      : AppMotion.of(context, AppMotion.standard),
-                  curve: fluid ? AppMotion.thumbCurve : AppMotion.std,
-                  left: left,
-                  top: SegmentedPill.inset,
-                  bottom: SegmentedPill.inset,
-                  width: segment,
-                  // The fluid tier's thumb swells a little under the finger.
-                  child: AnimatedScale(
-                    scale: fluid && _drag != null ? 1.04 : 1,
-                    duration: AppMotion.quick,
+                if (fluid)
+                  // The fluid tier's thumb is liquid (Libraries.dev Gooey, the tab recipe):
+                  // it stretches and trails as it slides, and is a plain pill at rest.
+                  Positioned.fill(
+                    child: Liquid(
+                      blur: LiquidTabs.blur,
+                      fill: thumb,
+                      shadows: dark ? const [] : LiquidShadows.tabPill(Brightness.light),
+                      child: Stack(
+                        children: [
+                          AnimatedPositioned(
+                            duration: _drag != null ? Duration.zero : AppMotion.thumbCurve.duration,
+                            curve: AppMotion.thumbCurve,
+                            left: left,
+                            top: SegmentedPill.inset,
+                            bottom: SegmentedPill.inset,
+                            width: segment,
+                            child: const LiquidItem(
+                              effect: LiquidEffect.move,
+                              move: LiquidTabs.move,
+                              radius: BorderRadius.all(Radius.circular(999)),
+                              child: SizedBox.expand(),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                else
+                  AnimatedPositioned(
+                    duration: _drag != null ? Duration.zero : AppMotion.of(context, AppMotion.standard),
                     curve: AppMotion.std,
+                    left: left,
+                    top: SegmentedPill.inset,
+                    bottom: SegmentedPill.inset,
+                    width: segment,
                     child: DecoratedBox(
                       decoration: ShapeDecoration(
                         color: thumb,
@@ -196,7 +217,6 @@ class _SegmentedPillState<T> extends State<SegmentedPill<T>> {
                       ),
                     ),
                   ),
-                ),
                 Row(
                   children: [
                     for (var i = 0; i < n; i++)

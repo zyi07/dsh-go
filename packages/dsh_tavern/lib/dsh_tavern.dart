@@ -3,13 +3,27 @@
 library;
 
 export 'src/api.dart';
+export 'src/authoring.dart';
+export 'src/authoring_model_images.dart';
+export 'src/authoring_preview.dart';
+export 'src/authoring_render.dart';
+export 'src/authoring_run.dart';
+export 'src/authoring_script_preview.dart';
+export 'src/authoring_seed.dart';
+export 'src/authoring_simulation.dart';
 export 'src/backup.dart';
 export 'src/director.dart';
+export 'src/dshgo_inspection.dart';
 export 'src/engine.dart';
+export 'src/gameplay.dart';
+export 'src/gameplay_bindings.dart';
+export 'src/gameplay_cast.dart';
+export 'src/gameplay_export.dart';
+export 'src/gameplay_packs.dart';
 export 'src/import_report.dart';
 export 'src/inspection.dart';
 export 'src/lorebook_library.dart';
-export 'src/io/card_codec.dart';
+export 'src/io/card_codec.dart' hide DecodedCardSeed, cardAssetDataUri;
 export 'src/io/chat_jsonl.dart';
 export 'src/io/st_chat_document.dart';
 export 'src/llm/model_client.dart';
@@ -36,9 +50,20 @@ export 'src/prompt/prompt_assembler.dart'
 export 'src/prompt/prompt_types.dart';
 export 'src/regex/regex_engine.dart';
 export 'src/regex/regex_worker.dart';
-export 'src/store/character_library.dart';
+export 'src/store/character_library.dart'
+    hide AuthoringCardMedia, AuthoringCharacterCapture, replayAuthoringSaveAs, authoringSaveAsReceipt;
 export 'src/store/chat_store.dart'
     hide
+        GameplayBindingStore,
+        GameplaySimulationStore,
+        StoredGameplaySimulationData,
+        AuthoringStore,
+        StoredAuthoringDraft,
+        AuthoringAuthorityStore,
+        inspectAuthoringDatabase,
+        StoredAuthoringResource,
+        AuthoringRunStore,
+        AuthoringSeedStore,
         ToolStore,
         StoredToolOperation,
         StoredToolPhase,
@@ -61,4 +86,4 @@ export 'src/store/chat_store.dart'
         StoredRememberMemory,
         StoredDisplayHistory,
         StoredHistoryLink;
-export 'src/worldinfo/world_info.dart';
+export 'src/worldinfo/world_info.dart' hide remapWorldInfoBook, WorldInfoPackSource, exportGameplayWorldInfoEntry;

@@ -43,7 +43,10 @@ enum SpotCondition {
   openChat,
 
   /// Only with animations on.
-  animationsOn;
+  animationsOn,
+
+  /// Only in builds that come with a Workshop.
+  workshopBuilt;
 
   String label(L10n l10n) => switch (this) {
     localHost => l10n.searchNeedsLocal,
@@ -52,6 +55,7 @@ enum SpotCondition {
     engineField => l10n.searchNeedsEngineField,
     openChat => l10n.searchNeedsChat,
     animationsOn => l10n.searchNeedsAnimations,
+    workshopBuilt => l10n.searchNeedsWorkshop,
   };
 }
 
@@ -797,6 +801,19 @@ abstract final class Spots {
     title: (l) => l.botsPetOverlayFraming,
     keywords: (l) => l.searchKwPetOverlayFraming,
   );
+  static final petMake = SettingSpot(
+    'pet-make',
+    page: SettingsPageId.pets,
+    title: (l) => l.botsPetMake,
+    keywords: (l) => l.searchKwPets,
+  );
+  static final workshop = SettingSpot(
+    'workshop',
+    page: SettingsPageId.pets,
+    title: (l) => l.workshopTitle,
+    keywords: (l) => l.searchKwWorkshop,
+    condition: SpotCondition.workshopBuilt,
+  );
 
   // 界面.
   static final uiMode = SettingSpot(
@@ -1120,6 +1137,8 @@ final _rows = <SettingSpot>[
   Spots.petDisplayWhen,
   Spots.petOverlayShows,
   Spots.petOverlayFraming,
+  Spots.petMake,
+  Spots.workshop,
   Spots.uiMode,
   Spots.hardwareEnterSends,
   Spots.chatSuggestions,

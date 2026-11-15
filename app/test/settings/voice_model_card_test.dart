@@ -6,6 +6,7 @@
 import 'dart:async';
 
 import 'package:dsh_app/l10n/l10n.dart';
+import 'package:dsh_app/state/streaming_asr_model_state.dart';
 import 'package:dsh_app/state/voice_model_state.dart';
 import 'package:dsh_app/ui/settings/voice_settings_page.dart';
 import 'package:flutter/material.dart';
@@ -51,6 +52,14 @@ class FixedVoiceModel extends VoiceModelController {
   Future<void> redownload() async => actions.add('redownload');
 }
 
+/// The streaming recognizer's card, not downloaded (the real one would look for files).
+class _NoStreamingModel extends StreamingAsrModelController {
+  @override
+  StreamingAsrModelState build() => const StreamingAsrModelState(status: StreamingAsrModelStatus.absent);
+}
+
+final _noStreamingModel = streamingAsrModelProvider.overrideWith(_NoStreamingModel.new);
+
 const _total = voiceModelDefaultBytes;
 
 const states = <String, VoiceModelState>{
@@ -77,7 +86,7 @@ void main() {
     goldenBoth(
       'voice_model_$name',
       () => const VoiceSettingsPage(),
-      overrides: () => [voiceModelProvider.overrideWith(() => FixedVoiceModel(state))],
+      overrides: () => [voiceModelProvider.overrideWith(() => FixedVoiceModel(state)), _noStreamingModel],
       before: toCard,
     );
   }
@@ -90,7 +99,7 @@ void main() {
       goldenApp(
         home: inEnglish(const VoiceSettingsPage()),
         brightness: Brightness.light,
-        overrides: [voiceModelProvider.overrideWith(() => FixedVoiceModel(states['ready']!))],
+        overrides: [voiceModelProvider.overrideWith(() => FixedVoiceModel(states['ready']!)), _noStreamingModel],
       ),
     );
     await tester.pump();
