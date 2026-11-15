@@ -1769,22 +1769,31 @@ class PhoneTaskSessionsTest {
         } finally { exit.countDown() }
     }
 
-    @Test fun resourceWaitPreservesTheExactPreparedPlanThroughTheActualCoreDispatch() {
+    @Test fun resourceWaitRefreshesTheMainPlanForTheOriginalSelectedPackage() {
         assertFalse(invoke("holder", tool = PhoneToolCatalog.SCREEN).isError)
-        val prepared = TestSystemLaunch(SystemTarget.Known(appEntries.single()))
+        val selected = appEntries.single()
+        val prepared = TestSystemLaunch(SystemTarget.Known(selected))
+        val updated = AppEntry("Renamed", PhoneAppIdentity(selected.packageName, 20234))
+        val refreshed = TestSystemLaunch(SystemTarget.Known(updated))
         val preparations = AtomicLong(); val launches = AtomicLong(); val waiting = CountDownLatch(1)
-        prepareLaunch = { preparations.incrementAndGet(); time.addAndGet(5_000); prepared }
+        prepareLaunch = { app ->
+            assertEquals(selected.packageName, app.packageName)
+            val count = preparations.incrementAndGet()
+            time.addAndGet(5_000)
+            if (count == 1L) prepared else refreshed
+        }
         launch = { actual, dispatch ->
-            assertSame(prepared, actual); assertTrue(dispatch.commitStart()); launches.incrementAndGet()
+            assertSame(refreshed, actual); assertTrue(dispatch.commitStart()); launches.incrementAndGet()
             SysResult(false, "attempted once", actual.target)
         }
         changed = { if (sessions.snapshot().any { it["sessionId"] == "B" && it["waitingForApp"] != null }) waiting.countDown() }
-        val call = pool.submit<ToolOutput> { openApp("B", "example.app", background = false) }
+        val call = pool.submit<ToolOutput> { openApp("B", selected.label, background = false) }
         assertTrue(waiting.await(5, TimeUnit.SECONDS)); assertEquals(1L, preparations.get()); assertEquals(0L, launches.get())
         assertEquals(0L, sessions.snapshot().single { it["sessionId"] == "B" }["waitingForMs"]) // PM time is not resource-wait time.
+        appEntries = listOf(updated, AppEntry(selected.label, PhoneAppIdentity("other.app", 30345)))
         end("holder")
         assertTrue(call.get(5, TimeUnit.SECONDS).text.contains("attempted once"))
-        assertEquals(1L, preparations.get()); assertEquals(1L, launches.get())
+        assertEquals(2L, preparations.get()); assertEquals(1L, launches.get())
     }
 
     @Test fun appAliasesUseBothPackageAndFullUidAndPublishOnlyTheRequestersOwnPackage() {
@@ -1925,10 +1934,12 @@ class PhoneTaskSessionsTest {
         } finally { bodyExit.countDown(); cleanupExit.countDown() }
     }
 
-    @Test fun chooserHasNoInventedKnownIdentityAndDispatchesItsOriginalPlanOnce() {
+    @Test fun chooserHasNoInventedKnownIdentityAndIsNotConfirmedAgain() {
         assertFalse(invoke("holder", tool = PhoneToolCatalog.SCREEN).isError)
         val chooser = TestSystemLaunch(SystemTarget.UserChoice, "url")
         val prepared = AtomicLong(); val started = AtomicLong(); val waiting = CountDownLatch(1)
+        val confirmations = AtomicLong()
+        confirm = { confirmations.incrementAndGet(); Decision.ALLOW_ONCE }
         prepareUrl = { prepared.incrementAndGet(); chooser }
         launch = { plan, dispatch ->
             assertSame(chooser, plan); assertTrue(dispatch.commitStart()); started.incrementAndGet()
@@ -1940,7 +1951,7 @@ class PhoneTaskSessionsTest {
         assertEquals(mapOf("kind" to "unknown"), sessions.snapshot().single { it["sessionId"] == "B" }["waitingForApp"])
         end("holder")
         assertTrue(b.get(5, TimeUnit.SECONDS).text.contains("chooser attempted"))
-        assertEquals(1L, prepared.get()); assertEquals(1L, started.get())
+        assertEquals(2L, prepared.get()); assertEquals(0L, confirmations.get()); assertEquals(1L, started.get())
         assertTrue(task("B").holdsUnknownApp); assertTrue(task("B").heldApps.isEmpty())
     }
 

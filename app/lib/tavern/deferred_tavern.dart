@@ -127,6 +127,242 @@ class DeferredTavern implements Tavern {
   Future<List<TavernPathUsage>> pathUsage(String chatId) async => (await _ready).pathUsage(chatId);
 
   @override
+  Future<TavernCastImportResult> importDshgoCastMember(
+    TavernCastSource source,
+    String localCastId, {
+    required String operationId,
+    String? domainId,
+  }) async => (await _ready).importDshgoCastMember(source, localCastId, operationId: operationId, domainId: domainId);
+
+  @override
+  Future<TavernCastImportResult?> readDshgoCastImport(String domainId, String operationId) async =>
+      (await _ready).readDshgoCastImport(domainId, operationId);
+
+  @override
+  Future<TavernGameplayExportPreview> previewGameplayExport(TavernGameplayExportRequest request) async =>
+      (await _ready).previewGameplayExport(request);
+
+  @override
+  Future<Uint8List> exportCharacterWithPacks(
+    TavernGameplayExportRequest request, {
+    required String expectedPreviewId,
+  }) async => (await _ready).exportCharacterWithPacks(request, expectedPreviewId: expectedPreviewId);
+
+  @override
+  Future<Uint8List> exportGameplayPackFromDraft(
+    TavernGameplayExportRequest request, {
+    required String expectedPreviewId,
+  }) async => (await _ready).exportGameplayPackFromDraft(request, expectedPreviewId: expectedPreviewId);
+
+  @override
+  Future<TavernPackScopeSnapshot> readGameplayBindings(TavernPackScopeTarget scope) async =>
+      (await _ready).readGameplayBindings(scope);
+
+  @override
+  Future<TavernPackBindingReceipt> updateGameplayBindings(
+    TavernPackScopeTarget scope, {
+    required TavernGameplayRevision expected,
+    required String operationId,
+    required List<TavernPackBindingEdit> edits,
+  }) async => (await _ready).updateGameplayBindings(scope, expected: expected, operationId: operationId, edits: edits);
+
+  @override
+  Future<TavernGameplayResolution> resolveGameplayConfig(
+    TavernGameplayContext context, {
+    List<TavernPackScopePreview> proposedScopes = const [],
+    bool validateCurrentState = false,
+  }) async => (await _ready).resolveGameplayConfig(
+    context,
+    proposedScopes: proposedScopes,
+    validateCurrentState: validateCurrentState,
+  );
+
+  @override
+  Future<TavernPackImportResult> importGameplayPack(Uint8List bytes) async => (await _ready).importGameplayPack(bytes);
+
+  @override
+  Future<List<TavernPackVersion>> listGameplayPacks({bool includeRemoved = false}) async =>
+      (await _ready).listGameplayPacks(includeRemoved: includeRemoved);
+
+  @override
+  Future<TavernPackVersion?> readGameplayPack(TavernPackVersionRef ref) async => (await _ready).readGameplayPack(ref);
+
+  @override
+  Future<TavernPackResource?> readGameplayPackResource(TavernPackVersionRef ref, String localId) async =>
+      (await _ready).readGameplayPackResource(ref, localId);
+
+  @override
+  Future<Uint8List> exportInstalledGameplayPack(TavernPackVersionRef ref) async =>
+      (await _ready).exportInstalledGameplayPack(ref);
+
+  @override
+  Future<TavernPackRemovalReceipt> removeGameplayPackVersion(
+    TavernPackVersionRef ref, {
+    required TavernGameplayRevision expected,
+    required String operationId,
+  }) async => (await _ready).removeGameplayPackVersion(ref, expected: expected, operationId: operationId);
+
+  @override
+  Future<TavernAuthoringDraft> createAuthoringDraft(List<TavernAuthoringTarget> targets) async =>
+      (await _ready).createAuthoringDraft(targets);
+
+  @override
+  Future<TavernAuthoringDraft?> readAuthoringDraft(String draftId) async => (await _ready).readAuthoringDraft(draftId);
+
+  /// Returned at once with its id; the render itself runs once the engine is open.
+  @override
+  TavernAuthoringTask<TavernAuthoringRenderResult> renderAuthoringDraft(
+    TavernAuthoringRenderRequest request, {
+    required TavernAuthoringPreviewHost host,
+  }) => _DeferredTask(request.requestId, _ready.then((t) => t.renderAuthoringDraft(request, host: host)));
+
+  /// Returned at once with its id; the preview itself runs once the engine is open.
+  @override
+  TavernAuthoringTask<TavernAuthoringPromptPreview> previewAuthoringPrompt(
+    TavernAuthoringPromptRequest request, {
+    TavernAuthoringPromptHost? host,
+  }) => _DeferredTask(request.requestId, _ready.then((t) => t.previewAuthoringPrompt(request, host: host)));
+
+  /// Returned at once with its id; the trial itself runs once the engine is open.
+  @override
+  TavernAuthoringSimulationTask simulateAuthoringDraft(TavernAuthoringSimulationRequest request) =>
+      _DeferredSimulation(request, _ready.then((t) => t.simulateAuthoringDraft(request)));
+
+  /// Returned at once with its id; the run itself starts once the engine is open.
+  @override
+  TavernAuthoringRun startAuthoringRun(
+    TavernAuthoringRunRequest request, {
+    TavernAuthoringPromptHost? promptHost,
+    TavernAuthoringPreviewHost? renderHost,
+  }) => _DeferredAuthoringRun(
+    request.runId,
+    _ready.then((t) => t.startAuthoringRun(request, promptHost: promptHost, renderHost: renderHost)),
+  );
+
+  @override
+  Future<TavernAuthoringRunSnapshot?> readAuthoringRun(String runId) async => (await _ready).readAuthoringRun(runId);
+
+  @override
+  Future<List<TavernAuthoringRunSummary>> listAuthoringRuns({
+    String? draftId,
+    int limit = 30,
+    String? beforeRunId,
+  }) async => (await _ready).listAuthoringRuns(draftId: draftId, limit: limit, beforeRunId: beforeRunId);
+
+  @override
+  Future<TavernAuthoringToolReceipt?> readAuthoringToolReceipt(String runId, String receiptId) async =>
+      (await _ready).readAuthoringToolReceipt(runId, receiptId);
+
+  @override
+  Future<void> cancelAuthoringRun(String runId) async => (await _ready).cancelAuthoringRun(runId);
+
+  @override
+  Future<TavernAuthoringDraft> createAuthoringSeed(TavernAuthoringSeedInput input) async =>
+      (await _ready).createAuthoringSeed(input);
+
+  @override
+  Future<TavernAuthoringSaveAsReceipt> saveAuthoringAsNew(
+    String draftId, {
+    required int draftRevision,
+    required String physicalResourceId,
+    required List<String> changeIds,
+    required String operationId,
+    required TavernAuthoringMediaSelection media,
+    String? domainId,
+  }) async => (await _ready).saveAuthoringAsNew(
+    draftId,
+    draftRevision: draftRevision,
+    physicalResourceId: physicalResourceId,
+    changeIds: changeIds,
+    operationId: operationId,
+    media: media,
+    domainId: domainId,
+  );
+
+  @override
+  Future<TavernAuthoringReceipt> applyAuthoringChanges(
+    String draftId, {
+    required int draftRevision,
+    required String physicalResourceId,
+    required List<String> changeIds,
+    required TavernAuthorityRevision expectedAuthorityRevision,
+    required String operationId,
+  }) async => (await _ready).applyAuthoringChanges(
+    draftId,
+    draftRevision: draftRevision,
+    physicalResourceId: physicalResourceId,
+    changeIds: changeIds,
+    expectedAuthorityRevision: expectedAuthorityRevision,
+    operationId: operationId,
+  );
+
+  @override
+  Future<TavernAuthoringOperation?> readAuthoringOperation(String operationId, {required String domainId}) async =>
+      (await _ready).readAuthoringOperation(operationId, domainId: domainId);
+
+  @override
+  Future<List<TavernAuthoringRevisionSummary>> listAuthoringRevisions(String physicalResourceId) async =>
+      (await _ready).listAuthoringRevisions(physicalResourceId);
+
+  @override
+  Future<TavernAuthoringReceipt> restoreAuthoringRevision(
+    String physicalResourceId, {
+    required TavernAuthorityRevision revision,
+    required TavernAuthorityRevision expectedAuthorityRevision,
+    required String operationId,
+  }) async => (await _ready).restoreAuthoringRevision(
+    physicalResourceId,
+    revision: revision,
+    expectedAuthorityRevision: expectedAuthorityRevision,
+    operationId: operationId,
+  );
+
+  @override
+  Future<List<TavernAuthoringDraftSummary>> listAuthoringDrafts() async => (await _ready).listAuthoringDrafts();
+
+  @override
+  Future<TavernAuthoringDraft> editAuthoringDraft(
+    String draftId, {
+    required int draftRevision,
+    required List<TavernAuthoringChange> changes,
+  }) async => (await _ready).editAuthoringDraft(draftId, draftRevision: draftRevision, changes: changes);
+
+  @override
+  Future<TavernAuthoringDraft> rebaseAuthoringDraft(
+    String draftId, {
+    required int draftRevision,
+    required List<TavernAuthoringChange> changes,
+  }) async => (await _ready).rebaseAuthoringDraft(draftId, draftRevision: draftRevision, changes: changes);
+
+  @override
+  Future<void> deleteAuthoringDraft(String draftId, {required int draftRevision}) async =>
+      (await _ready).deleteAuthoringDraft(draftId, draftRevision: draftRevision);
+
+  @override
+  Future<TavernAuthoringPreview> previewAuthoringDraft(
+    String draftId, {
+    required int draftRevision,
+    required List<String> changeIds,
+  }) async => (await _ready).previewAuthoringDraft(draftId, draftRevision: draftRevision, changeIds: changeIds);
+
+  @override
+  Future<TavernAuthoringRegexTest> testAuthoringRegex(
+    String draftId, {
+    required int draftRevision,
+    required List<String> changeIds,
+    required String physicalResourceId,
+    required String scriptPath,
+    required String text,
+  }) async => (await _ready).testAuthoringRegex(
+    draftId,
+    draftRevision: draftRevision,
+    changeIds: changeIds,
+    physicalResourceId: physicalResourceId,
+    scriptPath: scriptPath,
+    text: text,
+  );
+
+  @override
   Future<List<TavernToolTurnSummary>> recentToolTurns(String chatId, {int limit = 20}) async =>
       (await _ready).recentToolTurns(chatId, limit: limit);
 
@@ -892,4 +1128,78 @@ Object? _held(Object? value, String operation, [Set<Object>? seen]) {
   } finally {
     active.remove(value);
   }
+}
+
+/// An authoring run asked for before the engine opened: its id now, the rest
+/// from the engine's own run once there is one.
+class _DeferredAuthoringRun implements TavernAuthoringRun {
+  _DeferredAuthoringRun(this.runId, this._run);
+
+  @override
+  final String runId;
+  final Future<TavernAuthoringRun> _run;
+
+  @override
+  Stream<TavernAuthoringRunEvent> get events => Stream.fromFuture(_run).asyncExpand((run) => run.events);
+
+  @override
+  Future<TavernAuthoringRunSnapshot> get result => _run.then((run) => run.result);
+
+  @override
+  Future<void> cancel() async => (await _run).cancel();
+}
+
+/// An authoring task asked for before the engine opened: its id now, its
+/// result and cancellation from the engine's own task once there is one.
+class _DeferredTask<T> implements TavernAuthoringTask<T> {
+  _DeferredTask(this.requestId, this._task);
+
+  @override
+  final String requestId;
+  final Future<TavernAuthoringTask<T>> _task;
+
+  @override
+  Future<T> get result => _task.then((task) => task.result);
+
+  @override
+  Future<void> cancel() async => (await _task).cancel();
+}
+
+/// A trial asked for before the engine opened: until its task is there, the
+/// view says that nothing has run yet.
+class _DeferredSimulation implements TavernAuthoringSimulationTask {
+  _DeferredSimulation(this._request, this._task) {
+    unawaited(_task.then((task) => _started = task, onError: (Object _) => null));
+  }
+
+  final TavernAuthoringSimulationRequest _request;
+  final Future<TavernAuthoringSimulationTask> _task;
+  TavernAuthoringSimulationTask? _started;
+
+  @override
+  String get requestId => _request.requestId;
+
+  @override
+  Future<TavernAuthoringSimulationResult> get result => _task.then((task) => task.result);
+
+  @override
+  Future<void> cancel() async => (await _task).cancel();
+
+  @override
+  TavernAuthoringSimulationResult get view =>
+      _started?.view ??
+      TavernAuthoringSimulationResult(
+        requestId: _request.requestId,
+        captureId: '',
+        draftId: _request.draftId,
+        draftRevision: _request.draftRevision,
+        changeIds: _request.changeIds,
+        status: TavernAuthoringSimulationStatus.running,
+        origin: const {},
+        turns: const [],
+        requests: const [],
+        usage: const {},
+        cleanup: const {},
+        issues: const [],
+      );
 }

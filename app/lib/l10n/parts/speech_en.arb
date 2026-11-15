@@ -16,6 +16,7 @@
   "speechVoiceFollowHint": "The reading voice in Settings › Voice",
   "speechNotSetUp": "The reading voice isn't set up yet. See Settings › Voice",
   "speechNoCredential": "Sign in to DeepSeek or add an API key in Settings first",
+  "speechAccountUnusable": "Your signed-in account can't pay for DeepSeek speech here: the DSH you're connected to is older (updating fixes it), or you're going through DSH Remote. Add a DeepSeek API key in Settings to use it",
   "speechSignIn": "Your DeepSeek account can't pay for speech (sign-in expired, or speech takes only an API key). Sign in again, or add an API key in Settings",
   "speechUnauthorized": "The DeepSeek API key was refused. Check it in Settings",
   "speechBalance": "Not enough DeepSeek balance",
@@ -33,12 +34,46 @@
   "speechCallSection": "Voice calls",
   "speechCallFooter": "In a call, pause after you speak and it is sent; the answer is read while it is written.",
   "speechCallBargeIn": "Interrupt by speaking",
-  "speechCallBargeInHint": "Start talking while the AI speaks and it stops to listen",
+  "speechCallBargeInHint": "When you speak over the AI it goes quiet; a “yeah” lets it go on, anything else stops it",
   "speechCallSpoken": "Spoken answers",
   "speechCallSpokenHint": "The call's first message asks for short, conversational answers",
   "speechCallSpeaker": "Speakerphone by default",
   "speechCallSpeakerHint": "Headphones always win when connected",
   "speechCallHint": "(This is a voice call; what I say comes through speech recognition. Please answer briefly and conversationally, without Markdown, lists, tables or code blocks.)",
+  "speechCallCutNote": "(I cut you off at “{heard}”; I didn't hear the rest.)",
+  "@speechCallCutNote": {
+    "placeholders": {
+      "heard": {
+        "type": "String"
+      }
+    }
+  },
+  "speechCallCutEarly": "(I cut you off before you said anything; I didn't hear that answer.)",
+  "speechCallCue": "Thinking sound",
+  "speechCallCueHint": "A soft chime when an answer is slow to start",
+  "speechLiveSection": "Live captions",
+  "speechLiveName": "Streaming recognizer",
+  "speechLiveAbsentNote": "Download it and calls show your words as you speak, and stop sooner when you cut in. About {mb}; it runs on the phone",
+  "@speechLiveAbsentNote": {
+    "placeholders": {
+      "mb": {
+        "type": "String"
+      }
+    }
+  },
+  "speechLiveReadyNote": "Using {mb}. Calls use it automatically",
+  "@speechLiveReadyNote": {
+    "placeholders": {
+      "mb": {
+        "type": "String"
+      }
+    }
+  },
+  "speechLiveBlocked": "Off",
+  "speechLiveBlockedNote": "It crashed on this phone, so live captions are off; calls work as before. Delete it and download again to try once more.",
+  "speechLiveFooter": "Captions and cut-ins run on the phone; the text sent to the AI still comes from the recognition chosen above, and cloud recognition uploads the recording.",
+  "speechLiveDeleteTitle": "Delete the streaming recognizer?",
+  "speechLiveDeleteBody": "Calls will stop showing live captions. You can download it again any time.",
   "speechCallStarting": "Connecting",
   "speechCallListening": "Listening",
   "speechCallHearing": "You're speaking",
@@ -48,17 +83,31 @@
   "speechCallEnded": "Call ended",
   "speechCallEndPermission": "No microphone permission",
   "speechCallEndMicrophone": "The microphone is busy or can't be opened",
+  "speechCallEndNoRecognizerSignedIn": "A call needs a way to recognize speech. Your signed-in account can't pay for DeepSeek speech here (the DSH you're connected to is older, or you're going through DSH Remote): add a DeepSeek API key in Settings, or download the voice model in Settings › Voice",
   "speechCallEndNoRecognizer": "A call needs a recognizer that takes recordings: sign in to DeepSeek, add an API key, or download the voice model",
   "speechCallEndBackground": "Calls end when the app goes to the background",
   "speechCallEndFailed": "Recording failed; the call has ended",
   "speechCallSendFailed": "That didn't go through. Say it again",
   "speechCallSkipHint": "Skip this answer",
+  "speechCallTranscript": "Captions",
+  "speechCallTranscriptHint": "Everything said on this call",
+  "speechCallTranscriptEmpty": "Nothing said yet. What you both say is written down here, line by line.",
+  "speechCallTranscriptCut": "You cut in here",
   "speechCallMute": "Mute",
   "speechCallUnmute": "Unmute",
   "speechCallHangUp": "Hang up",
   "speechCallSpeakerOn": "Speaker",
   "speechCallEarpiece": "Earpiece",
   "speechBackdropTitle": "Call background",
+  "speechCallSettings": "Call settings",
+  "speechCallPause": "Pause before she answers",
+  "speechCallPauseQuick": "Short",
+  "speechCallPauseNormal": "Medium",
+  "speechCallPausePatient": "Long",
+  "speechCallPauseHint": "Pick Long if she cuts in while you pause; Short if she feels slow to answer.",
+  "speechCallSpeechSection": "Voice and recognition",
+  "speechCallVoice": "Her voice",
+  "speechCallSpeechHint": "Changes apply from the next sentence.",
   "speechBackdropSea": "Deep sea",
   "speechBackdropImage": "My picture",
   "speechBackdropImagePick": "Pick a picture",
@@ -68,5 +117,9 @@
   "speechBackdropNoCompanion": "Set her up in the companion room first to bring her into calls.",
   "speechBackdropReplace": "Change picture",
   "speechBackdropPickFailed": "That picture can't be used. Try another",
+  "speechCallVisual": "Light",
+  "speechCallVisualRing": "Ring",
+  "speechCallVisualMono": "Line",
+  "speechCallVisualGlass": "Orb",
   "speechInsecure": "That service's address isn't https; the key can't be sent that way"
 }

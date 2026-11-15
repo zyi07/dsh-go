@@ -11,7 +11,7 @@ import '../chat/support/composer_fakes.dart';
 import 'speech_fakes.dart';
 
 class _Rig {
-  _Rig({required VoiceMode mode, VoiceCloud? cloud, VoiceCapabilities? caps}) {
+  _Rig({required VoiceMode mode, VoiceCloud? cloud, VoiceCapabilities? caps, bool live = false}) {
     if (caps != null) bridge.caps = caps;
     voice = VoiceInputController(
       input: input,
@@ -23,6 +23,12 @@ class _Rig {
         return cloud;
       },
       observeLifecycle: false,
+      liveWords: live
+          ? (onWords) async {
+              words = onWords;
+              return null;
+            }
+          : null,
     );
     voice.onMessage = (message) => messages.add(message);
     addTearDown(() {
@@ -35,6 +41,7 @@ class _Rig {
   final input = TextEditingController(text: '前面 ');
   final messages = <VoiceMessage>[];
   final modes = <VoiceMode>[];
+  void Function(String)? words;
   late VoiceInputController voice;
 }
 
@@ -54,6 +61,33 @@ void main() {
     expect(cloud.heard, hasLength(1));
     expect(rig.input.text, '前面 你好世界');
     expect(rig.voice.phase, VoicePhase.idle);
+  });
+
+  testWidgets('live words show in the draft while recording; the recording\'s text replaces them', (tester) async {
+    final rig = _Rig(mode: VoiceMode.auto, cloud: FakeCloud('你好世界'), live: true);
+    rig.input.selection = const TextSelection.collapsed(offset: 3);
+    await rig.voice.start();
+    await tester.pump();
+    rig.words!('你好');
+    expect(rig.input.text, '前面 你好');
+    rig.words!('你好世');
+    expect(rig.input.text, '前面 你好世');
+    await rig.voice.stop();
+    expect(rig.input.text, '前面 你好世界');
+    // Late words after the end change nothing.
+    rig.words!('你好世界啊');
+    expect(rig.input.text, '前面 你好世界');
+  });
+
+  testWidgets('live words the recording does not confirm go: the draft is as it was', (tester) async {
+    final rig = _Rig(mode: VoiceMode.auto, cloud: FakeCloud()..fail = StateError('offline'), live: true);
+    final before = rig.input.text;
+    await rig.voice.start();
+    await tester.pump();
+    rig.words!('你好');
+    expect(rig.input.text, isNot(before));
+    await rig.voice.stop();
+    expect(rig.input.text, before);
   });
 
   testWidgets('automatic sends audio to DeepSeek unasked: said once, with 更换', (tester) async {

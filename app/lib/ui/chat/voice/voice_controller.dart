@@ -14,6 +14,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../voice/live_words.dart';
 import '../../../l10n/l10n.dart';
 import '../../../speech/voice_cloud.dart';
 import '../../../state/voice_settings.dart';
@@ -80,6 +81,8 @@ class VoiceInputController extends ChangeNotifier with WidgetsBindingObserver {
     bool Function()? harmony,
     this._cloud,
     this._cloudLikely,
+    this._signedIn,
+    this._liveWords,
     this.onRecognized,
     this.requiredProviderId,
     bool observeLifecycle = true,
@@ -118,6 +121,18 @@ class VoiceInputController extends ChangeNotifier with WidgetsBindingObserver {
   /// A cloud recognizer is probably there (settings only, nothing asked):
   /// the microphone shows even without a phone or engine recognizer.
   final bool Function()? _cloudLikely;
+
+  /// Signed in to a DeepSeek account (for saying why DeepSeek cannot listen).
+  final bool Function()? _signedIn;
+
+  /// Words as they are spoken, from the phone's streaming recognizer (null
+  /// when its model is not downloaded): shown as provisional text while a
+  /// recording runs; the recording's own text replaces them when it is done.
+  final Future<LiveWords?> Function(void Function(String words) onWords)? _liveWords;
+  LiveWords? _live;
+
+  /// Live words are in the draft, not yet replaced by the recording's text.
+  bool _liveShown = false;
   VoiceCloud? _cloudRun;
 
   /// HarmonyOS: the recogniser is the system's own, so there is none to choose,
@@ -329,7 +344,7 @@ class VoiceInputController extends ChangeNotifier with WidgetsBindingObserver {
           !_caps.recorder
               ? appL10n.chatVoiceMicrophoneFailed
               : _runMode == VoiceMode.deepseek
-              ? appL10n.speechNoCredential
+              ? (_signedIn?.call() ?? false ? appL10n.speechAccountUnusable : appL10n.speechNoCredential)
               : appL10n.speechCloudNotSetUp,
           change: true,
         ),
@@ -418,6 +433,7 @@ class VoiceInputController extends ChangeNotifier with WidgetsBindingObserver {
       await cancel();
       return;
     }
+    unawaited(_startLive(operation));
     HapticFeedback.lightImpact();
     _setPhase(VoicePhase.listening);
     if (fallback) _say(VoiceMessage(appL10n.voiceFallbackStarted));
@@ -437,9 +453,31 @@ class VoiceInputController extends ChangeNotifier with WidgetsBindingObserver {
       return;
     }
     if (!_current(operation) || _phase != VoicePhase.starting) return;
+    unawaited(_startLive(operation));
     HapticFeedback.lightImpact();
     _setPhase(VoicePhase.listening);
     if (_runMode == VoiceMode.auto) unawaited(_cloudNoticeOnce());
+  }
+
+  Future<void> _startLive(int operation) async {
+    final live = await _liveWords?.call((words) {
+      if (_current(operation) && _phase == VoicePhase.listening && words.isNotEmpty) {
+        _apply(words, provisional: true);
+        _liveShown = true;
+      }
+    });
+    if (live == null) return;
+    if (_current(operation)) {
+      _live = live;
+    } else {
+      unawaited(live.stop());
+    }
+  }
+
+  void _stopLive() {
+    final live = _live;
+    _live = null;
+    if (live != null) unawaited(live.stop());
   }
 
   static const cloudNoticeKey = 'speech_cloud_notice_shown';
@@ -530,6 +568,7 @@ class VoiceInputController extends ChangeNotifier with WidgetsBindingObserver {
     final operation = _operation;
     HapticFeedback.lightImpact();
     _setPhase(VoicePhase.transcribing);
+    _stopLive();
     if (_engine == VoiceEngine.system) {
       _finalTimeout = Timer(const Duration(seconds: 6), () {
         if (!_current(operation) || _engine != VoiceEngine.system) return;
@@ -674,6 +713,7 @@ class VoiceInputController extends ChangeNotifier with WidgetsBindingObserver {
   void _apply(String heard, {required bool provisional}) {
     final base = _base;
     if (base == null) return;
+    if (!provisional) _liveShown = false;
     final text = base.text;
     final spoken = heard.trim();
     final before = text.substring(0, _anchorStart);
@@ -710,6 +750,10 @@ class VoiceInputController extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   void _finish() {
+    _stopLive();
+    // Not heard after all (failed, empty, too short): the draft goes back.
+    if (_liveShown) _restoreDraft();
+    _liveShown = false;
     _operation++;
     _requestingPermission = false;
     _switching = false;
@@ -761,6 +805,7 @@ class VoiceInputController extends ChangeNotifier with WidgetsBindingObserver {
     }
     _operation++;
     _disposed = true;
+    _stopLive();
     _finalTimeout?.cancel();
     unawaited(_events?.cancel());
     if (_observing) WidgetsBinding.instance.removeObserver(this);

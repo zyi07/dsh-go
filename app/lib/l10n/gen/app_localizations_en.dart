@@ -3067,6 +3067,12 @@ class L10nEn extends L10n {
       'Bring your own pixel pet: a zip with pack.json and PNG frame sheets; the format is in docs/design/pets.md in the repository. Long-press an imported pet to delete it.';
 
   @override
+  String get botsPetMake => 'Make a pet with AI';
+
+  @override
+  String get botsPetMakeSubtitle => 'Turn GIFs, stickers or a theme into a pet pack';
+
+  @override
   String botsPetImportDone(String name) {
     return '$name is here';
   }
@@ -3166,6 +3172,9 @@ class L10nEn extends L10n {
 
   @override
   String get botsPetSize => 'Size';
+
+  @override
+  String get botsPetCustomSize => 'Custom size';
 
   @override
   String get botsPetQuiet => 'Quiet mode';
@@ -6131,6 +6140,70 @@ class L10nEn extends L10n {
 
   @override
   String get companionAdaptNetwork => 'no connection';
+
+  @override
+  String get automaticDiagnosticsRecover => 'Recover local records';
+
+  @override
+  String get automaticDiagnosticsRecoverHint =>
+      'Only recovers analysis records on this phone, skips retained failures, and never resends old requests.';
+
+  @override
+  String get automaticDiagnosticsTitle => 'Automatic failure analysis';
+
+  @override
+  String get automaticDiagnosticsHint =>
+      'Off by default. Local, foreground and engine-ready only. Same-version failures are merged for 24 hours. Disabling stops new requests; sent data cannot be retracted.';
+
+  @override
+  String get automaticDiagnosticsConsentTitle => 'Enable automatic failure analysis?';
+
+  @override
+  String get automaticDiagnosticsConsent =>
+      'On a failure, the app sends redacted versions, Android system facts, runtime state, error categories, voice stages and its own process exit reasons to the model provider configured on your local engine. Model charges may apply. No chat text, recordings, credentials or raw logs are included. Reports stay in a separate read-only analysis conversation without changing your current chat. No automatic repairs or GitHub publication. Disabling or switching hosts blocks new analyses and attempts to stop existing analysis; data already sent cannot be retracted.';
+
+  @override
+  String get automaticDiagnosticsEnable => 'Agree and enable';
+
+  @override
+  String get automaticDiagnosticsOff => 'Off';
+
+  @override
+  String get automaticDiagnosticsWaiting => 'Waiting for a local connection, foreground and ready engine';
+
+  @override
+  String get automaticDiagnosticsReady => 'Enabled; waiting for a new failure';
+
+  @override
+  String get automaticDiagnosticsCollecting => 'Collecting structured failure facts';
+
+  @override
+  String get automaticDiagnosticsAnalyzing => 'Analyzing in a separate conversation (up to 2 minutes)';
+
+  @override
+  String get automaticDiagnosticsComplete => 'Analysis complete';
+
+  @override
+  String get automaticDiagnosticsCancelled => 'Stopped or interrupted; no automatic retry';
+
+  @override
+  String get automaticDiagnosticsFailed => 'Analysis failed; this failure will not be retried automatically';
+
+  @override
+  String get automaticDiagnosticsStoreFailed => 'Cannot save diagnostics settings or state; automatic analysis stopped';
+
+  @override
+  String get automaticDiagnosticsCancelFailed => 'Stop request failed; check the report conversation and stop manually';
+
+  @override
+  String get automaticDiagnosticsViewReport => 'View latest analysis conversation';
+
+  @override
+  String get automaticDiagnosticsReportHint =>
+      'Opens only when tapped; never interrupts your current chat. The report may still be running or interrupted.';
+
+  @override
+  String get automaticDiagnosticsReportTitle => 'Automatic failure analysis report';
 
   @override
   String get systemImeTitle => 'System input-method diagnostics';
@@ -9743,6 +9816,9 @@ class L10nEn extends L10n {
   String get launchFitCenter => 'Center';
 
   @override
+  String get launchFrame => 'Reposition';
+
+  @override
   String get launchBackground => 'Background';
 
   @override
@@ -12755,16 +12831,16 @@ class L10nEn extends L10n {
       'invalid': 'The request or result could not be verified.',
       'display': 'The temporary display could not be verified.',
       'input': 'Input acceptance or delivery was not confirmed. Sent input is not retried.',
-      'cleanup': 'Resource cleanup is unconfirmed. Retry only cleanup.',
+      'cleanup': 'Resource cleanup is unconfirmed. Reconnect the channel, then check again.',
       'denied': 'The system denied the operation.',
       'timeout': 'The operation timed out; sent work may still complete.',
       'unavailable': 'The local status or selected channel is unavailable.',
       'target_unavailable': 'The fixed target could not be verified. Finish cleanup before starting again.',
       'target_changed': 'The original target changed. Continue only with cleanup.',
-      'target_cleanup': 'Target cleanup is unconfirmed. Retry only cleanup.',
+      'target_cleanup': 'Target cleanup is unconfirmed. Reconnect the channel, then check again.',
       'target_main': 'The target was observed on MAIN. Further steps stopped; complete cleanup.',
       'target_readback': 'The fixed target count or text did not match. Do not repeat the action; complete cleanup.',
-      'tree_cleanup': 'Tree connection cleanup is unconfirmed. Retry only cleanup.',
+      'tree_cleanup': 'Tree connection cleanup is unconfirmed. Reconnect the channel, then check again.',
       'target_launch': 'Target launch was denied or unconfirmed. Check the device and complete cleanup.',
       'frame_unavailable': 'No usable local pattern frame was observed. Complete cleanup before a new check.',
       'frame_mismatch': 'The actual frame did not match this target and phase. Complete cleanup.',
@@ -16592,7 +16668,7 @@ class L10nEn extends L10n {
   String get remoteDirectoryGo => 'Go';
 
   @override
-  String get remoteDirectoryAbsolutePath => 'Enter the full path, starting with “/”';
+  String get remoteDirectoryAbsolutePath => 'Enter the full path, like /root/workspace or C:/Users/me';
 
   @override
   String get remoteDirectoryNewFolder => 'New folder';
@@ -17436,6 +17512,9 @@ class L10nEn extends L10n {
   String get searchNeedsAnimations => 'Available with animations on';
 
   @override
+  String get searchNeedsWorkshop => 'This build doesn\'t include the Workshop';
+
+  @override
   String get searchNeedsChat => 'Available with a chat open';
 
   @override
@@ -17612,6 +17691,9 @@ class L10nEn extends L10n {
 
   @override
   String get searchKwPetOverlayFraming => 'framing,full body,half body';
+
+  @override
+  String get searchKwWorkshop => 'workshop,download pets,download companions,share pets,submit';
 
   @override
   String get searchKwBlur => 'blur,glass,frosted';
@@ -19041,6 +19123,10 @@ class L10nEn extends L10n {
   String get speechNoCredential => 'Sign in to DeepSeek or add an API key in Settings first';
 
   @override
+  String get speechAccountUnusable =>
+      'Your signed-in account can\'t pay for DeepSeek speech here: the DSH you\'re connected to is older (updating fixes it), or you\'re going through DSH Remote. Add a DeepSeek API key in Settings to use it';
+
+  @override
   String get speechSignIn =>
       'Your DeepSeek account can\'t pay for speech (sign-in expired, or speech takes only an API key). Sign in again, or add an API key in Settings';
 
@@ -19095,7 +19181,8 @@ class L10nEn extends L10n {
   String get speechCallBargeIn => 'Interrupt by speaking';
 
   @override
-  String get speechCallBargeInHint => 'Start talking while the AI speaks and it stops to listen';
+  String get speechCallBargeInHint =>
+      'When you speak over the AI it goes quiet; a “yeah” lets it go on, anything else stops it';
 
   @override
   String get speechCallSpoken => 'Spoken answers';
@@ -19112,6 +19199,53 @@ class L10nEn extends L10n {
   @override
   String get speechCallHint =>
       '(This is a voice call; what I say comes through speech recognition. Please answer briefly and conversationally, without Markdown, lists, tables or code blocks.)';
+
+  @override
+  String speechCallCutNote(String heard) {
+    return '(I cut you off at “$heard”; I didn\'t hear the rest.)';
+  }
+
+  @override
+  String get speechCallCutEarly => '(I cut you off before you said anything; I didn\'t hear that answer.)';
+
+  @override
+  String get speechCallCue => 'Thinking sound';
+
+  @override
+  String get speechCallCueHint => 'A soft chime when an answer is slow to start';
+
+  @override
+  String get speechLiveSection => 'Live captions';
+
+  @override
+  String get speechLiveName => 'Streaming recognizer';
+
+  @override
+  String speechLiveAbsentNote(String mb) {
+    return 'Download it and calls show your words as you speak, and stop sooner when you cut in. About $mb; it runs on the phone';
+  }
+
+  @override
+  String speechLiveReadyNote(String mb) {
+    return 'Using $mb. Calls use it automatically';
+  }
+
+  @override
+  String get speechLiveBlocked => 'Off';
+
+  @override
+  String get speechLiveBlockedNote =>
+      'It crashed on this phone, so live captions are off; calls work as before. Delete it and download again to try once more.';
+
+  @override
+  String get speechLiveFooter =>
+      'Captions and cut-ins run on the phone; the text sent to the AI still comes from the recognition chosen above, and cloud recognition uploads the recording.';
+
+  @override
+  String get speechLiveDeleteTitle => 'Delete the streaming recognizer?';
+
+  @override
+  String get speechLiveDeleteBody => 'Calls will stop showing live captions. You can download it again any time.';
 
   @override
   String get speechCallStarting => 'Connecting';
@@ -19141,6 +19275,10 @@ class L10nEn extends L10n {
   String get speechCallEndMicrophone => 'The microphone is busy or can\'t be opened';
 
   @override
+  String get speechCallEndNoRecognizerSignedIn =>
+      'A call needs a way to recognize speech. Your signed-in account can\'t pay for DeepSeek speech here (the DSH you\'re connected to is older, or you\'re going through DSH Remote): add a DeepSeek API key in Settings, or download the voice model in Settings › Voice';
+
+  @override
   String get speechCallEndNoRecognizer =>
       'A call needs a recognizer that takes recordings: sign in to DeepSeek, add an API key, or download the voice model';
 
@@ -19155,6 +19293,18 @@ class L10nEn extends L10n {
 
   @override
   String get speechCallSkipHint => 'Skip this answer';
+
+  @override
+  String get speechCallTranscript => 'Captions';
+
+  @override
+  String get speechCallTranscriptHint => 'Everything said on this call';
+
+  @override
+  String get speechCallTranscriptEmpty => 'Nothing said yet. What you both say is written down here, line by line.';
+
+  @override
+  String get speechCallTranscriptCut => 'You cut in here';
 
   @override
   String get speechCallMute => 'Mute';
@@ -19173,6 +19323,33 @@ class L10nEn extends L10n {
 
   @override
   String get speechBackdropTitle => 'Call background';
+
+  @override
+  String get speechCallSettings => 'Call settings';
+
+  @override
+  String get speechCallPause => 'Pause before she answers';
+
+  @override
+  String get speechCallPauseQuick => 'Short';
+
+  @override
+  String get speechCallPauseNormal => 'Medium';
+
+  @override
+  String get speechCallPausePatient => 'Long';
+
+  @override
+  String get speechCallPauseHint => 'Pick Long if she cuts in while you pause; Short if she feels slow to answer.';
+
+  @override
+  String get speechCallSpeechSection => 'Voice and recognition';
+
+  @override
+  String get speechCallVoice => 'Her voice';
+
+  @override
+  String get speechCallSpeechHint => 'Changes apply from the next sentence.';
 
   @override
   String get speechBackdropSea => 'Deep sea';
@@ -19202,6 +19379,18 @@ class L10nEn extends L10n {
 
   @override
   String get speechBackdropPickFailed => 'That picture can\'t be used. Try another';
+
+  @override
+  String get speechCallVisual => 'Light';
+
+  @override
+  String get speechCallVisualRing => 'Ring';
+
+  @override
+  String get speechCallVisualMono => 'Line';
+
+  @override
+  String get speechCallVisualGlass => 'Orb';
 
   @override
   String get speechInsecure => 'That service\'s address isn\'t https; the key can\'t be sent that way';
@@ -19387,6 +19576,9 @@ class L10nEn extends L10n {
 
   @override
   String get stateSizeLarge => 'Large';
+
+  @override
+  String get stateSizeCustom => 'Custom';
 
   @override
   String get statePetDone => 'Done';
@@ -24044,6 +24236,629 @@ class L10nEn extends L10n {
   String get tavernChannelKeyCleared => 'The key is cleared when you save';
 
   @override
+  String get tavernDrafts => 'Drafts';
+
+  @override
+  String get tavernDraftsSubtitle => 'Changes wait in a draft until you pick what goes into the real one';
+
+  @override
+  String get tavernDraftsForCard => 'Change this card with AI';
+
+  @override
+  String get tavernDraftsForCardSubtitle => 'In a draft; apply what you pick';
+
+  @override
+  String get tavernDraftsEmpty => 'No drafts yet';
+
+  @override
+  String get tavernDraftsEmptyOwn => 'Start a draft and tell the AI how to change this card.';
+
+  @override
+  String get tavernDraftsEmptyAll =>
+      'Start one from a character\'s page, or from a file: it stays a draft, nothing is imported.';
+
+  @override
+  String get tavernDraftNew => 'New draft';
+
+  @override
+  String get tavernDraftFromFile => 'Draft from a file';
+
+  @override
+  String tavernDraftSeedUnsupported(String name) {
+    return '$name isn\'t a card or a lorebook';
+  }
+
+  @override
+  String get tavernDraft => 'Draft';
+
+  @override
+  String get tavernDraftSubtitle => 'Nothing here is in the real one yet';
+
+  @override
+  String get tavernDraftGone => 'This draft is gone';
+
+  @override
+  String get tavernDraftKindCharacter => 'Card';
+
+  @override
+  String get tavernDraftKindPreset => 'Preset';
+
+  @override
+  String tavernDraftNewSource(String name) {
+    return '$name (not saved yet)';
+  }
+
+  @override
+  String get tavernDraftGreetings => 'Other greetings';
+
+  @override
+  String tavernDraftEntry(int n) {
+    return 'Entry $n';
+  }
+
+  @override
+  String get tavernDraftNoChanges => 'No changes yet';
+
+  @override
+  String get tavernDraftNoChangesHint => 'Tell the AI below what to change';
+
+  @override
+  String get tavernDraftBefore => 'Was';
+
+  @override
+  String get tavernDraftAfter => 'Becomes';
+
+  @override
+  String get tavernDraftAbsent => '(none)';
+
+  @override
+  String get tavernDraftRemoved => 'Removed';
+
+  @override
+  String get tavernDraftAppliedChange => 'Applied';
+
+  @override
+  String tavernDraftDependsOn(int n) {
+    return 'Goes with $n earlier change(s)';
+  }
+
+  @override
+  String get tavernDraftRemoveChange => 'Take this out of the draft';
+
+  @override
+  String tavernDraftApply(int n) {
+    return 'Apply $n';
+  }
+
+  @override
+  String get tavernDraftSaveNew => 'Save as new';
+
+  @override
+  String get tavernDraftSavedNew => 'Saved as new';
+
+  @override
+  String get tavernDraftChecked => 'Checked: nothing found';
+
+  @override
+  String get tavernDraftCannotApply => 'Regex and preset drafts can be previewed, not applied yet';
+
+  @override
+  String tavernDraftApplied(String name) {
+    return 'Applied to $name';
+  }
+
+  @override
+  String get tavernDraftNoChange => 'Same as now: nothing to change';
+
+  @override
+  String tavernDraftNotApplied(String reason) {
+    return 'Not applied: $reason';
+  }
+
+  @override
+  String get tavernDraftUnconfirmed =>
+      'The write isn\'t confirmed yet. Don\'t repeat it; check the history in a while.';
+
+  @override
+  String tavernDraftApplyUnknown(String reason) {
+    return 'No answer ($reason); tapping again continues the same one';
+  }
+
+  @override
+  String tavernDraftBehind(String name) {
+    return '$name changed after this draft began (maybe just now, by applying). Continue from it and look the changes over again.';
+  }
+
+  @override
+  String get tavernDraftCatchUp => 'Continue from now';
+
+  @override
+  String get tavernDraftChangedMeanwhile => 'The draft just changed; reloaded';
+
+  @override
+  String get tavernDraftPending => 'The last write isn\'t confirmed; it can\'t be applied again yet';
+
+  @override
+  String get tavernDraftDelete => 'Delete draft';
+
+  @override
+  String get tavernDraftDeleteTitle => 'Delete this draft?';
+
+  @override
+  String get tavernDraftDeleteBody => 'Only the draft goes; what was applied stays.';
+
+  @override
+  String get tavernDraftAskHint => 'What to change? e.g. a cooler greeting';
+
+  @override
+  String get tavernDraftAiSend => 'Ask the AI';
+
+  @override
+  String get tavernDraftAiStop => 'Stop';
+
+  @override
+  String get tavernDraftAiTitle => 'AI';
+
+  @override
+  String get tavernDraftAiRunning => 'Working…';
+
+  @override
+  String get tavernDraftAiDone => 'Done: the changes are above; pick and apply';
+
+  @override
+  String get tavernDraftAiStopped => 'Stopped';
+
+  @override
+  String get tavernDraftAiConflict => 'The draft changed meanwhile; the AI stopped';
+
+  @override
+  String get tavernDraftAiBudget => 'Four requests used; it stopped here';
+
+  @override
+  String get tavernDraftAiFailed => 'Something went wrong';
+
+  @override
+  String get tavernDraftAiInterrupted => 'Interrupted (the app closed)';
+
+  @override
+  String get tavernDraftEarlier => 'Asked before';
+
+  @override
+  String tavernDraftRunReceipts(int changes, int requests) {
+    return '$changes edit(s) · $requests request(s)';
+  }
+
+  @override
+  String get tavernDraftHistory => 'Versions';
+
+  @override
+  String get tavernDraftHistoryEmpty => 'No versions recorded yet';
+
+  @override
+  String get tavernDraftHistoryNote =>
+      'Going back saves it as a new version; later ones stay. Pictures and chats aren\'t touched.';
+
+  @override
+  String tavernDraftVersion(int n) {
+    return 'Version $n';
+  }
+
+  @override
+  String get tavernDraftVersionCurrent => 'Current';
+
+  @override
+  String get tavernDraftRestore => 'Go back to it';
+
+  @override
+  String tavernDraftRestoreTitle(int n) {
+    return 'Go back to version $n?';
+  }
+
+  @override
+  String get tavernDraftRestoreBody => 'It is saved as a new version.';
+
+  @override
+  String tavernDraftRestored(int n) {
+    return 'Back to version $n';
+  }
+
+  @override
+  String get tavernDraftRestoreMoved => 'It changed meanwhile; try again';
+
+  @override
+  String get tavernDraftPrompt => 'Prompt with the draft';
+
+  @override
+  String get tavernDraftPromptSubtitle => 'What the next turn would send with the ticked changes; nothing is sent';
+
+  @override
+  String get tavernDraftPromptFrom => 'After which chat';
+
+  @override
+  String get tavernDraftPromptFirst => 'A new chat';
+
+  @override
+  String get tavernDraftPromptText => 'Next line (optional)';
+
+  @override
+  String get tavernDraftPromptTextHint => 'What you would say';
+
+  @override
+  String get tavernDraftPromptShow => 'Show the prompt';
+
+  @override
+  String get tavernDraftPromptComplete => 'Prompt';
+
+  @override
+  String get tavernDraftPromptUnsupported => 'Part of this card can\'t be put together faithfully in a preview';
+
+  @override
+  String get tavernDraftPromptNote => 'The card\'s scripts don\'t run in a preview.';
+
+  @override
+  String tavernDraftUsagePartial(String prompt, String completion) {
+    return 'Reported: in $prompt · out $completion (some requests reported nothing)';
+  }
+
+  @override
+  String get tavernDraftTrial => 'Try it';
+
+  @override
+  String get tavernDraftTrialSubtitle => 'A few lines with the draft in a chat of its own; real chats aren\'t touched';
+
+  @override
+  String get tavernDraftTrialNote => 'The model is really asked and billed as used; four lines at most.';
+
+  @override
+  String tavernDraftTrialLine(int n) {
+    return 'Line $n';
+  }
+
+  @override
+  String get tavernDraftTrialMore => 'Add a line';
+
+  @override
+  String get tavernDraftTrialPlay => 'Start';
+
+  @override
+  String get tavernDraftTrialRunning => 'Playing…';
+
+  @override
+  String get tavernDraftTrialDone => 'Done';
+
+  @override
+  String get tavernDraftTrialUnsupported => 'This draft can\'t be tried yet';
+
+  @override
+  String get tavernPacks => 'Gameplay packs';
+
+  @override
+  String get tavernPacksSubtitle =>
+      'Installed packs. Installing doesn\'t turn one on: add it globally, to a character or to a chat.';
+
+  @override
+  String get tavernPacksEmpty => 'No gameplay packs yet';
+
+  @override
+  String get tavernPacksEmptyNote =>
+      'Import a .dshpack file. Importing only keeps it: nothing is turned on and no character is made.';
+
+  @override
+  String get tavernPackImport => 'Import pack';
+
+  @override
+  String tavernPackInstalled(String title, String version) {
+    return 'Imported $title $version';
+  }
+
+  @override
+  String tavernPackAlreadyInstalled(String title, String version) {
+    return '$title $version is already installed with the same content';
+  }
+
+  @override
+  String tavernPackVersionCount(int n) {
+    return '$n versions';
+  }
+
+  @override
+  String tavernPackWithdrawnShort(String version) {
+    return '$version (withdrawn)';
+  }
+
+  @override
+  String get tavernPackWithdrawnLabel => 'Withdrawn';
+
+  @override
+  String get tavernPackShowWithdrawn => 'Show withdrawn versions';
+
+  @override
+  String get tavernPackScopeGlobal => 'On everywhere';
+
+  @override
+  String get tavernPackScopeGlobalSubtitle => 'Packs every chat uses';
+
+  @override
+  String get tavernPackScopeCharacter => 'This character\'s packs';
+
+  @override
+  String get tavernPackScopeChat => 'This chat\'s packs';
+
+  @override
+  String get tavernPackForCardSubtitle => 'Used by every chat with this card';
+
+  @override
+  String get tavernPackBindingsSubtitle => 'Changes take effect when saved; preview to see what they compose into';
+
+  @override
+  String get tavernPackOrderNote =>
+      'Composed top to bottom; the preview shows which pack wins each field. Tap a row to change its version, order or characters.';
+
+  @override
+  String get tavernPackAdd => 'Add a pack';
+
+  @override
+  String get tavernPackUnsaved => 'Not saved';
+
+  @override
+  String get tavernPackResetPending => 'Once-only state resets on save';
+
+  @override
+  String tavernPackCastMappedCount(int n) {
+    return '$n characters linked';
+  }
+
+  @override
+  String get tavernPackRemovedBindings => 'Removed';
+
+  @override
+  String get tavernPackPickVersion => 'Change version';
+
+  @override
+  String get tavernPackMoveUp => 'Move up';
+
+  @override
+  String get tavernPackMoveDown => 'Move down';
+
+  @override
+  String get tavernPackResetOnce => 'Reset once-only state';
+
+  @override
+  String get tavernPackRestore => 'Restore';
+
+  @override
+  String get tavernPackRemoveBinding => 'Remove';
+
+  @override
+  String get tavernPackSaved => 'Saved';
+
+  @override
+  String tavernPackUnanswered(String reason) {
+    return 'No answer: $reason. Saving again retries the same operation';
+  }
+
+  @override
+  String get tavernPackVersion => 'Version';
+
+  @override
+  String get tavernPackAddGlobal => 'Turn on everywhere';
+
+  @override
+  String get tavernPackAddNote =>
+      'For one character or chat only, add it from the character\'s page or the chat\'s stage panel';
+
+  @override
+  String get tavernPackCast => 'Characters';
+
+  @override
+  String get tavernPackCastNote =>
+      'Importing makes a new character; the original card is untouched and no group chat is joined';
+
+  @override
+  String get tavernPackCastFromCard => 'Full character card';
+
+  @override
+  String get tavernPackCastImportAction => 'Import as character';
+
+  @override
+  String tavernPackCastImportTitle(String name) {
+    return 'Import $name as a new character?';
+  }
+
+  @override
+  String get tavernPackCastImportNote =>
+      'A new character goes into the library. Changing this pack\'s version later won\'t replace it.';
+
+  @override
+  String tavernPackCastImported(String name) {
+    return 'Imported $name';
+  }
+
+  @override
+  String get tavernPackCastNotAdopted => 'No character was made this time';
+
+  @override
+  String tavernPackCastUnknown(String state) {
+    return 'Not confirmed yet ($state); check the library in a moment';
+  }
+
+  @override
+  String get tavernPackCastMapping => 'Linked characters';
+
+  @override
+  String get tavernPackCastMapped => 'Linked';
+
+  @override
+  String get tavernPackResources => 'Resources';
+
+  @override
+  String tavernPackIssueCount(int n) {
+    return '$n notes';
+  }
+
+  @override
+  String get tavernPackDeclaration => 'Declaration check';
+
+  @override
+  String get tavernPackDeclarationNote =>
+      'What the import found. Installed doesn\'t mean every block runs; conditional and opaque parts depend on the case.';
+
+  @override
+  String get tavernPackNothingNoted => 'Nothing to note';
+
+  @override
+  String get tavernPackExportOriginal => 'Export the original file';
+
+  @override
+  String get tavernPackWithdraw => 'Withdraw this version';
+
+  @override
+  String tavernPackWithdrawTitle(String version) {
+    return 'Withdraw $version?';
+  }
+
+  @override
+  String get tavernPackWithdrawNote =>
+      'It can\'t be chosen anew; places already using it stay as they are. The file and its history are kept and can still be exported.';
+
+  @override
+  String get tavernPackPreview => 'Preview';
+
+  @override
+  String get tavernPackPreviewSubtitle => 'Composed with the current changes; nothing is saved or run';
+
+  @override
+  String get tavernPackPreviewSources => 'Sources';
+
+  @override
+  String get tavernPackPreviewDefinitions => 'Definitions';
+
+  @override
+  String get tavernPackPreviewConflicts => 'Conflicts';
+
+  @override
+  String get tavernPackPreviewFields => 'Field sources';
+
+  @override
+  String get tavernPackPreviewState => 'Current value';
+
+  @override
+  String get tavernPackPreviewNote => 'Read only: no binding is saved, no variable set up, no model asked.';
+
+  @override
+  String get tavernPackStateUnavailable => 'This chat has no state to check yet';
+
+  @override
+  String get tavernPackStateNotValidated =>
+      'The current value wasn\'t validated this time; see the definitions and conflicts';
+
+  @override
+  String get tavernPackStateValid => 'The current value fits the composed definition';
+
+  @override
+  String get tavernPackStateInvalid => 'The current value doesn\'t fit the composed definition';
+
+  @override
+  String get tavernPackStateMissing => 'This chat has no such value';
+
+  @override
+  String get tavernPackCardExport => 'Export with packs';
+
+  @override
+  String get tavernPackCardExportMenuSubtitle => 'Fold chosen pack resources into the card';
+
+  @override
+  String get tavernPackCardExportSubtitle => 'Preview first; export once nothing blocks it';
+
+  @override
+  String get tavernPackExportFormat => 'Format';
+
+  @override
+  String get tavernPackExportCopyMedia => 'Include the card\'s images';
+
+  @override
+  String get tavernPackExportFlattenNote =>
+      'Inside a single card, scope, order, budget and timing may behave differently than here';
+
+  @override
+  String get tavernPackExportNoResources => 'The packs on for this card have no resources a card can carry';
+
+  @override
+  String get tavernPackExportFindings => 'Preview';
+
+  @override
+  String tavernPackExportMappings(int ids, int resources) {
+    return '$ids identities and $resources resources rewritten';
+  }
+
+  @override
+  String get tavernPackExportGo => 'Export';
+
+  @override
+  String get tavernPackExportPreviewFirst => 'Preview first';
+
+  @override
+  String get tavernPackExportBlocked => 'Something blocks the export';
+
+  @override
+  String get tavernPackDraftExport => 'Export as pack';
+
+  @override
+  String tavernPackDraftExportSubtitle(int n) {
+    return 'A new .dshpack from this draft\'s character definition and all $n changes';
+  }
+
+  @override
+  String get tavernPackDraftId => 'Pack ID';
+
+  @override
+  String get tavernPackDraftRoots => 'State paths to include';
+
+  @override
+  String get tavernPackDraftRootsHint => 'e.g. /hp /items; empty for all of it';
+
+  @override
+  String get tavernPackInstallMade => 'Install here';
+
+  @override
+  String get tavernPackCommitted => 'The change took effect, but a later notice failed';
+
+  @override
+  String get tavernPackVersionConflict =>
+      'This pack ID and version already exist with different content; use a new version name';
+
+  @override
+  String get tavernPackRevisionConflict => 'Changed elsewhere. Refreshed: please make this change again';
+
+  @override
+  String get tavernPackOperationConflict => 'This operation\'s ID was already used; please do it again';
+
+  @override
+  String get tavernPackVersionNotFound => 'Version not found';
+
+  @override
+  String get tavernPackVersionRemoved => 'This version is withdrawn and can\'t be chosen anew';
+
+  @override
+  String get tavernPackTimerConflict =>
+      'This upgrade changes sticky or cooldown settings: reset once-only state with it, or add a new instance';
+
+  @override
+  String get tavernPackTargetGone => 'The character, chat or binding is gone';
+
+  @override
+  String get tavernPackAuthorityConflict => 'The character\'s source changed; refresh and confirm again';
+
+  @override
+  String get tavernPackCastUnproven => 'Can\'t confirm this character was imported from this pack';
+
+  @override
+  String get tavernPackCastOtherVersion => 'The linked character comes from another version of this pack';
+
+  @override
+  String get tavernPackExportChanged => 'The export\'s sources or options changed; preview again';
+
+  @override
   String get updateCheck => 'Check for updates';
 
   @override
@@ -24332,7 +25147,7 @@ class L10nEn extends L10n {
 
   @override
   String get usageStatsFooter =>
-      'This switch controls dsh-go’s own usage counts, versions, phone maker and model, and system version statistics. It includes no chats, files or accounts, and does not control Google ML Kit SDK statistics.';
+      'This switch controls dsh-go’s own statistics: feature counts (tavern messages, companion room visits and voice calls included), the token counts model replies report, versions, phone maker and model, and system version. It includes no chats, character cards, files or accounts, and does not control Google ML Kit SDK statistics.';
 
   @override
   String get usageNoticeBody => 'No chats or personal info.\nTurn off anytime.';
@@ -26604,17 +27419,17 @@ class L10nEn extends L10n {
   String get workshopErrorOtherOrigin => 'This was installed from a different Workshop.';
 
   @override
-  String get workshopErrorSignIn => 'Sign in to the forum first.';
+  String get workshopErrorSignIn => 'Sign in with GitHub first.';
 
   @override
   String get workshopErrorConsent => 'Agree to let the Workshop check your sign-in first.';
 
   @override
-  String get workshopErrorForumMismatch =>
-      'The forum you signed in to isn\'t the one this Workshop uses. Sign in again.';
+  String get workshopErrorAccountMismatch =>
+      'The account you signed in with isn\'t the kind this Workshop uses. Sign in again.';
 
   @override
-  String get workshopErrorForumDown => 'The forum can\'t be reached right now. Try again later.';
+  String get workshopErrorAccountDown => 'Couldn\'t confirm who you are with GitHub right now. Try again later.';
 
   @override
   String get workshopErrorPreferences => 'Couldn\'t save the record on this phone, so this step didn\'t continue.';
@@ -26633,25 +27448,35 @@ class L10nEn extends L10n {
   String get workshopErrorGeneric => 'That didn\'t work. Try again later.';
 
   @override
-  String get workshopDisclosureTitle => 'Let the Workshop confirm who you are';
+  String workshopErrorWithCode(String code) {
+    return 'That didn\'t work. Try again later. ($code)';
+  }
+
+  @override
+  String workshopErrorPackage(String code) {
+    return 'A file in this pack doesn\'t meet the requirements, so it can\'t be uploaded ($code).';
+  }
+
+  @override
+  String get workshopDisclosureTitle => 'Let the Workshop confirm your GitHub identity';
 
   @override
   String get workshopDisclosureLead =>
-      'To submit, manage your submissions or report something, the Workshop needs to know who you are. To find out, your forum sign-in credential (a User API Key) is sent to the Workshop service below, which asks the forum which account it belongs to.';
+      'To submit, manage your submissions or report something, the Workshop needs to know who you are. To find out, your GitHub sign-in credential is sent to the Workshop service below, which asks GitHub which account it belongs to.';
 
   @override
   String get workshopDisclosureWorker => 'Workshop that receives the credential';
 
   @override
-  String get workshopDisclosureForum => 'Forum that confirms who you are';
+  String get workshopDisclosureAccount => 'Account service that confirms who you are';
 
   @override
   String get workshopDisclosureUse =>
-      'It is sent when you submit, view or withdraw your submissions, or report something. The Workshop only uses it to confirm your identity with the forum and does not keep it.';
+      'It is sent when you submit, view or withdraw your submissions, or report something. The Workshop only uses it to confirm your identity with GitHub and does not keep it.';
 
   @override
   String get workshopDisclosureKept =>
-      'This phone only remembers that you agreed to these two addresses, with no extra copy of the credential. If either changes, you\'ll be asked again.';
+      'The credential stays on this phone, which also remembers that you agreed to these two addresses. If either changes, you\'ll be asked again.';
 
   @override
   String get workshopDisclosureStale => 'The addresses just changed. Please confirm the ones shown now.';
@@ -26665,6 +27490,59 @@ class L10nEn extends L10n {
   @override
   String get workshopDisclosureUnsaved =>
       'Your consent counts for now, but it couldn\'t be saved on this phone. You may be asked again.';
+
+  @override
+  String get workshopSignInTitle => 'Sign in with GitHub';
+
+  @override
+  String get workshopSignInLead =>
+      'The Workshop knows authors by their GitHub account. This sign-in can only read your public profile (username and account number), not your repositories.';
+
+  @override
+  String get workshopSignInPreparing => 'Getting a code from GitHub…';
+
+  @override
+  String get workshopSignInSteps =>
+      'Enter this code on GitHub\'s verification page and authorize, then come back here.';
+
+  @override
+  String get workshopSignInOpen => 'Copy and open GitHub';
+
+  @override
+  String get workshopSignInCopied => 'Code copied';
+
+  @override
+  String get workshopSignInWaiting => 'Waiting for you to authorize on GitHub…';
+
+  @override
+  String get workshopSignInExpired => 'The code expired.';
+
+  @override
+  String get workshopSignInDenied => 'You cancelled the authorization on GitHub.';
+
+  @override
+  String get workshopSignInNetwork => 'Can\'t reach GitHub. Check the connection and try again.';
+
+  @override
+  String get workshopSignInUnconfigured => 'This Workshop hasn\'t set up GitHub sign-in yet.';
+
+  @override
+  String get workshopSignInAgain => 'Get a new code';
+
+  @override
+  String workshopAccountLine(String login) {
+    return 'GitHub account $login';
+  }
+
+  @override
+  String get workshopAccountSignOut => 'Sign out';
+
+  @override
+  String get workshopAccountSignedOut =>
+      'Signed out. To withdraw the authorization completely, revoke it under Applications in your GitHub settings.';
+
+  @override
+  String get workshopAccountSignOutFailed => 'Couldn\'t sign out. Try again later.';
 
   @override
   String get workshopInstalledEmptyTitle => 'Nothing from the Workshop yet';
@@ -26815,7 +27693,7 @@ class L10nEn extends L10n {
   String get workshopMinePublishHint => 'Shows up in Discover once approved';
 
   @override
-  String get workshopMineSignInTitle => 'Submissions belong to a forum account';
+  String get workshopMineSignInTitle => 'Submissions belong to a GitHub account';
 
   @override
   String get workshopMineSignInMessage => 'Sign in to see what you have sent in.';
@@ -26825,7 +27703,7 @@ class L10nEn extends L10n {
 
   @override
   String get workshopMineConsentMessage =>
-      'The workshop checks who you are with your forum sign-in. Agree to that to see your submissions.';
+      'The workshop checks who you are with your GitHub sign-in. Agree to that to see your submissions.';
 
   @override
   String get workshopMineConsentAction => 'See details';
@@ -26981,14 +27859,14 @@ class L10nEn extends L10n {
   String get workshopReportDone => 'Report received. A reviewer will look at it.';
 
   @override
-  String get workshopReportSignInTitle => 'Reporting needs a forum account';
+  String get workshopReportSignInTitle => 'Reporting needs a GitHub account';
 
   @override
   String get workshopReportSignInMessage => 'Sign in to send a report.';
 
   @override
   String get workshopReportConsentMessage =>
-      'The workshop checks who you are with your forum sign-in. Agree to that to report.';
+      'The workshop checks who you are with your GitHub sign-in. Agree to that to report.';
 
   @override
   String get workshopReportUnknownTitle => 'Not sure it arrived';
@@ -27015,13 +27893,13 @@ class L10nEn extends L10n {
   String get workshopPublishClosedMessage => 'What you already sent is still under My uploads.';
 
   @override
-  String get workshopPublishSignInTitle => 'Sign in to the forum first';
+  String get workshopPublishSignInTitle => 'Sign in with GitHub first';
 
   @override
-  String get workshopPublishSignInMessage => 'The Workshop uses your forum account to know who is submitting.';
+  String get workshopPublishSignInMessage => 'The Workshop uses your GitHub account to know who is submitting.';
 
   @override
-  String get workshopPublishProfileTitle => 'Couldn\'t read your forum account yet';
+  String get workshopPublishProfileTitle => 'Couldn\'t read your GitHub account yet';
 
   @override
   String get workshopPublishProfileMessage => 'Submitting needs to know which account you are.';
@@ -27046,7 +27924,22 @@ class L10nEn extends L10n {
 
   @override
   String get workshopPublishSourcesEmptyMessage =>
-      'Pixel pets you imported and your current companion can be submitted.';
+      'Pixel pets you imported and your current companion can be submitted, or pick a file directly.';
+
+  @override
+  String get workshopPublishFromFile => 'Choose a file';
+
+  @override
+  String get workshopPublishFromFileHint => 'A pet or companion zip; no need to import it first';
+
+  @override
+  String get workshopPublishTitleEnHelper => 'Optional; the Chinese name is used if empty';
+
+  @override
+  String get workshopPublishAuthorHelper => 'Optional; your GitHub username is used if empty';
+
+  @override
+  String get workshopPublishLicenseHelper => 'Optional; Author permission if none is picked';
 
   @override
   String get workshopPublishSourcesIssue => 'Couldn\'t read what can be submitted from this phone.';
@@ -27083,7 +27976,7 @@ class L10nEn extends L10n {
   String get workshopPublishId => 'Item ID';
 
   @override
-  String get workshopPublishIdHelper => 'Lowercase letters, digits and hyphens';
+  String get workshopPublishIdHelper => 'Optional; made from the name if empty. Lowercase letters, digits and hyphens';
 
   @override
   String get workshopPublishAuthor => 'Author';
@@ -27095,7 +27988,7 @@ class L10nEn extends L10n {
   String get workshopPublishSourceLink => 'Source link';
 
   @override
-  String get workshopPublishSourceHelper => 'Its home page or where it comes from, starting with https://';
+  String get workshopPublishSourceHelper => 'Optional; your GitHub page is used if empty. Starts with https://';
 
   @override
   String get workshopPublishSectionAbout => 'About (optional)';
@@ -27329,13 +28222,13 @@ class L10nEn extends L10n {
   String get workshopPublishLetGoTitle => 'Let go of this phone\'s record?';
 
   @override
-  String workshopPublishLetGoAccount(String forum, String worker) {
-    return 'Only this phone\'s unfinished record for the account on forum $forum at Workshop $worker is removed.';
+  String workshopPublishLetGoAccount(String worker) {
+    return 'Only this phone\'s unfinished record for this GitHub account at Workshop $worker is removed.';
   }
 
   @override
-  String workshopPublishLetGoAll(String forum, String worker) {
-    return 'The submission records on this phone can\'t be read as a whole. Letting go removes the unfinished-submission records of every account on this phone, not just the one for forum $forum at Workshop $worker.';
+  String workshopPublishLetGoAll(String worker) {
+    return 'The submission records on this phone can\'t be read as a whole. Letting go removes the unfinished-submission records of every account on this phone, not just the one for this GitHub account at Workshop $worker.';
   }
 
   @override

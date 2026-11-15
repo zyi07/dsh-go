@@ -110,6 +110,11 @@ class PcmStream(
         queue.offer(END)
     }
 
+    /** Quieter while the person may be speaking over it ([on]), or back to full. */
+    fun duck(on: Boolean) {
+        runCatching { track?.setVolume(if (on) DUCKED else 1f) }
+    }
+
     /** Silence now. Safe from any thread; the writer releases the track. */
     fun stop() {
         if (stopped) return
@@ -222,5 +227,8 @@ class PcmStream(
     private companion object {
         val END = ByteArray(0)
         const val LEVEL_MS = 40
+
+        /** About −12 dB: still heard, out of the way of the person speaking. */
+        const val DUCKED = 0.25f
     }
 }

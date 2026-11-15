@@ -691,10 +691,17 @@ TavernModelException _apiError(int status, String body, String? key, Iterable<St
     _ => TavernFailure.server,
   };
   var detail = body;
-  for (final value in [?key, ...headerValues]) {
-    if (value.isEmpty) continue;
+  void redact(String value) {
+    if (value.isEmpty) return;
     final encoded = jsonEncode(value);
     detail = detail.replaceAll(value, '[redacted]').replaceAll(encoded.substring(1, encoded.length - 1), '[redacted]');
+  }
+
+  if (key != null) redact(key);
+  for (final value in headerValues) {
+    redact(value);
+    final separator = value.indexOf(' ');
+    if (separator >= 0) redact(value.substring(separator + 1));
   }
   detail = detail.replaceAll(RegExp(r'Bearer\s+[^\s"<>]+', caseSensitive: false), 'Bearer [redacted]');
   if (detail.length > 512) detail = detail.substring(0, 512);

@@ -145,7 +145,10 @@ input-trigger-source-recovery.diff
 web-preset-save-freshness.diff
 web-search-key-write-result.diff
 deepseek-attachment-error.diff
+fork-default-effort.diff
 config-editor-lock-order.diff
+piai-overflow-output-limit.diff
+schedule-authorization-availability.diff
 ohos-attachment-publication.diff
 ohos-attachment-diagnostic.diff
 ohos-forge-github-unavailable.diff

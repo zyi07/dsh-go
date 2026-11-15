@@ -229,7 +229,9 @@ class _Body extends StatelessWidget {
           SettingsSection(
             title: l10n.tavernInspectSegments(segments.length),
             footer: Text(l10n.tavernInspectSegmentsNote),
-            children: [for (final (i, s) in segments.indexed) _SegmentTile(segment: s, breaksCache: i == breakAt)],
+            children: [
+              for (final (i, s) in segments.indexed) TavernPromptSegmentTile(segment: s, breaksCache: i == breakAt),
+            ],
           ),
         if (hits.isNotEmpty)
           SettingsSection(
@@ -256,8 +258,8 @@ class _Body extends StatelessWidget {
 
 /// One part of the prompt: who says it, where it came from, its tokens; a tap
 /// shows the text (long-press copies it).
-class _SegmentTile extends StatefulWidget {
-  const _SegmentTile({required this.segment, this.breaksCache = false});
+class TavernPromptSegmentTile extends StatefulWidget {
+  const TavernPromptSegmentTile({super.key, required this.segment, this.breaksCache = false});
 
   final PromptSegment segment;
 
@@ -266,10 +268,10 @@ class _SegmentTile extends StatefulWidget {
   final bool breaksCache;
 
   @override
-  State<_SegmentTile> createState() => _SegmentTileState();
+  State<TavernPromptSegmentTile> createState() => _TavernPromptSegmentTileState();
 }
 
-class _SegmentTileState extends State<_SegmentTile> {
+class _TavernPromptSegmentTileState extends State<TavernPromptSegmentTile> {
   bool _open = false;
 
   String get _text => switch (widget.segment.message['content']) {

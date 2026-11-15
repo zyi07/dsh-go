@@ -102,7 +102,23 @@ class ToolCardPolicy {
 }
 
 ToolCardPolicy captureToolCardPolicy(Map<String, Object?> cardData, {required String characterId}) {
-  if (characterId.isEmpty) throw const FormatException('A card policy requires a character identity.');
+  if (characterId.isEmpty) {
+    throw const FormatException('A card policy requires a character identity.');
+  }
+  final declaration = parseToolCardDeclaration(cardData);
+  return ToolCardPolicy._({
+    'characterId': characterId,
+    ...declaration,
+    'diagnostics': [
+      for (final issue in declaration['diagnostics']! as List<Map<String, Object?>>)
+        {'code': issue['code'], 'characterId': characterId, ...issue},
+    ],
+  });
+}
+
+/// Internal declaration parsing shared with pure inspection. No character
+/// identity, scope permission or model-wire authorization is manufactured.
+Map<String, Object?> parseToolCardDeclaration(Map<String, Object?> cardData) {
   final diagnostics = <Map<String, Object?>>[];
   final captured = <String, Object?>{};
   var rollAvailable = true;
@@ -110,19 +126,20 @@ ToolCardPolicy captureToolCardPolicy(Map<String, Object?> cardData, {required St
   var rollDisabled = false;
   var rememberDisabled = false;
   void invalid(String path, Object? value, {String? tool}) {
-    diagnostics.add({
-      'code': 'invalid_card_tool_policy',
-      'characterId': characterId,
-      'fieldPath': path,
-      'raw': _copyValue(value),
-    });
-    if (tool == null || tool == 'roll') rollAvailable = false;
-    if (tool == null || tool == 'remember') rememberAvailable = false;
+    diagnostics.add({'code': 'invalid_card_tool_policy', 'fieldPath': path, 'raw': _copyValue(value)});
+    if (tool == null || tool == 'roll') {
+      rollAvailable = false;
+    }
+    if (tool == null || tool == 'remember') {
+      rememberAvailable = false;
+    }
   }
 
   Map<String, Object?>? child(Map<String, Object?> parent, String key, String path) {
     captured['$path.present'] = parent.containsKey(key);
-    if (!parent.containsKey(key)) return null;
+    if (!parent.containsKey(key)) {
+      return null;
+    }
     final value = parent[key];
     if (value is! Map<String, Object?>) {
       invalid(path, value);
@@ -142,13 +159,17 @@ ToolCardPolicy captureToolCardPolicy(Map<String, Object?> cardData, {required St
     if (tools != null) {
       for (final name in const ['roll', 'remember']) {
         captured[name] = {'present': tools.containsKey(name), 'raw': _copyValue(tools[name])};
-        if (!tools.containsKey(name)) continue;
+        if (!tools.containsKey(name)) {
+          continue;
+        }
         final tool = tools[name];
         if (tool is! Map<String, Object?>) {
           invalid('extensions.dshgo.tools.$name', tool, tool: name);
           continue;
         }
-        if (!tool.containsKey('disabled')) continue;
+        if (!tool.containsKey('disabled')) {
+          continue;
+        }
         final disabled = tool['disabled'];
         if (disabled is! bool) {
           invalid('extensions.dshgo.tools.$name.disabled', disabled, tool: name);
@@ -160,15 +181,14 @@ ToolCardPolicy captureToolCardPolicy(Map<String, Object?> cardData, {required St
       }
     }
   }
-  return ToolCardPolicy._({
-    'characterId': characterId,
+  return {
     'rollAvailable': rollAvailable,
     'rememberAvailable': rememberAvailable,
     'rollDisabled': rollDisabled,
     'rememberDisabled': rememberDisabled,
     'configured': captured,
     'diagnostics': diagnostics,
-  });
+  };
 }
 
 /// The fixed scope and host/actor veto snapshot for one admitted operation.

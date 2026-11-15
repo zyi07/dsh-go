@@ -138,6 +138,35 @@ void main() {
     }
   });
 
+  test('keyless Authorization credentials are redacted when the provider echoes only the token', () async {
+    for (final credential in ['abc123', r'abc123"quoted\suffix']) {
+      final wire = _Wire(
+        (_, _) => http.Response(
+          jsonEncode({
+            'error': {'message': 'invalid token $credential'},
+          }),
+          401,
+        ),
+      );
+      await expectLater(
+        wire.model
+            .generate(
+              config: _config(key: null, headers: {'Authorization': 'Bearer $credential'}),
+              body: {'stream': false},
+              cancellation: ModelCancellation(),
+            )
+            .toList(),
+        throwsA(
+          isA<TavernModelException>()
+              .having((error) => error.kind, 'kind', TavernFailure.badKey)
+              .having((error) => error.detail, 'credential redacted', isNot(contains('abc123')))
+              .having((error) => error.detail, 'provider message retained', contains('invalid token [redacted]')),
+        ),
+      );
+      expect(wire.requests.single.headers['authorization'], 'Bearer $credential');
+    }
+  });
+
   test('streaming reasoning accepts both names without duplicating the preferred native field', () async {
     final wire = _Wire(
       (_, _) => _sse([

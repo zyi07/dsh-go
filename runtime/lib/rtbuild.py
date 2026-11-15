@@ -438,7 +438,9 @@ def cmd_patch_dsh(args):
     observed hashes for this DSH version (use after reviewing the upstream file and the patch)."""
     pins_path = os.path.join(args.patches, "pins.json")
     pins = json.load(open(pins_path)) if os.path.isfile(pins_path) else {"schema": 1, "patches": {}}
-    names, all_names = select_dsh_patches(pins, args.patches, args.target)
+    # Tests drive cmd_patch_dsh through a bare namespace; the CLI default is Android.
+    target = getattr(args, "target", "android")
+    names, all_names = select_dsh_patches(pins, args.patches, target)
     # Several independently reviewed patches may touch the same file. Their
     # pins must form one ordered chain, and a fully patched tree is a valid
     # idempotent input. Never accept an arbitrary intermediate/custom hash.
@@ -491,9 +493,10 @@ def cmd_patch_dsh(args):
             pins["patches"].setdefault(name, {})[args.dsh_version] = observed
         applied.append(name)
     if args.record:
-        with open(pins_path, "w") as f:
+        with open(pins_path + ".tmp", "w") as f:
             json.dump(pins, f, indent=2, sort_keys=True)
             f.write("\n")
+        os.replace(pins_path + ".tmp", pins_path)
         print("recorded pins for DSH %s in %s" % (args.dsh_version, pins_path))
     if "zzzzzz-session-deletion.diff" in applied:
         # Source-owned companion module, installed only alongside the vetted rc4 seam.
@@ -508,9 +511,9 @@ def cmd_patch_dsh(args):
         with open(args.out, "w") as f:
             json.dump(applied, f)
     if args.target_report:
-        inputs, input_hash = dsh_patch_inputs(pins, args.patches, names, args.target, args.dsh_version)
+        inputs, input_hash = dsh_patch_inputs(pins, args.patches, names, target, args.dsh_version)
         with open(args.target_report, "w") as f:
-            json.dump({"schema": 1, "target": args.target, "dshVersion": args.dsh_version,
+            json.dump({"schema": 1, "target": target, "dshVersion": args.dsh_version,
                        "selected": names, "excluded": sorted(set(all_names) - set(names)),
                        "inputSha256": input_hash, "inputs": inputs}, f, indent=2)
             f.write("\n")
@@ -1325,7 +1328,7 @@ def cmd_assemble(args):
     runtime_info = json.loads(args.runtime_info)
     def digest(path):
         with open(path, "rb") as source:
-            return hashlib.file_digest(source, "sha256").hexdigest()
+            return stream_digest(source)[0]
     sources = {"ubuntu": digest(args.base), "debs": [digest(p) for p in args.deb or []],
                "python": digest(args.python) if args.python else None}
     upgrade = upgrade_descriptor(abi, runtime_info["ubuntuVersion"], sources["ubuntu"],
@@ -1810,9 +1813,10 @@ def cmd_manifest(args):
         "launch": launch_template(),
         "build": v.get("build", {}),
     }
-    with open(args.out, "w") as f:
+    with open(args.out + ".tmp", "w") as f:
         json.dump(m, f, indent=2)
         f.write("\n")
+    os.replace(args.out + ".tmp", args.out)
     print("wrote " + args.out)
 
 

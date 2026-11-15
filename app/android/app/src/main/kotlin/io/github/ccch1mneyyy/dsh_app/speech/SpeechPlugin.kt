@@ -17,6 +17,9 @@ import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.github.ccch1mneyyy.dsh_app.nativemedia.MicArbiter
+import io.github.ccch1mneyyy.dsh_app.nativemedia.NativeTrial
+import io.github.ccch1mneyyy.dsh_app.nativemedia.SpeechGates
+import io.github.ccch1mneyyy.dsh_app.nativemedia.TurnPause
 
 /**
  * Speech audio for 朗读 and 语音通话: MethodChannel `dsh/speech` (lib/speech/speech_audio.dart).
@@ -25,8 +28,8 @@ import io.github.ccch1mneyyy.dsh_app.nativemedia.MicArbiter
  * the bytes waiting to play, -1 when the stream is gone), `waiting` {id}, `end` {id}, `stop`. Opening a stream stops the one before. A `call` stream plays as voice
  * communication (so the echo canceller hears it); others as media, ducking other apps.
  *
- * Calls — `callStart` {bargeIn} answers "ok", "permission" or "microphone"; `callStop`; `callMute`
- * {on}; `callBargeIn` {on}; `callPlaying` {on} (another player of the app's voice, such as the phone's
+ * Calls — `callStart` {bargeIn, pause} answers "ok", "permission" or "microphone"; `callStop`; `callMute`
+ * {on}; `callBargeIn` {on}; `callPause` {pause: quick|normal|patient}; `callPlaying` {on} (another player of the app's voice, such as the phone's
  * own text-to-speech, started or stopped); `callSpeaker` {on}. A call holds the app's one microphone
  * ([MicArbiter]) and puts audio in communication mode, on the loudspeaker unless a headset is there;
  * the screen stays on meanwhile (a backgrounded app gets no microphone).
@@ -110,7 +113,18 @@ class SpeechPlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCallHandl
                 stream?.stop()
                 result.success(null)
             }
-            "callStart" -> result.success(startCall(call.argument<Boolean>("bargeIn") ?: true))
+            "duck" -> {
+                val s = stream
+                if (s != null && s.id == call.argument<String>("id")) s.duck(call.argument<Boolean>("on") == true)
+                result.success(null)
+            }
+            "callStart" -> result.success(
+                startCall(call.argument<Boolean>("bargeIn") ?: true, TurnPause.of(call.argument<String>("pause"))),
+            )
+            "callPause" -> {
+                capture?.pause = TurnPause.of(call.argument<String>("pause"))
+                result.success(null)
+            }
             "callStop" -> {
                 endCall()
                 result.success(null)
@@ -206,14 +220,16 @@ class SpeechPlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCallHandl
 
     // ── Calls ─────────────────────────────────────────────────────────────
 
-    private fun startCall(bargeIn: Boolean): String {
+    private fun startCall(bargeIn: Boolean, pause: TurnPause): String {
         if (context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             return "permission"
         }
         endCall()
         mic = MicArbiter.beginDictation()
-        val c = CallCapture(main, captureListener)
+        val marks = NativeTrial.marks(context.getSharedPreferences("speech_native", Context.MODE_PRIVATE))
+        val c = CallCapture(main, captureListener) { SpeechGates.create(context.assets, it, marks) }
         c.bargeIn = bargeIn
+        c.pause = pause
         val am = audio
         if (am != null) {
             previousMode = am.mode
@@ -232,8 +248,9 @@ class SpeechPlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCallHandl
 
     private val captureListener = object : CallCapture.Listener {
         override fun onSpeechStart(overPlayback: Boolean) {
-            // Barge-in: the voice stops here, before Dart hears of it.
-            if (overPlayback) stream?.takeIf { it.call }?.stop()
+            // Spoken over: the voice steps back at once, before Dart hears of it; Dart
+            // decides from what was said whether it stops or comes back up.
+            if (overPlayback) stream?.takeIf { it.call }?.duck(true)
             send("speechStart", "over" to overPlayback)
         }
 

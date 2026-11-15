@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:dsh_app/speech/deepseek_speech.dart';
 import 'package:dsh_app/speech/speech_audio.dart';
 import 'package:dsh_app/speech/speech_out.dart';
+import 'package:flutter/services.dart' show MethodChannel;
 import 'package:flutter_test/flutter_test.dart';
 
 import 'speech_fakes.dart';
@@ -74,6 +76,23 @@ print('不读');
       expect(pieces.first.length, lessThanOrEqualTo(20));
     });
 
+    test('the first piece goes at a comma once long enough; later ones wait for a sentence', () {
+      final chunker = SpeechChunker(first: 8, target: 20, max: 60);
+      chunker.add('好的，这周末北京以晴为主，周六最高二十度');
+      // 「好的，」 is too short to go alone; the next comma is far enough.
+      expect(chunker.take(), ['好的，这周末北京以晴为主，']);
+      chunker.add('，周日有小雨。');
+      // Later pieces stop at sentence ends only.
+      expect(chunker.take(), isEmpty);
+      expect(chunker.take(final_: true), ['周六最高二十度，周日有小雨。']);
+    });
+
+    test('a number or a time is not a pause', () {
+      final chunker = SpeechChunker(first: 4);
+      chunker.add('门票是1,000元，3:30开门');
+      expect(chunker.take(), ['门票是1,000元，']);
+    });
+
     test('pieces with no letters or digits are dropped', () {
       final chunker = SpeechChunker(first: 1);
       chunker.add('……\n好。');
@@ -82,6 +101,26 @@ print('不读');
   });
 
   group('DeepSeekOut', () {
+    test('pending diagnostic persistence never reorders synthesis requests', () async {
+      const channel = MethodChannel('dsh/diagnostics');
+      final writes = Completer<void>();
+      final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      messenger.setMockMethodCallHandler(channel, (call) async => writes.future);
+      addTearDown(() {
+        if (!writes.isCompleted) writes.complete();
+        messenger.setMockMethodCallHandler(channel, null);
+      });
+      final audio = FakeAudio();
+      final speech = FakeDeepSeek();
+      final out = DeepSeekOut(() async => speech, audio, call: true);
+      out.add('今天北京是晴天。最高气温二十度，适合出门散步。');
+      out.finish();
+      await pumpEventQueue();
+      expect(speech.asked, ['今天北京是晴天。', '最高气温二十度，适合出门散步。']);
+      expect(writes.isCompleted, false);
+      expect(audio.calls, ['open:${out.id}:call=true', 'end:${out.id}']);
+      out.stop();
+    });
     test('streams every piece, in order, into one native stream, then ends it', () async {
       final audio = FakeAudio();
       final speech = FakeDeepSeek();
@@ -107,6 +146,26 @@ print('不读');
       expect(events.first, isA<SpeechOutStarted>());
       expect(events.last, isA<SpeechOutDone>());
       expect(out.ended, isTrue);
+    });
+
+    test('what was heard follows playback: whole pieces, then the share of the one playing', () async {
+      final audio = FakeAudio();
+      final out = DeepSeekOut(() async => _Seconds(), audio, call: true, levels: true);
+      out
+        ..add('第一句话说完了。')
+        ..add('第二句也很长很长。')
+        ..finish();
+      await pumpEventQueue();
+      expect(out.heard, '');
+      // Each piece is 80 ms of audio here; each level tick is 40 ms heard.
+      audio.emit(PlayLevel(out.id, 0.5));
+      expect(out.heard, '第一句话');
+      audio.emit(PlayLevel(out.id, 0.5));
+      expect(out.heard, '第一句话说完了。');
+      audio.emit(PlayLevel(out.id, 0.5));
+      expect(out.heard, '第一句话说完了。第二句也');
+      audio.emit(PlayEvent(out.id, PlayPhase.done));
+      expect(out.heard, '第一句话说完了。第二句也很长很长。');
     });
 
     test('nobody to pay: fails before any sound', () async {
@@ -144,4 +203,21 @@ print('不读');
       expect(speech.asked, ['第一句已经够长了。']);
     });
   });
+}
+
+/// Every piece is 80 ms of 24 kHz PCM.
+class _Seconds implements DeepSeekSpeech {
+  @override
+  DeepSeekSpeechRoute get route => DeepSeekSpeechRoute.apiKey;
+
+  @override
+  Stream<Uint8List> synthesize(String text, {String voice = 'stella'}) async* {
+    yield Uint8List(deepSeekTtsRate * 2 * 80 ~/ 1000);
+  }
+
+  @override
+  Future<String> transcribe(Uint8List wav) async => '';
+
+  @override
+  void close() {}
 }

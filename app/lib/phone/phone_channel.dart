@@ -281,7 +281,6 @@ class PhoneBackgroundStatus {
     this.viewport,
     this.previewVersion,
     this.previewEnabled = false,
-    this.selfCheckWarning,
     this.parallelism,
   });
 
@@ -297,7 +296,6 @@ class PhoneBackgroundStatus {
     viewport: PhoneBackgroundViewport.fromMap(_map(m['viewport'])),
     previewVersion: _int(_map(m['preview'])['v']),
     previewEnabled: _flag(_map(m['preview'])['enabled']),
-    selfCheckWarning: _text(m['selfCheckWarning']),
     parallelism: BackgroundParallelism.parse(m['parallelism']),
   );
 
@@ -318,8 +316,6 @@ class PhoneBackgroundStatus {
   final PhoneBackgroundViewport? viewport;
   final int? previewVersion;
   final bool previewEnabled;
-  /// The settings self-check did not pass. Only a note: the channel stays ready and usable.
-  final String? selfCheckWarning;
   final BackgroundParallelism? parallelism;
 
   PhonePrivilegedMode get effectiveMode =>
@@ -715,15 +711,19 @@ class PhoneStatus {
 // ── 悬浮条 ───────────────────────────────────────────────────────────────────
 
 /// 设置 → 手机操控 → 悬浮条 (`overlayPrefs` / `setOverlayPrefs`): how opaque the
-/// pill is when idle, and whether it folds into the ball by itself. A showing
-/// overlay follows changes at once.
+/// ball is when idle, and whether an idle capsule folds into the ball by itself
+/// (on unless the person turned it off, as OverlayPrefs.kt). A showing overlay
+/// follows changes at once.
 class PhoneOverlayPrefs {
-  const PhoneOverlayPrefs({this.idleOpacity = defaultOpacity, this.autoCollapse = false});
+  const PhoneOverlayPrefs({this.idleOpacity = defaultOpacity, this.autoCollapse = defaultAutoCollapse});
 
   factory PhoneOverlayPrefs.fromMap(Map<Object?, Object?> m) => PhoneOverlayPrefs(
     idleOpacity: clampOpacity(m['idleOpacity'] is num ? (m['idleOpacity'] as num).toDouble() : defaultOpacity),
-    autoCollapse: _flag(m['autoCollapse']),
+    autoCollapse: _maybeFlag(m['autoCollapse']) ?? defaultAutoCollapse,
   );
+
+  /// On: the capsule shows what DSH starts doing, then gets out of the way.
+  static const defaultAutoCollapse = true;
 
   /// 70 %: the line reads over light and dark pages alike (see OverlayPrefs.kt).
   static const defaultOpacity = 0.7;
