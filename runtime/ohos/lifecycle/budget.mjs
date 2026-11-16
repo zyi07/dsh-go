@@ -10,9 +10,6 @@ export class ActiveBudgetClock {
   #excluded = 0;
   #deadlines = new Set();
   #closed = false;
-  constructor(bootId) {
-    if (typeof bootId !== 'string' || !bootId) throw new TypeError('Clock boot identity is required');
-    this.bootId = bootId;
   #onPendingChange;
   constructor(bootId, onPendingChange = () => {}) {
     if (typeof bootId !== 'string' || !bootId) throw new TypeError('Clock boot identity is required');

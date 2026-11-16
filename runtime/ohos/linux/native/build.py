@@ -7,7 +7,6 @@ sha=lambda path:hashlib.sha256(path.read_bytes()).hexdigest()
 assert sha(a.source_archive)=='be8351f2121819b3172fcedce5cb1826fa12c87da1b7ed98f269d3e802a05555'
 lock=json.loads((HERE/'source-lock.json').read_text())
 for name,digest in lock['files'].items():assert sha(HERE/name)==digest, 'native input identity: '+name
-for k,n in [('MAJOR',24),('MINOR',22),('PATCH',1)]:assert f'#define NODE_{k}_VERSION {n}\n' in (a.node_headers/'node_version.h').read_text()
 for k,n in [('MAJOR',24),('MINOR',22)]:assert f'#define NODE_{k}_VERSION {n}\n' in (a.node_headers/'node_version.h').read_text()
 assert not a.host_baseline or a.host_test
 out=a.output.resolve();out.mkdir(parents=True,exist_ok=False);commands=[]
@@ -22,8 +21,6 @@ if not a.host_test:
  link=['-L',a.libnode.resolve().parent,'-lnode','-Wl,-z,defs']
 with tarfile.open(a.source_archive) as t:t.extractall(out,filter='data')
 src=out/'tinyemu-2019-12-21'
-for patch in sorted((HERE/'patches').glob('*.patch')):
- if a.host_baseline and patch.name.startswith(('0012','0013')):continue
 skipped=[]
 for patch in sorted((HERE/'patches').glob('*.patch')):
  # Fatal/SIGPIPE counterfactual: RAM retirement and event waiting depend on
@@ -36,10 +33,6 @@ files=['virtio','pci','fs','cutils','iomem','simplefb','json','machine','temu','
 for name in files:
  cpu=name.startswith('riscv_cpu');obj=out/(name.replace('/','_')+'.o');objects.append(obj)
  run([a.cc,*flags,*(['-DMAX_XLEN='+name[-2:]] if cpu else []),'-w','-c',src/(('riscv_cpu' if cpu else name)+'.c'),'-o',obj],'compile-'+name.replace('/','_'))
-for name in ['embed-fatal','fs_export','binding']:
- obj=out/(name+'.o');objects.append(obj);napi=['-I',a.node_headers.resolve(),'-DNAPI_VERSION=8','-DNODE_GYP_MODULE_NAME=dsh_linux'] if name=='binding' else []
- if name=='binding' and not a.host_test:napi+=['-include',a.rename_header.resolve()]
- run([a.cc,*flags,*napi,'-std=c11','-Wall','-Wextra',*(['-Wno-unused-parameter'] if name=='fs_export' else []),'-Werror','-c',HERE/(name+'.c'),'-o',obj],'compile-'+name)
 for name in ['embed-fatal','embed-ram','fs_export','binding']:
  obj=out/(name+'.o');objects.append(obj);napi=['-I',a.node_headers.resolve(),'-DNAPI_VERSION=8','-DNODE_GYP_MODULE_NAME=dsh_linux'] if name=='binding' else []
  if name=='binding' and not a.host_test:napi+=['-include',a.rename_header.resolve()]
@@ -60,7 +53,6 @@ if not a.host_test:
  assert 'NODELETE' in elf and 'RUNPATH' not in elf and 'RPATH' not in elf
  (out/'ELF.txt').write_text(elf)
 
-(out/'BUILD.json').write_text(json.dumps({'scope':'HOST_TEST_ONLY' if a.host_test else 'OH_CROSS_BUILD_DEVICE_NOT_RUN','sourceSha256':sha(a.source_archive),'librarySha256':sha(binary),'sources':{str(f.relative_to(HERE)):sha(f) for f in HERE.rglob('*') if f.is_file()},'commands':commands},indent=2)+'\n');print(binary)
 receipt={'scope':'HOST_TEST_ONLY' if a.host_test else 'OH_CROSS_BUILD_DEVICE_NOT_RUN','sourceSha256':sha(a.source_archive),'librarySha256':sha(binary),'sources':{str(f.relative_to(HERE)):sha(f) for f in HERE.rglob('*') if f.is_file()},'commands':commands}
 if a.host_baseline:
  receipt['hostBaseline']={'omittedPatches':skipped,'bindingCompatibilityBridge':{'path':str(baseline_bridge),'sha256':sha(baseline_bridge)},'meaning':'Fatal/SIGPIPE counterfactual, legacy controlled entry; not an event-wait baseline or a production library'}

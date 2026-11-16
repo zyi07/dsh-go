@@ -9,7 +9,6 @@ import { prepareLinuxImages } from './prepare-images.mjs';
 import { loadLinuxNative } from './native-session.mjs';
 import { LinuxRuntimeBackend } from './backend.mjs';
 import { linuxHostLock } from './host-paths.mjs';
-import { openLinuxInstance, cleanGuestClose } from './instance.mjs';
 import { openLinuxInstance, discardLinuxInstance, cleanGuestClose } from './instance.mjs';
 
 const error=(code,message)=>Object.assign(new Error(message),{code});
@@ -24,7 +23,6 @@ async function copyAsset(asset,destination,signal){
 // supplies manifests/native paths; ordinary argv/env cannot select these inputs.
 export class LinuxInstallationOwner {
   state='idle';backend=undefined;active=undefined;nativeRetirement=undefined;
-  #options;#internals;#promise;#session;#backend;#instance;#attempt;#epoch;#persistentId=null;#bootMode=null;#abort=new AbortController();#cleanup;#published=false;#retainedExisting=false;#disposed=false;#transportDebt=false;
   #options;#internals;#promise;#session;#backend;#instance;#attempt;#epoch;#persistentId=null;#bootMode=null;#abort=new AbortController();#cleanup;#published=false;#retainedExisting=false;#disposed=false;#transportDebt=false;#creationQuarantined=false;
   constructor(options,internals={}){
     const {directory,manifest,nativeLibraryDirectory,exports=[],bootTimeoutMs=180000,onProgress=()=>{}}=options??{};
@@ -76,7 +74,6 @@ export class LinuxInstallationOwner {
       signal.throwIfAborted();this.state='booting';this.#progress('boot-start');
       let raw;
       try{raw=(this.#internals.createSession??(path=>loadLinuxNative({nativeLibraryDirectory}).create(path)))(configPath);}
-      catch(cause){this.#transportDebt=cause.linuxUnsettledFd!==undefined;if(cause.linuxJoin){this.#session={socket:{destroy(){}},requestStop(){},join:async()=>{const result=await cause.linuxJoin;this.nativeRetirement=result;return result;}};}throw cause;}
       catch(cause){this.#creationQuarantined=cause.code==='ERR_OHOS_LINUX_CREATE_QUARANTINED';this.#transportDebt=cause.linuxUnsettledFd!==undefined;if(cause.linuxJoin){this.#session={socket:{destroy(){}},requestStop(){},join:async()=>{const result=await cause.linuxJoin;this.nativeRetirement=result;return result;}};}throw cause;}
       let joining;this.#session={socket:raw.socket,requestStop:()=>raw.requestStop(),join:()=>joining??=(async()=>{const result=await raw.join();this.nativeRetirement=result;return result;})()};
       // Observe only fixed, bounded installer markers; these never imply READY.
@@ -100,7 +97,6 @@ export class LinuxInstallationOwner {
     this.#cleanup=(async()=>{
       let fault,closed;this.state='stopping';
       if(this.#session){try{closed=await this.#backend?.dispose();}catch(cause){fault=cause;}try{this.#session.requestStop();await this.#session.join();}catch(cause){fault??=cause;}this.#session.socket.destroy();}
-      let retired=!this.#transportDebt&&(!this.#session||(this.nativeRetirement?.joined===true&&this.nativeRetirement.retirementError===false));
       let retired=!this.#creationQuarantined&&!this.#transportDebt&&(!this.#session||(this.nativeRetirement?.joined===true&&this.nativeRetirement.retirementError===false&&(this.nativeRetirement.fdRetirement===undefined||this.nativeRetirement.fdRetirement?.retired===true)));
       this.backend=undefined;this.active=undefined;this.state='quarantined';
       // Unpublished attempts can be removed only after native retirement.
@@ -113,7 +109,6 @@ export class LinuxInstallationOwner {
       }catch(cause){fault??=cause;}
       if(retired&&this.#instance){try{await this.#instance.release();}catch(cause){fault??=cause;retired=false;cleanCheckpoint=false;}}
       if(retired)this.state=this.#session?'stopped-quarantined':'cancelled-before-vm';
-      return {resourcesRetired:retired,filesRemoved,dataRetained:this.#published||this.#retainedExisting||!!this.#instance&&!filesRemoved,ownerQuarantined:!!this.#session,native:this.nativeRetirement,guestClose,cleanCheckpoint,releaseError:fault};
       return {resourcesRetired:retired,filesRemoved,dataRetained:this.#published||this.#retainedExisting||!!this.#instance&&!filesRemoved,ownerQuarantined:!!this.#session||this.#creationQuarantined,native:this.nativeRetirement,guestClose,cleanCheckpoint,releaseError:fault};
     })();return this.#cleanup;
   }

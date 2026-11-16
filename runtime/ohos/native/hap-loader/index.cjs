@@ -33,7 +33,6 @@ function load(product) {
     throw failure('ERR_OHOS_NATIVE_LIBRARY_PATH', 'A required library is missing or outside the application library directory');
   }
   // .so is the HAP library filename; require(.so) would parse it as JavaScript.
-  // This is an explicit call for two fixed libraries, not a built-in override.
   // This is an explicit call for a fixed product library, not a built-in override.
   const module = { exports: {} };
   process.dlopen(module, filename);

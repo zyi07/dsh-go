@@ -26,12 +26,6 @@ const output = collector => {
 };
 const noOwner = () => ({ resourcesRetired: true, filesRemoved: true, dataRetained: false,
   ownerQuarantined: false, native: null, releaseErrorCode: null, guestClose: null, cleanCheckpoint: false });
-function retirement(value) {
-  const native = value.native;
-  return { resourcesRetired: value.resourcesRetired === true, filesRemoved: value.filesRemoved === true,
-    dataRetained: value.dataRetained === true, ownerQuarantined: value.ownerQuarantined === true,
-    native: native ? { joined: native.joined === true, retirementError: native.retirementError,
-      apiResult: native.apiResult } : null,
 function nativeRetirement(native) {
   if (!native) return null;
   const result = { joined: native.joined === true, retirementError: native.retirementError, apiResult: native.apiResult };
@@ -81,8 +75,6 @@ function runRequest(body) {
 /** One explicit App entry, and the owner of agent/plugin commands routed into the guest. */
 export class LinuxControl {
   #instanceId = randomUUID(); #attemptId = null; #phase = 'disabled'; #enabled = false;
-  #paths; #assets; #loadModule; #owner; #backend; #installAbort; #installPromise;
-  #disablePromise; #shutdownPromise; #closing = false; #shutdownComplete = false;
   #paths; #assets; #loadModule; #owner; #backend; #installAbort; #installPromise; #installSettled = false;
   #disablePromise; #discardPromise; #shutdownPromise; #closing = false; #shutdownComplete = false;
   #failed = false; #unknown = false; #lastError = null; #progress = null; #retirement = null;
@@ -133,14 +125,12 @@ export class LinuxControl {
         started: job.started, cancelRequested: job.cancelRequested, outcome: job.outcome && { ...job.outcome },
         errorCode: job.errorCode, diagnostic: job.diagnostic && { ...job.diagnostic },
         stdout: output(job.handle.collected.stdout), stderr: output(job.handle.collected.stderr) } : null,
-      retirement: this.#retirement && { ...this.#retirement, native: this.#retirement.native && { ...this.#retirement.native },
       retirement: this.#retirement && { ...this.#retirement, native: nativeRetirement(this.#retirement.native),
         guestClose: this.#retirement.guestClose && { ...this.#retirement.guestClose } } };
   }
   command(body) {
     if (!plain(body) || body.v !== 1 || typeof body.instanceId !== 'string' ||
         !(body.attemptId === null || typeof body.attemptId === 'string')) throw requestError('Invalid control identity');
-    const fields = { setEnabled: ['enabled'], setProxy: ['proxy'], runPrivateGuest: ['requestId', 'argv', 'cwd', 'env', 'stdin'], shutdown: [] };
     const fields = { setEnabled: ['enabled'], setProxy: ['proxy'], runPrivateGuest: ['requestId', 'argv', 'cwd', 'env', 'stdin'], shutdown: [], discardRetained: [] };
     if (!Object.hasOwn(fields, body.action) || Object.keys(body).some(key => !['v', 'instanceId', 'attemptId', 'action', ...fields[body.action]].includes(key))) {
       throw requestError('Unknown action or field');
@@ -181,9 +171,6 @@ export class LinuxControl {
       return;
     }
     this.#enabled = false;
-    if (this.#disablePromise) return;
-    if (!this.#installPromise) { this.#phase = 'disabled'; return; }
-    const installing = !this.#backend;
     if (this.#disablePromise || this.#discardPromise) return;
     if (!this.#installPromise) { this.#phase = 'disabled'; return; }
     const installing = !this.#backend;
@@ -219,7 +206,6 @@ export class LinuxControl {
       if (cause.code === 'ERR_OHOS_LINUX_UNKNOWN' || this.#owner?.state === 'quarantined') this.#recordUnknown(cause);
       if (!this.#closing && !signal.aborted) this.#phase = cause.code === 'ERR_OHOS_LINUX_ASSETS_UNAVAILABLE' ? 'unavailable' : 'failed';
       throw cause;
-    }
     } finally { this.#installSettled = true; }
   }
   /**
@@ -286,7 +272,6 @@ export class LinuxControl {
    * long-lived server holding it cannot queue every later command forever.
    */
   async spawnRouted(spec, { signal, label, waitMs = 10000, resumeMs = 120000 } = {}) {
-    const resumeBy = Date.now() + resumeMs, busyBy = Date.now() + waitMs;
     const resumeBy = performance.now() + resumeMs, busyBy = performance.now() + waitMs;
     for (;;) {
       signal?.throwIfAborted();
@@ -297,10 +282,6 @@ export class LinuxControl {
         if (status.state === 'installing' && this.#owner?.bootMode === 'install') {
           throw routed(127, 'ERR_OHOS_LINUX_INSTALLING', `Linux 环境正在首次安装，完成后重试；进度见 ${settings}。`);
         }
-        if (status.state !== 'installing' || Date.now() >= resumeBy) {
-          throw routed(127, 'ERR_OHOS_LINUX_UNAVAILABLE', `Linux 环境当前不可用（${status.state}${status.lastErrorCode ? '，' + status.lastErrorCode : ''}）：请在 ${settings} 查看，必要时重启 App。`);
-        }
-      } else if (Date.now() >= busyBy) {
         if (status.state !== 'installing' || performance.now() >= resumeBy) {
           throw routed(127, 'ERR_OHOS_LINUX_UNAVAILABLE', `Linux 环境当前不可用（${status.state}${status.lastErrorCode ? '，' + status.lastErrorCode : ''}）：请在 ${settings} 查看，必要时重启 App。`);
         }
@@ -388,7 +369,6 @@ export function registerLinuxControlRoutes(ctx, control) {
       if (!['GET', 'POST'].includes(req.method)) { headers.allow = 'GET, POST'; reply(405, { error: 'Method Not Allowed' }); return; }
       if (req.url !== route) throw requestError('Control route does not accept query or path arguments');
       if (req.method === 'GET') reply(200, control.status());
-      else reply(202, control.command(await readJson(req)));
       else {
         // 202: accepted, may still be running. 200: discardRetained has finished.
         const body = await readJson(req), status = await control.command(body);

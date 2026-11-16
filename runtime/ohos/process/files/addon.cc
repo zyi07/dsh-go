@@ -23,8 +23,6 @@ struct Api {
  METHODS(FIELD)
  EDIT_METHODS(FIELD)
  MOVE_METHODS(FIELD)
-#undef FIELD
- void* library=nullptr;bool edit_ready=false,move_ready=false;
  WHOLE_METHODS(FIELD)
 #undef FIELD
  void* library=nullptr;bool edit_ready=false,move_ready=false,whole_ready=false;
@@ -233,7 +231,6 @@ napi_value Mutate(napi_env env,napi_callback_info info){return Run(env,[&]{Args 
  else if(op=="mkdir")result=api.fn_mkdir(handle->lease,path.c_str());else throw std::runtime_error("ERR_WORKSPACE_OPERATION");
  Native(result);return Num(env,0);});}
 napi_value Init(napi_env env,napi_value exports){return Run(env,[&]{auto state=std::make_shared<State>(env);auto* holder=new std::shared_ptr<State>(state);Check(napi_add_env_cleanup_hook(env,Cleanup,holder));
- const std::map<std::string,napi_callback> methods={{"bindOwner",Bind},{"snapshot",Snapshot},{"issue",Issue},{"retire",Retire},{"consume",Consume},{"close",Close},{"read",Read},{"write",Write},{"stat",Stat},{"readdir",Readdir},{"mutate",Mutate},{"statExact",StatExact},{"openEditInput",OpenEditInput},{"readEditInput",ReadEditInput},{"closeEditInput",CloseEditInput},{"beginEdit",BeginEdit},{"writeEdit",WriteEdit},{"closeEdit",CloseEdit},{"publishEdit",PublishEdit},{"abortEdit",AbortEdit},{"beginMoveOutput",BeginMoveOutput},{"publishMoveOutput",PublishMoveOutput}};
  const std::map<std::string,napi_callback> methods={{"bindOwner",Bind},{"snapshot",Snapshot},{"issue",Issue},{"retire",Retire},{"consume",Consume},{"close",Close},{"read",Read},{"write",Write},{"stat",Stat},{"readdir",Readdir},{"mutate",Mutate},{"statExact",StatExact},{"openEditInput",OpenEditInput},{"readEditInput",ReadEditInput},{"closeEditInput",CloseEditInput},{"beginEdit",BeginEdit},{"writeEdit",WriteEdit},{"closeEdit",CloseEdit},{"publishEdit",PublishEdit},{"abortEdit",AbortEdit},{"beginMoveOutput",BeginMoveOutput},{"publishMoveOutput",PublishMoveOutput},{"beginWholeOutput",BeginWholeOutput},{"writeWholeOutput",WriteWholeOutput},{"closeWholeOutput",CloseWholeOutput},{"stepWholeOutput",StepWholeOutput},{"abortWholeOutput",AbortWholeOutput}};
  for(const auto& pair:methods){napi_value method;Check(napi_create_function(env,pair.first.c_str(),NAPI_AUTO_LENGTH,pair.second,state.get(),&method));Check(napi_set_named_property(env,exports,pair.first.c_str(),method));}return exports;});}
 }

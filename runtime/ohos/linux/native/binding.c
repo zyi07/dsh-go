@@ -13,7 +13,6 @@
 typedef struct {
     pthread_t thread;
     atomic_int stop;
-    int peer, result, fatal_reason, join_error, joined;
     int peer, result, fatal_reason, wait_error, join_error, join_attempted, joined;
     pthread_mutex_t wake_mutex;
     int wake_read, wake_write, body_returned;
@@ -30,11 +29,6 @@ static napi_value fail(napi_env env, const char *code, const char *message) {
     napi_throw_error(env, code, message); return NULL;
 }
 static int stopping(void *data) { return atomic_load(&((Owner *)data)->stop); }
-static void *machine(void *data) {
-    Owner *owner = data;
-    owner->result = temu_embed_run_controlled(owner->config, owner->peer, owner->peer, NULL, stopping, owner);
-    owner->fatal_reason = dsh_temu_fatal_reason;
-    close(owner->peer); /* Only the native socket end; transferred fd is never closed here. */
 static int close_owned(int *owned) {
     int fd = *owned;
     *owned = -1; /* Never retry a possibly reused integer, including EINTR. */
@@ -68,15 +62,6 @@ static void *machine(void *data) {
 }
 static void finalize(napi_env env, void *data, void *hint) {
     (void)env; (void)hint;
-    atomic_store(&((Owner *)data)->stop, 1);
-    /* The VM allocations and owner remain quarantined, including after GC.
-       Finalization is not join or cleanup completion. Library is NODELETE. */
-}
-static void cleanup(void *data) { atomic_store(&((Owner *)data)->stop, 1); }
-static napi_value request_stop(napi_env env, napi_callback_info info) {
-    void *data; napi_value value;
-    if (napi_get_cb_info(env, info, NULL, NULL, NULL, &data) != napi_ok) return NULL;
-    atomic_store(&((Owner *)data)->stop, 1);
     stop_and_notify(data);
     /* The VM allocations and owner remain quarantined, including after GC.
        Finalization is not join or cleanup completion. Library is NODELETE. */
@@ -90,8 +75,6 @@ static napi_value request_stop(napi_env env, napi_callback_info info) {
 }
 static void join_execute(napi_env env, void *data) {
     (void)env; Owner *owner = data;
-    owner->join_error = pthread_join(owner->thread, NULL);
-    owner->joined = owner->join_error == 0;
     owner->join_attempted = 1;
     owner->join_error = pthread_join(owner->thread, NULL);
     owner->joined = owner->join_error == 0;
@@ -108,26 +91,6 @@ static void boolean(napi_env env, napi_value out, const char *key, int b) {
 static void integer(napi_env env, napi_value out, const char *key, int n) {
     napi_value value; napi_create_int32(env, n, &value); napi_set_named_property(env, out, key, value);
 }
-static void join_complete(napi_env env, napi_status status, void *data) {
-    Owner *owner = data; napi_value out;
-    if (napi_create_object(env, &out) != napi_ok) {
-        napi_delete_async_work(env, owner->work); owner->work = NULL; return;
-    }
-    int synchronized = status == napi_ok && owner->joined;
-    boolean(env, out, "joined", synchronized);
-    boolean(env, out, "ownerQuarantined", 1);
-    if (synchronized) {
-        boolean(env, out, "retirementError", owner->result == -8);
-        integer(env, out, "apiResult", owner->result);
-        integer(env, out, "fatalReason", owner->fatal_reason);
-    } else {
-        /* No successful pthread_join: do not read machine-thread fields. */
-        napi_value unknown; napi_get_null(env, &unknown);
-        napi_set_named_property(env, out, "retirementError", unknown);
-        napi_set_named_property(env, out, "apiResult", unknown);
-        napi_set_named_property(env, out, "fatalReason", unknown);
-    }
-    integer(env, out, "joinError", owner->join_error);
 static void bytes(napi_env env, napi_value out, const char *key, uint64_t n) {
     napi_value value; napi_create_double(env, (double)n, &value); napi_set_named_property(env, out, key, value);
 }
@@ -244,12 +207,6 @@ static napi_value create(napi_env env, napi_callback_info info) {
     if (owner->config[0] != '/' || strlen(owner->config) != length) {
         free(owner->config); free(owner); return fail(env, "ERR_OHOS_LINUX_CONFIG", "Configuration must be absolute without NUL");
     }
-    if (atomic_flag_test_and_set(&claimed)) {
-        free(owner->config); free(owner); return fail(env, "ERR_OHOS_LINUX_OWNER_QUARANTINED", "This process already retains a Linux VM owner");
-    }
-    int pair[2] = {-1,-1};
-    if (socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0, pair)) goto failed;
-    owner->peer = pair[1];
     owner->peer = owner->wake_read = owner->wake_write = -1;
     if (pthread_mutex_init(&owner->wake_mutex, NULL)) {
         free(owner->config); free(owner); return fail(env, "ERR_OHOS_LINUX_CREATE", "Cannot initialize Linux notification owner");
@@ -270,10 +227,6 @@ static napi_value create(napi_env env, napi_callback_info info) {
     };
     if (napi_define_properties(env, out, 2, methods) != napi_ok) goto failed;
     if (napi_wrap(env, out, owner, finalize, NULL, NULL) != napi_ok) goto failed;
-    if (napi_add_env_cleanup_hook(env, cleanup, owner) != napi_ok) { void *removed; napi_remove_wrap(env,out,&removed); goto failed; }
-    int error = pthread_create(&owner->thread, NULL, machine, owner);
-    if (error) {
-        void *removed; napi_remove_wrap(env, out, &removed); napi_remove_env_cleanup_hook(env, cleanup, owner); errno = error; goto failed;
     wrapped = 1;
     if (napi_add_env_cleanup_hook(env, cleanup, owner) != napi_ok) goto failed;
     hooked = 1;
@@ -284,10 +237,6 @@ static napi_value create(napi_env env, napi_callback_info info) {
     /* Ownership transfer occurs only on successful return. */
     return out;
 failed:
-    if (pair[0] >= 0) close(pair[0]);
-    if (pair[1] >= 0) close(pair[1]);
-    free(owner->config); free(owner); atomic_flag_clear(&claimed);
-    return fail(env, "ERR_OHOS_LINUX_CREATE", "Cannot construct Linux transport/thread");
     if (wrapped) { void *removed; wrapped = napi_remove_wrap(env, out, &removed) != napi_ok; }
     if (hooked) hooked = napi_remove_env_cleanup_hook(env, cleanup, owner) != napi_ok;
     int client_error = close_owned(&pair[0]);

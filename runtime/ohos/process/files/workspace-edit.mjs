@@ -7,7 +7,6 @@ import { borrowProcessGrantAuthority, processWorkspaceGrant, isLogicalWorkspaceP
   quarantineProcessGrantRetirement } from './process-authority.mjs';
 
 const fail = (code, message = code) => Object.assign(new Error(message), { code });
-let binding, moveBinding, unavailable;
 let binding, moveBinding, wholeBinding, unavailable;
 
 // Evaluated by the sole preload before plugins. No writable global bridge.
@@ -73,7 +72,6 @@ function workspaceOperationScope(target, policy, requestSignal, destination) {
     if (destination) {
       if (!moveBinding) throw fail('ERR_WORKSPACE_MOVE_ABI');
       const to = posix.resolve(String(destination.targetKey));
-      if (!isLogicalWorkspacePath(to) || to.split('/').slice(0, 3).join('/') !== root) throw fail('ERR_WORKSPACE_MOVE_SCOPE');
       if (!isLogicalWorkspacePath(to) || to.split('/').slice(0, 3).join('/') !== root) throw fail('ERR_WORKSPACE_MOVE_SCOPE', '暂不支持在两个授权文件夹之间移动。请先复制到目标文件夹，确认成功后再删除原文件。');
       destinationRelative = to.slice(root.length + 1);
     }
@@ -228,14 +226,6 @@ function workspaceOperationScope(target, policy, requestSignal, destination) {
       committed = true;
     }
 
-    // Whole-write uses the original request signal, never Move's commit view.
-    // This draft admits existing files only until the new-file mode is decided.
-    async function writeWhole(content, mode, options = {}) {
-      if (mode === undefined) throw fail('ERR_WORKSPACE_ARGUMENT',
-        'new-file whole-write mode remains pending owner confirmation');
-      if (!moveBinding) throw fail('ERR_WORKSPACE_MOVE_ABI');
-      await turn(signal);
-      moveBinding.beginMoveOutput(handle, relative, mode, options.createIfAbsent === true);
     // Whole-write is an independent optional ABI group. Never use Move's
     // synchronous fallback or commit shield when the original signal applies.
     async function writeWhole(content, mode, options = {}) {
@@ -249,22 +239,6 @@ function workspaceOperationScope(target, policy, requestSignal, destination) {
       for (let offset = 0; offset < bytes.length;) {
         await turn(signal);
         const part = bytes.subarray(offset, Math.min(offset + 1048576, bytes.length));
-        const count = binding.writeEdit(handle, part);
-        if (count <= 0 || count > part.length) throw fail('EIO', 'workspace whole write made invalid write progress');
-        offset += count;
-      }
-      binding.closeEdit(handle);
-      await turn(signal);
-      publicationAttempted = true;
-      try { moveBinding.publishMoveOutput(handle); }
-      catch (error) {
-        if (error.workspaceMoveEffect === 0) publicationAttempted = false;
-        else if (error.workspaceMoveEffect === 1) wholeWritePartial = true;
-        else if (error.workspaceMoveEffect === 2) committed = true;
-        throw error;
-      }
-      // Normal return confirms complete publication; its bool is staging-only.
-      committed = true;
         const count = wholeBinding.writeWholeOutput(handle, part);
         if (count <= 0 || count > part.length) throw fail('EIO', 'workspace whole write made invalid progress');
         offset += count;
@@ -360,7 +334,6 @@ function workspaceOperationScope(target, policy, requestSignal, destination) {
       result = await action(io);
     } catch (error) { recordFailure(error, 'workspace edit failed'); }
     if (handle !== undefined) {
-      try { binding.abortEdit(handle); }
       try {
         if (wholeAttempted) wholeBinding.abortWholeOutput(handle);
         else binding.abortEdit(handle);
@@ -393,7 +366,6 @@ function workspaceOperationScope(target, policy, requestSignal, destination) {
       if (committed || publicationAttempted || cleanupFailed) {
         throw Object.assign(new Error(failure?.message ?? String(failure), { cause: failure }), {
           code: failure?.code,
-          workspaceEditState: committed ? 'committed' : wholeWritePartial ? 'partial' : publicationAttempted ? 'unknown' : 'unpublished',
           workspaceEditState: committed ? 'committed' : wholeEffectUnknown ? 'unknown' : wholeWritePartial ? 'partial' : publicationAttempted ? 'unknown' : 'unpublished',
           workspaceEditCleanupFailed: cleanupFailed,
         });
@@ -413,7 +385,6 @@ export function workspaceMoveScope(source, destination, policy, signal) {
   const fromLogical = isLogicalWorkspacePath(String(source.targetKey));
   const toLogical = isLogicalWorkspacePath(String(destination.targetKey));
   if (!fromLogical && !toLogical) return;
-  if (!fromLogical || !toLogical) throw fail('ERR_WORKSPACE_MOVE_SCOPE');
   if (!fromLogical || !toLogical) throw fail('ERR_WORKSPACE_MOVE_SCOPE', '暂不支持在授权文件夹与普通路径之间直接移动。请先复制到目标位置，确认成功后再删除原文件。');
   return workspaceOperationScope(source, policy, signal, destination);
 }

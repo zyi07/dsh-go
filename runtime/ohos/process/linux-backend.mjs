@@ -221,8 +221,6 @@ export class LinuxCommandBackend {
     if (this.#disposal) return this.#disposal;
     this.closed = true;
     const jobs = [...this.live];
-    for (const job of jobs) job.terminate();
-    return this.#disposal = Promise.allSettled(jobs.map(job => job.done)).then(() => {
     // Publish before unpipe can synchronously reenter from a caller's sink.
     this.#disposal = Promise.allSettled(jobs.map(job => job.done)).then(() => {
       const errors = [...this.#failures];

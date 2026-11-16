@@ -20,7 +20,6 @@ export function cleanGuestClose(value, epoch) {
   return exact(value, ['epoch', 'rootfsSync', 'syncMethod', 'syncScope']) && value.epoch === epoch &&
     value.rootfsSync === true && value.syncMethod === 'syncfs' && value.syncScope === 'rootfs';
 }
-const cleanNative = value => value?.joined === true && value.retirementError === false && [-3, -4].includes(value.apiResult);
 const cleanNative = value => value?.joined === true && value.retirementError === false && [-3, -4].includes(value.apiResult) &&
   (value.fdRetirement === undefined || value.fdRetirement?.retired === true);
 
@@ -115,22 +114,6 @@ async function removeDiscarded(fs, directory, names, verifyRoot, root) {
 // flock is held until retirement AND metadata handling finish; its inode is
 // never replaced. fs is injectable only for precise persistence fault tests.
 export async function openLinuxInstance({ directory, manifest, lockExclusive }, { fs = promises } = {}) {
-  if (typeof directory !== 'string' || !isAbsolute(directory) || directory === '/' || directory.includes('\0') || resolve(directory) !== directory) throw new TypeError('A canonical private Linux root is required');
-  if (typeof lockExclusive !== 'function') throw fail('ERR_OHOS_LINUX_LOCK_UNAVAILABLE', 'The trusted native Linux installation lock is unavailable');
-  const expected = assetIdentity(manifest);
-  let root, lock, instance, target, rootInfo, lockInfo, instanceInfo, targetInfo, record, path, existing = false;
-  const lockPath = join(directory, '.lock');
-  const handles = () => [target, instance, root, lock].filter(Boolean);
-  async function directoryIdentity(name, handle, saved) {
-    const [named, held, canonical] = await Promise.all([fs.lstat(name, { bigint: true }), handle.stat({ bigint: true }), fs.realpath(name)]);
-    if (!named.isDirectory() || !held.isDirectory() || canonical !== name || !same(named, held) || (saved && !same(held, saved))) throw fail('ERR_OHOS_LINUX_DIRECTORY_IDENTITY', 'Linux private directory identity changed');
-    return held;
-  }
-  async function verify() {
-    await directoryIdentity(directory, root, rootInfo);
-    const namedLock = await fs.lstat(lockPath, { bigint: true });
-    if (!privateFile(namedLock) || !same(namedLock, lockInfo) || !same(await lock.stat({ bigint: true }), lockInfo)) throw fail('ERR_OHOS_LINUX_LOCK_IDENTITY', 'Linux lock inode changed');
-    await directoryIdentity(path, instance, instanceInfo);
   checkRoot(directory, lockExclusive);
   const expected = assetIdentity(manifest);
   let root, lock, instance, target, rootInfo, instanceInfo, targetInfo, record, path, verifyRoot, existing = false;
@@ -165,23 +148,6 @@ export async function openLinuxInstance({ directory, manifest, lockExclusive }, 
   }
   async function persist(next) { await write('instance.json', next); record = next; }
   try {
-    await fs.mkdir(directory, { mode: 0o700 }).catch(cause => { if (cause.code !== 'EEXIST') throw cause; });
-    root = await fs.open(directory, constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW);
-    rootInfo = await directoryIdentity(directory, root);
-    await root.chmod(0o700);
-    lock = await fs.open(lockPath, constants.O_RDWR | constants.O_CREAT | constants.O_NOFOLLOW, 0o600);
-    lockInfo = await lock.stat({ bigint: true });
-    if (!privateFile(lockInfo)) throw fail('ERR_OHOS_LINUX_LOCK_IDENTITY', 'Linux lock must be a private single-link ordinary file');
-    try { if (lockExclusive(lock.fd) !== undefined) throw new TypeError('lockExclusive must return undefined synchronously'); }
-    catch (cause) {
-      if (['EAGAIN', 'EWOULDBLOCK'].includes(cause.code)) throw fail('ERR_OHOS_LINUX_BUSY', 'Another live owner holds this Linux environment', cause);
-      throw cause;
-    }
-    const namedLock = await fs.lstat(lockPath, { bigint: true });
-    if (!privateFile(namedLock) || !same(namedLock, lockInfo)) throw fail('ERR_OHOS_LINUX_LOCK_IDENTITY', 'Linux lock path changed during acquisition');
-    const names = (await fs.readdir(directory)).filter(name => name !== '.lock');
-    if (names.length) {
-      existing = true;
     ({ root, lock, rootInfo, verifyRoot } = await lockRoot(fs, directory, lockExclusive));
     const listed = (await fs.readdir(directory)).filter(name => name !== '.lock');
     // Conservative until a discard interrupted by a crash is finished: its
@@ -195,7 +161,6 @@ export async function openLinuxInstance({ directory, manifest, lockExclusive }, 
       path = join(directory, names[0]);
     } else path = await fs.mkdtemp(join(directory, '.installation-'));
     instance = await fs.open(path, constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW);
-    instanceInfo = await directoryIdentity(path, instance);
     instanceInfo = await directoryIdentity(fs, path, instance);
     if ((instanceInfo.mode & 0o077n) !== 0n) throw fail('ERR_OHOS_LINUX_DIRECTORY_IDENTITY', 'Linux instance directory is not private');
     if (existing) {

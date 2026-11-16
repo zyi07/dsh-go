@@ -6,7 +6,6 @@
 #include <node.h>
 #include <node_api.h>
 #include <uv.h>
-#include <deviceinfo.h>
 #if !defined(__APPLE__)
 #include <deviceinfo.h>
 #endif
@@ -22,10 +21,6 @@
 #include <cstring>
 #include <fcntl.h>
 #include <limits>
-#include <linux/fs.h>
-#include <string>
-#include <sys/file.h>
-#include <sys/syscall.h>
 #if defined(__APPLE__)
 #include <cstdio>
 #include <sys/sysctl.h>
@@ -81,10 +76,6 @@ const char* ErrorName(int error_number) {
 
 napi_value GetSystemBuildIdentity(napi_env env, napi_callback_info) {
   // These are public OS build properties, never a device serial or user ID.
-  // Product builds resolve these four APIs from libdeviceinfo_ndk.z.so.
-  const char* names[] = {"osFullName", "displayVersion", "incrementalVersion", "securityPatchTag"};
-  const char* values[] = {OH_GetOSFullName(), OH_GetDisplayVersion(),
-                          OH_GetIncrementalVersion(), OH_GetSecurityPatchTag()};
   const char* names[] = {"osFullName", "displayVersion", "incrementalVersion", "securityPatchTag"};
 #if defined(__APPLE__)
   // iOS has no patch tag; the kernel's version string changes with every OS build.
@@ -145,7 +136,6 @@ napi_value RenameNoReplace(napi_env env, napi_callback_info info) {
   std::string source, destination;
   if (!ReadPath(env, argv[0], &source) || !ReadPath(env, argv[1], &destination)) return nullptr;
 
-#ifdef SYS_renameat2
 #if defined(__APPLE__)
   const int rename_result = renamex_np(source.c_str(), destination.c_str(), RENAME_EXCL);
   const int error_number = rename_result == 0 ? 0 : errno;
@@ -342,7 +332,6 @@ napi_value SetOwnershipMarker(napi_env env, napi_callback_info info) {
     napi_throw_type_error(env, "ERR_INVALID_ARG_VALUE", "Ownership token must not contain NUL");
     return nullptr;
   }
-  const int result = fsetxattr(descriptor, kOwnershipAttribute, bytes.data(), length, XATTR_CREATE);
   const int result = SetAttribute(descriptor, kOwnershipAttribute, bytes.data(), length);
   const int error_number = result == 0 ? 0 : errno;
   if (error_number != 0) return ThrowAttributeError(env, error_number, "fsetxattr");
@@ -361,10 +350,6 @@ napi_value GetOwnershipMarker(napi_env env, napi_callback_info info) {
   }
   int descriptor;
   if (!ReadDescriptor(env, argv[0], &descriptor)) return nullptr;
-  const ssize_t expected = fgetxattr(descriptor, kOwnershipAttribute, nullptr, 0);
-  const int first_error = expected < 0 ? errno : 0;
-  napi_value result;
-  if (first_error == ENODATA) {
   const ssize_t expected = GetAttribute(descriptor, kOwnershipAttribute, nullptr, 0);
   const int first_error = expected < 0 ? errno : 0;
   napi_value result;
@@ -380,9 +365,6 @@ napi_value GetOwnershipMarker(napi_env env, napi_callback_info info) {
   // A zero-size query is not a read. Use at least one byte so a concurrent
   // growth cannot turn the second syscall into another successful size query.
   std::vector<char> bytes(expected == 0 ? 1 : static_cast<size_t>(expected));
-  const ssize_t actual = fgetxattr(descriptor, kOwnershipAttribute, bytes.data(), bytes.size());
-  const int read_error = actual < 0 ? errno : 0;
-  if (read_error == ENODATA) {
   const ssize_t actual = GetAttribute(descriptor, kOwnershipAttribute, bytes.data(), bytes.size());
   const int read_error = actual < 0 ? errno : 0;
   if (read_error == kMissingAttribute) {

@@ -54,15 +54,6 @@ export class BoundaryCoordinator {
   #nativeHost;
   #nativeFailure;
   #nativeTimer;
-  #admissionTarget = true;
-  constructor({ journal, bootId, flushSession, readEvents, resolveAgent = () => undefined,
-    revalidateTransport = async () => {}, onStage = () => {}, readHost = readNativeHost, hasActiveRounds = () => false }) {
-    if (!journal || !knownString(bootId) || typeof flushSession !== 'function' || typeof readEvents !== 'function') throw new TypeError('Lifecycle requires durable session adapters and boot identity');
-    this.#readHost = readHost;
-    this.hasActiveRounds = hasActiveRounds;
-    this.#journal = journal;
-    this.bootId = bootId;
-    this.clock = new ActiveBudgetClock(bootId);
   #gateWaiters = 0;
   #admissionTarget = true;
   constructor({ journal, bootId, flushSession, readEvents, resolveAgent = () => undefined,
@@ -83,12 +74,6 @@ export class BoundaryCoordinator {
     catch (error) { this.#fault = error; }
     this.#manualPaused = this.#lastManualPaused;
     if (this.#lastPause) { this.#gate = Promise.withResolvers(); this.clock.pause(); this.#admissionTarget = false; }
-    const poll = () => {
-      if (this.#closing) return;
-      this.#refreshNative();
-      this.#nativeTimer = setTimeout(poll, 250); this.#nativeTimer.unref?.();
-    };
-    this.#nativeTimer = setTimeout(poll, 250); this.#nativeTimer.unref?.();
     this.#updateNativePolling();
   }
   get protocolVersion() { return 1; }
@@ -172,8 +157,6 @@ export class BoundaryCoordinator {
       && (row.reconciliation?.blocking === true || row.phase !== 'committed')
       && !this.#pending.has(keyOf(row.identity)) && row.reconciliation?.blocking !== false);
   }
-  #refreshNative() {
-    try { this.#nativeHost = validateHostSnapshot(this.#readHost()); this.#nativeFailure = undefined; }
   #updateNativePolling() {
     if (this.#closing) return;
     // Admission/host requests always read native facts themselves. Poll only
@@ -233,8 +216,6 @@ export class BoundaryCoordinator {
       const interrupted = Promise.withResolvers();
       const abort = () => interrupted.reject(signal.reason);
       signal?.addEventListener('abort', abort, { once: true });
-      try { await Promise.race([this.#gate.promise, interrupted.promise]); }
-      finally { signal?.removeEventListener('abort', abort); }
       this.#gateWaiters++; this.#updateNativePolling();
       try { await Promise.race([this.#gate.promise, interrupted.promise]); }
       finally {
@@ -533,7 +514,6 @@ export class BoundaryCoordinator {
   #hostStatus() {
     const blocked = this.#fault || this.#journal.failed || this.#journal.corruption;
     return { v: 1, nativeHost: this.#nativeHost ?? null, closed: this.#closing, paused: !!this.#gate, confirmedPause: this.clock.paused,
-      manualPaused: this.#manualPaused, busy: this.#pending.size > 0 || this.hasActiveRounds() === true,
       manualPaused: this.#manualPaused, busy: this.#pending.size > 0 || this.hasActiveRounds() === true || this.hasActiveWork() === true,
       blocked: !!blocked, controlVersion: this.#controlVersion,
       host: { revision: this.#nativeHost?.revision ?? 0,

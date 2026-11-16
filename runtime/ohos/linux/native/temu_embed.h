@@ -17,7 +17,6 @@ enum {
     TEMU_EMBED_OWNER_UNRELEASED = -6,
     TEMU_EMBED_INPUT_UNRELEASED = -7,
     TEMU_EMBED_RETIRE_FAILED_UNRELEASED = -8,
-    TEMU_EMBED_FATAL_UNRELEASED = -9
     TEMU_EMBED_FATAL_UNRELEASED = -9,
     /* Dedicated wake/wait failure; distinct from drive retirement failure. */
     TEMU_EMBED_WAIT_UNRELEASED = -10

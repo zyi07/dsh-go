@@ -2,9 +2,6 @@
   "upstream": "https://bellard.org/tinyemu/tinyemu-2019-12-21.tar.gz",
   "archiveSha256": "be8351f2121819b3172fcedce5cb1826fa12c87da1b7ed98f269d3e802a05555",
   "files": {
-    "CMakeLists.txt": "d9d838e5c364f3fbbd92956fa37268f98e2b9a636e516a2a78d6294b467919a4",
-    "THIRD-PARTY-NOTICES.txt": "8aa05a2e0e64c199f75b5f96d694b1de3b27a2b1b81ab2f6dba3b8ce661f3c99",
-    "binding.c": "a54179c1cc291629faefe7c8ea0b9bcc8899ee833f742b5318885e878fdd91d2",
     "CMakeLists.txt": "9903e25f31d9753d9ed5e447ffde86b664d42c824eff50ecfdeedc66678b6f4e",
     "THIRD-PARTY-NOTICES.txt": "8aa05a2e0e64c199f75b5f96d694b1de3b27a2b1b81ab2f6dba3b8ce661f3c99",
     "binding.c": "d5a90eac315bbc654ce3767596aba09e525f3def27119344978af2f2404d32b9",
@@ -23,13 +20,11 @@
     "patches/0011-controlled-drive-retire.patch": "78025a679ec6216c191661c38331dd9b584b2b69ae88d940f52ed7c731ce5d03",
     "patches/0012-embedded-fatal-boundary.patch": "1a7d9bc99285a409faa0961699542da0e71049d86bde4cc98a08b80ed79b85d6",
     "patches/0013-embedded-network-nosigpipe.patch": "439769b843ee36fe1a1753ee842470a74556a23b849c7be6b87cb2a307e42e3a",
-    "temu_embed.h": "e6b6da718dd459cee79733c854c3b2a1d55fae2956c9030c7806a7d2dc733485",
     "temu_embed.h": "9bc744e17baf3c57b9bd6d2970a7b43416219a52e3225a1ba152890a83fc65e0",
     "patches/0014-grant-fid-decoder.patch": "c356a51798380a59267621884e096e0e7de36b727b3915eb282ff2b868906d27",
     "patches/0015-block-write-errors.patch": "e6644b787e29c98caeab49b0911a88f88ab120c290dcaf07383c7e228f83d66d",
     "fs_export.c": "4ebc81e80db33f47daa7677ab84ae50bcff90411f490842602a4bdde9804f6f9",
     "fs_export.h": "978fea6b3a36b9c49751b1f8c306c0fad9414c114a95d9067a64fd67161c9200",
-    "patches/0016-app-workspace-export.patch": "d229bd61ea52c9f9743813565cbbf3f21a34a711512fdcf86747233a56f36696"
     "patches/0016-app-workspace-export.patch": "d229bd61ea52c9f9743813565cbbf3f21a34a711512fdcf86747233a56f36696",
     "embed-ram.c": "65fb48a61753b40c260ea737bee32b06f53ea3f6773138a46ed4615334e52e55",
     "embed-ram.h": "3b919c585f581ef76afb29a26ee3d2a5668f42ccd5859ed8b9e0e8b53e825bab",

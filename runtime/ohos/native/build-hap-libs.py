@@ -113,7 +113,6 @@ def main():
     parser.add_argument('--output', required=True, type=Path, help='Fresh arm64-v8a directory')
     parser.add_argument('--tinyemu-source', type=Path, help='Optional fixed TinyEMU archive; builds signed Linux backend into this HAP set')
     parser.add_argument('--workspace-grants', action='store_true', help='Build the optional native directory-lease Node consumer')
-    args = parser.parse_args()
     parser.add_argument('--sqlite-amalgamation', type=Path,
                         help="Pinned SQLite amalgamation zip; builds the OH libsqlite3.so the AOT's sqlite3 asset needs")
     parser.add_argument('--sqlite3-package', type=Path, help='With --sqlite-amalgamation: the locked Dart sqlite3 package')
@@ -135,17 +134,10 @@ def main():
                     '--node-headers', str(headers), '--compiler', str(sdk / 'llvm/bin/clang'),
                     '--napi-rename-header', str(rename), '--libnode', str(output / 'libnode.so'),
                     '--output', str(work / 'flock')], check=True)
-    # The 6.1 public SDK sysroot carries no libc++, and nothing in the target link line names the static
-    # C++ runtimes that sit beside libnode.so; without these the loader's own libc++ references stay undefined.
-    static_cxx = [f'--ld-flag={flag}' for flag, name in
-                  (('-lc++', 'libc++.a'), ('-lc++abi', 'libc++abi.a'), ('-lunwind', 'libunwind.a'))
-                  if (runtimes / 'lib' / name).is_file()]
     subprocess.run([sys.executable, '-B', str(HERE / 'loader/build-loader.py'), '--sdk-native', str(sdk),
                     '--source', str(loader), '--node-headers', str(headers), '--node-addon-api', str(api),
                     '--compiler', str(clang), f'--cxx-flag=-resource-dir={runtimes / "clang-resource"}',
                     f'--cxx-flag=-stdlib++-isystem{runtimes / "include/c++/v1"}', '--cxx-flag=-D__MUSL__=1',
-                    f'--ld-flag=-L{runtimes / "lib"}', *static_cxx,
-                    f'--ld-flag=--ld-path={sdk / "llvm/bin/ld.lld"}',
                     f'--ld-flag=-L{runtimes / "lib"}', f'--ld-flag=--ld-path={sdk / "llvm/bin/ld.lld"}',
                     '--napi-rename-header', str(rename), '--libnode', str(output / 'libnode.so'),
                     '--libnode-build-json', str(built / 'build.json'), '--output', str(work / 'loader')], check=True)

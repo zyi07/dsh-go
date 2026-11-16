@@ -4,7 +4,6 @@ import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { STATUS_CODES } from 'node:http';
 
 export const name = 'dsh-go-ohos-lifecycle';
-export const inject = ['sessions', 'sessionPersistence', 'agents', 'subprocess'];
 export const inject = ['sessions', 'sessionPersistence', 'agents', 'subprocess', 'jobs'];
 const lifecycleSymbol = Symbol.for('dsh.go.ohos.lifecycle');
 const simulationSymbol = Symbol.for('dsh.go.ohos.sim');
@@ -138,7 +137,6 @@ export async function apply(ctx, config = {}) {
       try { return (await handle.read(from, to)).events; }
       finally { await handle.close(); }
     },
-    resolveAgent: id => ctx.agents.get(id), hasActiveRounds: () => ctx.agents.list().some(agent => agent.status === 'running'), revalidateTransport: () => transport.revalidate() });
     resolveAgent: id => ctx.agents.get(id), hasActiveRounds: () => ctx.agents.list().some(agent => agent.status === 'running'),
     hasActiveWork: () => jobs.hasActiveJobs() || ctx.subprocess.backend.live.size > 0 || ctx.subprocess.linux.hasActiveWork(),
     revalidateTransport: () => transport.revalidate() });
