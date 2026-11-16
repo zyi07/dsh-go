@@ -106,7 +106,6 @@ class MethodChannelIslandPlatform extends IslandPlatform {
   /// Asks the OS: stock Flutter has no `TargetPlatform.ohos`.
   final bool _ohos;
 
-  bool get _hasPlatformSide => !kIsWeb && (defaultTargetPlatform == TargetPlatform.android || _ohos);
   bool get _hasPlatformSide =>
       !kIsWeb &&
       (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS || _ohos);

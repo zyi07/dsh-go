@@ -122,12 +122,6 @@ List<SearchHit> searchSettings(
   if (q.isEmpty) return const [];
   final hits = <SearchHit>[];
   for (final spot in spots) {
-    if (!androidFeatures && SettingsIndex.androidOnly(spot)) continue;
-    if (androidFeatures && spot.ohosOnly) continue;
-    final langs = [
-      for (final l in [zh, en])
-        _Words(spot.titleOn(androidFeatures: androidFeatures)(l), [
-          ..._split((androidFeatures ? spot.keywords : spot.ohosKeywords ?? spot.keywords)?.call(l)),
     if (!androidFeatures && SettingsIndex.androidOnly(spot) && !(ios && spot.iosToo)) continue;
     if ((androidFeatures || ios) && spot.ohosOnly) continue;
     if (ios && (spot.iosLacks || identical(spot, Spots.notifyLive))) continue;

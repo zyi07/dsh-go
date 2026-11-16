@@ -109,7 +109,6 @@ class SettingsScreen extends ConsumerWidget {
         ? (replyPrefsSummary(ref) == null ? l10n.commonNotSet : l10n.hubValueSet)
         : null;
     // 能力.
-    final phone = android ? ref.watch(phoneProvider) : null;
     final phone = android || ios ? ref.watch(phoneProvider) : null;
     final phoneValue = phone == null || !phone.loaded || !phone.status.ready
         ? null

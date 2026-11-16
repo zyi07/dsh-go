@@ -95,9 +95,6 @@ abstract final class EngineControl {
         status.phase == RuntimePhase.stopping;
     // Only a currently running safe profile may keep running during this write.
     // OH must observe the embedded Node's exit even when its safe profile runs.
-    final safeRunning = status.inSafeMode && status.phase == RuntimePhase.running;
-    final mustStop = busy && (!safeRunning || container.read(operatingSystemProvider) == 'ohos');
-    if (mustStop && !await _stopAndWait(container)) {
     final safeRunning =
         status.inSafeMode &&
         status.phase == RuntimePhase.running &&

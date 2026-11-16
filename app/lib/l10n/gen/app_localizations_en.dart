@@ -8871,6 +8871,34 @@ class L10nEn extends L10n {
   String get fileUploadFailed => 'Couldn’t send to the computer';
 
   @override
+  String get harmonyUnknownResults =>
+      'Some tool calls never got a result. They may or may not have run. This conversation can\'t call tools until you deal with them.';
+
+  @override
+  String get harmonyUnknownResultsReview => 'Review';
+
+  @override
+  String get harmonyUnknownResultsTitle => 'These tool calls have unknown results';
+
+  @override
+  String harmonyUnknownResultsBody(String tools) {
+    return '$tools\n\nThe app was interrupted while waiting for them, so they may or may not have run. You can check first, for example whether a file changed.\n\nIf you continue, they won\'t run again, and they won\'t be recorded as successful.';
+  }
+
+  @override
+  String get harmonyUnknownResultsContinue => 'Continue this conversation';
+
+  @override
+  String get harmonyUnknownResultsChanged => 'Something changed. Please look again.';
+
+  @override
+  String get harmonyUnknownResultsFailed => 'Couldn\'t confirm that. Try again.';
+
+  @override
+  String get harmonyCallsNotRecorded =>
+      'The local engine can\'t record the state of tool calls, so they\'re paused. Restart the engine and try again.';
+
+  @override
   String get harmonyAccessSubtitle => 'What each feature needs from HarmonyOS';
 
   @override
@@ -8925,14 +8953,14 @@ class L10nEn extends L10n {
       'Tasks on this phone only fire while the app is running: they won\'t run on time while the system has it suspended';
 
   @override
-  String get harmonyPageUnavailable => 'HarmonyOS doesn\'t support this';
+  String get harmonyPageUnavailable => 'This page isn\'t available in this version';
 
   @override
   String get harmonyNotificationSettingsFailed =>
       'Couldn’t open system settings. Turn on notifications in Settings → Notifications & status bar → DSH Go.';
 
   @override
-  String get harmonySearchUnavailable => 'This isn\'t available on HarmonyOS';
+  String get harmonySearchUnavailable => 'This isn\'t available in this version';
 
   @override
   String get harmonyCredentialsSection => 'Keys';
@@ -9102,7 +9130,7 @@ class L10nEn extends L10n {
       'You can turn bundled plugins on or off, or connect a computer to manage plugins';
 
   @override
-  String get harmonyVoiceLocalLine => 'On-device HarmonyOS uses the system\'s recognition. There\'s no voice model';
+  String get harmonyVoiceLocalLine => 'On-device HarmonyOS has no voice model';
 
   @override
   String get harmonyPasswordStorageHelp => 'Saved only on this phone, encrypted by the system keystore';
@@ -9121,7 +9149,8 @@ class L10nEn extends L10n {
   String get harmonyVoiceSystemHintChinese => 'Uses the system\'s speech recognition, Chinese only';
 
   @override
-  String get harmonyVoiceAutoHint => 'Uses the system\'s speech recognition';
+  String get harmonyVoiceAutoHint =>
+      'Uses DeepSeek when you\'re signed in or have an API key, otherwise the system\'s speech recognition';
 
   @override
   String get harmonyVoiceSystemUnavailable => 'The system\'s speech recognition isn\'t available';
@@ -9146,6 +9175,9 @@ class L10nEn extends L10n {
 
   @override
   String get harmonyKwPets => 'pet,pets,companion,whale';
+
+  @override
+  String get harmonyKwVoice => 'speech recognition,dictation,microphone,mic,voice';
 
   @override
   String get harmonyBackgroundSubtitleLong =>
@@ -10341,7 +10373,7 @@ class L10nEn extends L10n {
 
   @override
   String get linuxMemoryNote =>
-      'While Linux is on, the app uses roughly 100 MB more memory. Turning it off gives that back only when the app fully quits.';
+      'While Linux is on, the app uses roughly 100 MB more memory. Turning it off gives that back; turning it on again then needs the app reopened.';
 
   @override
   String get linuxStateOn => 'On';
@@ -10380,11 +10412,48 @@ class L10nEn extends L10n {
   String get linuxRequestFailed => 'Couldn’t reach the engine. Try again in a moment.';
 
   @override
-  String get linuxRestartRequired => 'Linux has stopped. Quit and reopen the app to turn it on again.';
+  String get linuxRestartRequired => 'Linux has stopped. Reopen the app to turn it on again.';
+
+  @override
+  String get linuxReopenApp => 'Reopen app';
+
+  @override
+  String get linuxReopenFailed => 'Couldn\'t reopen the app. Quit it and open it again.';
 
   @override
   String linuxErrorWithCode(String code) {
     return 'Couldn’t turn on: $code';
+  }
+
+  @override
+  String get linuxReinstall => 'Reinstall Linux';
+
+  @override
+  String get linuxReinstallHint => 'Deletes everything inside Linux; turning it on again installs it fresh';
+
+  @override
+  String get linuxReinstallAfterRestart =>
+      'Linux already started in this run of the app. Quit and reopen the app to reinstall';
+
+  @override
+  String get linuxReinstallTitle => 'Reinstall Linux?';
+
+  @override
+  String get linuxReinstallBody =>
+      'This deletes everything inside Linux: installed software and Python packages, files that exist only inside Linux, and accounts signed in there (such as gh). Files in your chat workspaces aren’t touched.\n\nThe switch stays off; turning it on afterwards downloads and installs Linux again.';
+
+  @override
+  String linuxRetainedRefused(String code) {
+    return 'The existing Linux data can’t be used any more (usually after an app update), and the app won’t overwrite it on its own. Tap Reinstall Linux to delete it, then turn Linux on for a fresh install. ($code)';
+  }
+
+  @override
+  String get linuxReinstallRestart =>
+      'Linux already started in this run of the app, so its data may still be in use. Quit and reopen the app, then tap Reinstall Linux.';
+
+  @override
+  String linuxReinstallFailed(String code) {
+    return 'Couldn’t reinstall: $code';
   }
 
   @override
@@ -10427,6 +10496,9 @@ class L10nEn extends L10n {
   @override
   String get linuxProxyUrlInvalid =>
       'Enter an address starting with http:// or https://, such as http://127.0.0.1:7890';
+
+  @override
+  String get searchKwLinux => 'Linux,terminal,command line,virtual machine,gh,GitHub CLI,python,pip,proxy';
 
   @override
   String get liveThinking => 'Thinking';

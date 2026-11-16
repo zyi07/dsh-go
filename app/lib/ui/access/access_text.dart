@@ -74,11 +74,6 @@ extension AccessItemText on AccessItem {
     AccessItem.overlay => l10n.accessOverlayTitle,
   };
 
-  /// Why, in one line. On HarmonyOS an alert can only go out while the app runs.
-  String why(L10n l10n, {required String os}) => switch (this) {
-    AccessItem.mic => l10n.accessMicWhy,
-    AccessItem.storage => l10n.accessStorageWhy,
-    AccessItem.notifications => os == 'ohos' ? l10n.harmonyNotifyWhy : l10n.accessNotifyWhy,
   /// Why, in one line. On HarmonyOS and iOS an alert can only go out while the
   /// app runs.
   String why(L10n l10n, {required String os}) => switch (this) {

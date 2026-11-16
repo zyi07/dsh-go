@@ -30,11 +30,6 @@ class LocalPaths {
   /// Default working directory for sessions created on the phone.
   static String get workspace => '$home/workspace';
 
-  /// Asks for the root before the first frame on HarmonyOS. Without an answer
-  /// the paths stay Android's and the engine refuses them, which shows up as a
-  /// failed session rather than a wrong folder.
-  static Future<void> load({bool? ohos, MethodChannel channel = const MethodChannel('dsh/runtime')}) async {
-    if (!(ohos ?? Platform.operatingSystem == 'ohos')) return;
   /// Asks for the root before the first frame where there's no guest (HarmonyOS,
   /// iOS). Without an answer the paths stay Android's and the engine refuses them,
   /// which shows up as a failed session rather than a wrong folder.

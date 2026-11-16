@@ -104,7 +104,6 @@ class RuntimeResetFailure implements Exception {
 /// A committed or uncertain request must not be treated as a rolled-back reset.
 class RuntimeResetPending extends RuntimeResetFailure {
   const RuntimeResetPending(Object cause, {RuntimeResetCommitState commitState = RuntimeResetCommitState.committed})
-      : super(commitState, cause);
     : super(commitState, cause);
   Object? get reopenError => committed ? cause : null;
 }

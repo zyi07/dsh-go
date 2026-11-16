@@ -46,7 +46,7 @@ IconData hostKindIcon(HostKind kind) => switch (kind) {
   HostKind.local => AppIcons.thisPhone,
   HostKind.ssh => AppIcons.sshHost,
   HostKind.relay => AppIcons.computer,
-  HostKind.direct => AppIcons.webConsole,
+  HostKind.direct => AppIcons.computer,
 };
 
 /// Identity tint per kind (one of the 8 fixed pairs), so rows read as a set.

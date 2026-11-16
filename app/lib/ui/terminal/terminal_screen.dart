@@ -9,7 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:xterm/xterm.dart';
 
-import '../../clipboard/field_paste.dart';
+import '../common/field_paste.dart';
 import '../../l10n/l10n.dart';
 import '../../state/terminal_state.dart';
 import '../common/empty_view.dart';

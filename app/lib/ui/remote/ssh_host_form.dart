@@ -5,13 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../clipboard/field_paste.dart';
 import '../../l10n/l10n.dart';
 import '../../remote/ssh/ssh_link.dart';
 import '../../state/android_features.dart';
 import '../../state/attachments.dart';
 import '../../state/connection_state.dart';
-import '../../state/android_features.dart';
 import '../../state/hosts_state.dart';
 import '../common/field_paste.dart';
 import '../providers/provider_widgets.dart' show FormFieldBlock, FormFieldGroup;
@@ -550,11 +548,6 @@ class _SshHostFormPageState extends ConsumerState<SshHostFormPage> with FieldPas
             ),
             SettingsSection(
               title: l10n.remoteAuthentication,
-              footer: Text(switch ((_auth == SshAuthMethod.password, ref.watch(operatingSystemProvider) == 'ohos')) {
-                (true, true) => l10n.harmonyPasswordStorageHelp,
-                (false, true) => l10n.harmonyKeyStorageHelp,
-                (true, false) => l10n.remotePasswordStorageHelp,
-                (false, false) => l10n.remoteKeyStorageHelp,
               footer: Text(switch ((_auth == SshAuthMethod.password, ref.watch(operatingSystemProvider))) {
                 (true, 'ohos') => l10n.harmonyPasswordStorageHelp,
                 (false, 'ohos') => l10n.harmonyKeyStorageHelp,

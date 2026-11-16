@@ -5,10 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/l10n.dart';
 import '../../runtime/ohos_linux_runtime.dart';
-import '../../state/ohos_linux_state.dart';
-import '../common/status_chip.dart';
-import '../shell/page_frame.dart';
-import '../theme/app_icons.dart';
 import '../../runtime/runtime_state.dart' show runtimeBridgeProvider;
 import '../../state/ohos_linux_state.dart';
 import '../common/app_dialog.dart';
@@ -187,8 +183,6 @@ class _LinuxEnvironmentPageState extends ConsumerState<LinuxEnvironmentPage> {
     final proxy = view.proxy;
 
     final code = snapshot?.lastErrorCode;
-    final String? problem = view.error != null
-        ? (snapshot == null ? l10n.linuxEngineOffline : l10n.linuxRequestFailed)
     final error = view.error;
     final String? problem = error is OhosLinuxReinstallFailure
         ? (error.needsRestart ? l10n.linuxReinstallRestart : l10n.linuxReinstallFailed(error.code))

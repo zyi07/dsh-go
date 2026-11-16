@@ -296,7 +296,6 @@ class _SpotResult extends ConsumerWidget {
         unavailableReason(ref, spot.condition, l10n) ??
         (spot.isEntry ? null : unavailableReason(ref, SettingsIndex.page(spot.page).condition, l10n));
     return ListPageRow(
-      title: spot.titleOn(androidFeatures: ref.watch(androidSystemFeaturesProvider))(l10n),
       title: spot.titleOn(harmony: ref.watch(operatingSystemProvider) == 'ohos')(l10n),
       titleNote: hit.synonym,
       subtitle: reason ?? SettingsIndex.path(spot, l10n).join(' › '),

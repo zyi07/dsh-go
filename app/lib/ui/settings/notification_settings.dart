@@ -96,7 +96,6 @@ class _NotificationSettingsPageState extends ConsumerState<NotificationSettingsP
 
   void _settingsFailed() => ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
-      content: Text(_ohos ? appL10n.harmonyNotificationSettingsFailed : appL10n.pluginsNotificationSettingsFailed),
       content: Text(
         wordsForIos
             ? appL10n.iosNotificationSettingsFailed
@@ -304,7 +303,6 @@ class _NotificationSettingsPageState extends ConsumerState<NotificationSettingsP
           children: [
             SettingsTile(
               spot: Spots.notifySystem,
-              subtitle: ohos ? l10n.harmonyEnableBanner : l10n.pluginsEnableFloatingNotifications,
               subtitle: ohos
                   ? l10n.harmonyEnableBanner
                   : wordsForIos

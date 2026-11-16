@@ -28,7 +28,6 @@ class AppSecureStorage {
   static const _channel = MethodChannel('dsh/secrets');
 
   bool get _ohos => _injected == null && (_platform ?? Platform.operatingSystem) == 'ohos';
-  FlutterSecureStorage get _fallback => _injected ?? const FlutterSecureStorage();
   FlutterSecureStorage get _fallback =>
       _injected ??
       const FlutterSecureStorage(iOptions: IOSOptions(accessibility: KeychainAccessibility.unlocked_this_device));

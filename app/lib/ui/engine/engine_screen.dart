@@ -132,7 +132,6 @@ class EngineScreen extends ConsumerWidget {
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
                 child: EngineActions(phase: status.phase),
               ),
-            if (!guest && !missing)
             // iOS gives each run a new Environment, so only HarmonyOS has this limit.
             if (ref.watch(operatingSystemProvider) == 'ohos' && !missing)
               Padding(
@@ -153,7 +152,6 @@ class EngineScreen extends ConsumerWidget {
                   onChanged: (v) => unawaited(ref.read(settingsProvider.notifier).setAutoStartLocal(v)),
                 ),
                 if (guest) const SafeModeAutoSwitch(icon: null),
-                const SafeModeSettingsTiles(showAutoSwitch: false, icon: false),
                 // iOS has no rescue profile of its own (SafeModeSettingsTiles is Android's and HarmonyOS's).
                 if (guest || ref.watch(operatingSystemProvider) == 'ohos')
                   const SafeModeSettingsTiles(showAutoSwitch: false, icon: false),
@@ -255,7 +253,6 @@ class EngineActions extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
     final container = ProviderScope.containerOf(context, listen: false);
-    if (phase == RuntimePhase.notInstalled) {
     // iOS can retain a native/reset error after the installed runtime is gone.
     // Keep the error visible, but offer installation instead of another start.
     final iosNeedsInstall =

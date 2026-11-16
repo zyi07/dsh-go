@@ -85,15 +85,6 @@ typedef PageResolver = Widget? Function(String id, String? sessionId);
 
 /// [pageForId] (tests swap in light pages); on HarmonyOS, Android's own pages
 /// lead to its form of them ([SettingsIndex.ohosLink]) or have none
-/// ([registerPageLinks] says so).
-final pageLinkResolverProvider = Provider<PageResolver>((ref) {
-  if (ref.watch(androidSystemFeaturesProvider)) {
-    return (id, sessionId) => SettingsIndex.ohosOnlyLink(id) ? null : pageForId(id, sessionId);
-  }
-  return (id, sessionId) {
-    final target = SettingsIndex.ohosLink(id);
-    return SettingsIndex.androidOnlyLink(target) ? null : pageForId(target, sessionId);
-  };
 /// ([registerPageLinks] says so). Android and iOS have nothing of HarmonyOS's own;
 /// iOS has none of Android's own but what it has too ([SettingSpot.iosToo]).
 final pageLinkResolverProvider = Provider<PageResolver>((ref) {

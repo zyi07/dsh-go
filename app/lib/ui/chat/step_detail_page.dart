@@ -255,8 +255,6 @@ class _ToolStep extends StatelessWidget {
     }
     final result = tool.resultText.trimRight();
     if (result.isNotEmpty) {
-      final failed = tool.status == ToolStatus.failed && (view.phoneResult?.isFault ?? true);
-      final title = failed
       // A phone tool's reported outcome that isn't a fault (HarmonyOS) isn't an error.
       final fault = view.phoneResult?.isFault ?? true;
       final title = tool.status == ToolStatus.failed && fault
@@ -264,7 +262,6 @@ class _ToolStep extends StatelessWidget {
           : view.isTerminal
           ? l10n.activityOutput
           : l10n.activityStepResult;
-      final color = failed && !view.sandboxBlocked ? DshColors.of(context).danger : null;
       final color = tool.status == ToolStatus.failed && !view.sandboxBlocked && fault
           ? DshColors.of(context).danger
           : null;

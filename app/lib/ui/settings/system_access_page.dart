@@ -62,7 +62,6 @@ class _SystemAccessPageState extends ConsumerState<SystemAccessPage> {
     final os = ref.watch(operatingSystemProvider);
     return AppPage.list(
       title: l10n.accessPageTitle,
-      subtitle: Text(os == 'ohos' ? l10n.harmonyAccessSubtitle : l10n.accessPageSubtitle),
       subtitle: Text(
         os == 'ohos'
             ? l10n.harmonyAccessSubtitle

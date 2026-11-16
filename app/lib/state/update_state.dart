@@ -126,10 +126,6 @@ class AppUpdateState {
   Uri? get noticePage {
     if (!noticeOnly) return null;
     final page = latest?.pageUrl;
-    if (page == null ||
-        (page.scheme != 'https' && page.scheme != 'http') ||
-        page.host.isEmpty ||
-        page.userInfo.isNotEmpty) {
     if (page == null || (page.scheme != 'https' && page.scheme != 'http') ||
         page.host.isEmpty || page.userInfo.isNotEmpty) {
       return null;
@@ -178,7 +174,6 @@ class AppUpdateState {
   bool get hasSelfUpdateResult => selfUpdate.state != SelfUpdatePendingState.none;
   bool get hasUpdate => latest != null;
   bool get isSkipped => latest != null && skippedVersion == latest!.version.toString();
-  /// A notice-only offer has no installer, so it never carries an asset.
   ReleaseAsset? get asset => noticeOnly ? null : latest?.apkFor(flavor);
 
   /// What a download fetches in place of [asset]: the patch from the installed
@@ -344,7 +339,6 @@ class AppUpdateController extends Notifier<AppUpdateState> {
   /// build and ABI once the native side said them.
   String _userAgent = updaterUserAgent(version: AppInfo.version.split('+').first);
 
-  /// HarmonyOS has no APK installer: the feed is checked, never installed.
   bool get _noticeOnly => ref.read(operatingSystemProvider) == 'ohos';
 
   UpdateInstaller get _installer => ref.read(updateInstallerProvider);
@@ -493,8 +487,6 @@ class AppUpdateController extends Notifier<AppUpdateState> {
   /// Read only. Missing/ambiguous evidence never unlocks replay of a dispatched
   /// attempt, and a successful RPC alone is not installation success.
   Future<void> reconcileSelfUpdate() async {
-    // A build without the APK path (desktop, HarmonyOS) has no install to reconcile.
-    if (!state.installable) return;
     final read = ++_reconcileRead;
     final run = _run;
     SelfUpdatePending pending;
@@ -546,8 +538,6 @@ class AppUpdateController extends Notifier<AppUpdateState> {
     );
   }
 
-  /// HarmonyOS: no APK is downloaded or installed, but the feed and its
-  /// release page are still checked and remembered.
   Future<void> _loadNotice(SharedPreferences prefs) async {
     var current = state.current;
     try {
@@ -640,11 +630,6 @@ class AppUpdateController extends Notifier<AppUpdateState> {
     if (!isAutoCheckDue(now: _now(), lastChecked: at(_checkedKey), lastAttempt: at(_attemptKey))) return false;
     await check();
     // Switched off while the check was in flight: keep the result, skip the offer.
-    return ref.mounted &&
-        state.autoCheck &&
-        state.hasUpdate &&
-        !state.isSkipped &&
-        (state.asset != null || state.noticePage != null);
     return ref.mounted && state.autoCheck && state.hasUpdate && !state.isSkipped &&
         (state.noticeOnly ? state.noticePage != null : state.asset != null);
   }
@@ -653,9 +638,6 @@ class AppUpdateController extends Notifier<AppUpdateState> {
   /// a running download keeps its release.
   Future<UpdateCheckPhase> check() async {
     await ready;
-    if (!ref.mounted) return UpdateCheckPhase.idle;
-    // A build that can neither install nor notice has nothing to check.
-    if (!state.checkable) return UpdateCheckPhase.idle;
     if (!ref.mounted || !state.checkable) return UpdateCheckPhase.idle;
     if (state.busy) return state.check;
     return _checking ??= _check().whenComplete(() => _checking = null);
@@ -802,7 +784,6 @@ class AppUpdateController extends Notifier<AppUpdateState> {
   // ── Download ───────────────────────────────────────────────────────────────
 
   Future<void> startDownload() async {
-    if (_noticeOnly || !state.installable) return;
     if (_noticeOnly) return;
     await ready;
     final release = state.latest;
@@ -1196,7 +1177,6 @@ class AppUpdateController extends Notifier<AppUpdateState> {
   /// was granted), or from the system install dialog. Some ROM installers close
   /// without reporting; after [confirmGrace] the person can try again.
   Future<void> onAppResumed({Duration confirmGrace = const Duration(seconds: 3)}) async {
-    if (_noticeOnly || !state.installable) return;
     if (_noticeOnly) return;
     await ready;
     if (!ref.mounted) return;

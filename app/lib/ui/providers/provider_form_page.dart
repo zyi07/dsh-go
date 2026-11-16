@@ -10,7 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../clipboard/field_paste.dart';
+import '../common/field_paste.dart';
 import '../../l10n/l10n.dart';
 import '../../state/providers_state.dart';
 import '../common/app_dialog.dart';

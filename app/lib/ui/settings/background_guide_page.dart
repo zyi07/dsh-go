@@ -16,8 +16,6 @@ import 'settings_widgets.dart';
 import '../common/row_marks.dart';
 import '../common/smooth_size.dart';
 
-/// 后台运行: how to keep conversations running on Android; on HarmonyOS, where
-/// nothing does, what happens instead.
 /// 后台运行: how to keep conversations running on Android; on HarmonyOS and iOS,
 /// where nothing does, what happens instead.
 class BackgroundGuidePage extends ConsumerWidget {
@@ -25,7 +23,6 @@ class BackgroundGuidePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) =>
-      ref.watch(operatingSystemProvider) == 'ohos' ? const _SuspendedPage() : const _KeepRunningGuide();
       ref.watch(androidSystemFeaturesProvider) ? const _KeepRunningGuide() : const _SuspendedPage();
 }
 

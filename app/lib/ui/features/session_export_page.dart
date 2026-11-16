@@ -93,8 +93,6 @@ class _SessionExportPageState extends ConsumerState<SessionExportPage> {
               ),
               ListPageRow(
                 icon: AppIcons.download,
-                title: harmony ? l10n.harmonySaveToFile : l10n.featuresExportSaveDownloads,
-                subtitle: harmony ? l10n.harmonySaveChooseLocation : l10n.featuresExportDownloadsHint,
                 title: harmony
                     ? l10n.harmonySaveToFile
                     : wordsForIos

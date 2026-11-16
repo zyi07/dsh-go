@@ -12,7 +12,6 @@ import 'package:webview_flutter_android/webview_flutter_android.dart';
 /// picker's `file://docs/…` and `file://media/…`), without copying file contents
 /// into Dart or granting the page access to app-private filesystem paths.
 class WebFileChooser {
-  WebFileChooser({MethodChannel? channel, this._canChoose, bool? ohos})
   WebFileChooser({MethodChannel? channel, bool? ohos, this._canChoose})
     : _channel = channel ?? const MethodChannel('dsh/web-files'),
       _ohos = ohos ?? Platform.operatingSystem == 'ohos';
@@ -20,7 +19,6 @@ class WebFileChooser {
   final MethodChannel _channel;
   final bool _ohos;
   final bool Function()? _canChoose;
-  final bool _ohos;
   int _generation = 0;
   bool _disposed = false;
   bool _busy = false;

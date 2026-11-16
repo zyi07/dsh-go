@@ -377,7 +377,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
       harmony: () => ref.read(operatingSystemProvider) == 'ohos',
       cloud: (mode) => ref.read(voiceCloudProvider)(mode),
       cloudLikely: () => ref.read(voiceCloudLikelyProvider)(),
-      harmony: () => ref.read(operatingSystemProvider) == 'ohos',
       signedIn: () => ref.read(accountProvider).signedIn,
       liveWords: (onWords) async {
         final pcm = ref.read(streamingPcmCaptureProvider);

@@ -156,37 +156,6 @@ class _VoiceSettingsPageState extends ConsumerState<VoiceSettingsPage> {
           title: l10n.voiceModeSection,
           footer: harmonyLocal ? Text(l10n.harmonyVoiceLocalLine, key: const ValueKey('voice-local-line')) : null,
           children: [
-            for (final mode in VoiceMode.values)
-              if (!harmonyLocal || mode != VoiceMode.engine)
-                Semantics(
-                  checked: selected == mode,
-                  inMutuallyExclusiveGroup: true,
-                  child: SettingsTile(
-                    key: ValueKey('voice-mode-${mode.name}'),
-                    title: voiceModeLabel(l10n, mode),
-                    subtitle: switch (mode) {
-                      VoiceMode.auto => harmonyLocal ? l10n.harmonyVoiceAutoHint : l10n.voiceModeAutoHint,
-                      VoiceMode.deepseek => l10n.voiceModeDeepseekHint,
-                      VoiceMode.system =>
-                        !ohos
-                            ? l10n.voiceModeSystemHint
-                            : chineseOnly
-                            ? l10n.harmonyVoiceSystemHintChinese
-                            : l10n.harmonyVoiceSystemHint,
-                      VoiceMode.engine => l10n.voiceModeEngineHint,
-                      VoiceMode.cloud => l10n.voiceModeCloudHint,
-                    },
-                    trailing: SizedBox.square(
-                      dimension: 32,
-                      child: Icon(selected == mode ? AppIcons.radioOn : AppIcons.radioOff, size: 24),
-                    ),
-                    onTap: () => unawaited(ref.read(voiceSettingsProvider.notifier).setMode(mode)),
-                  ),
-                ),
-          ],
-        ),
-        if (selected == VoiceMode.cloud) const _CloudAsrForm(),
-        if (!harmonyLocal)
             if (wordsForIos)
               SettingsTile(title: voiceModeLabel(l10n, VoiceMode.system), subtitle: l10n.iosVoiceSystemHint),
             if (!wordsForIos)
@@ -226,11 +195,6 @@ class _VoiceSettingsPageState extends ConsumerState<VoiceSettingsPage> {
             footer: Text(l10n.voiceModelFooter),
             children: const [VoiceModelCard()],
           ),
-        SettingsSection(
-          title: l10n.speechLiveSection,
-          footer: Text(l10n.speechLiveFooter),
-          children: const [StreamingAsrModelCard()],
-        ),
         if (!wordsForIos)
           SettingsSection(
             title: l10n.speechLiveSection,

@@ -145,7 +145,6 @@ class NativePluginSection extends ConsumerWidget {
                     title: l10n.plugslotsVoiceSwitch,
                     subtitle: cannot ? l10n.harmonyPluginVoiceUnavailable : null,
                     onTap: cannot ? null : () => set(!on),
-                    trailing: Switch(value: on && !cannot, onChanged: cannot ? null : set),
                     trailing: Switch.adaptive(value: on && !cannot, onChanged: cannot ? null : set),
                   ),
                 );

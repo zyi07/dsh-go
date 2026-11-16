@@ -87,7 +87,7 @@ String hostLabel(HostKind kind, String? name) => switch (kind) {
   HostKind.local => appL10n.commonThisPhone,
   HostKind.ssh => '${_short(name ?? appL10n.stateSshHost)} · SSH',
   HostKind.relay => appL10n.stateHostRemoteLabel(_short(name ?? appL10n.commonRemoteHost)),
-  HostKind.direct => appL10n.stateHostDirectLabel(_short(name ?? appL10n.stateDirectHost)),
+  HostKind.direct => _short(name ?? appL10n.commonRemoteHost),
 };
 
 String _short(String name) {

@@ -15530,6 +15530,54 @@ abstract class L10n {
   /// **'没能传到电脑'**
   String get fileUploadFailed;
 
+  /// No description provided for @harmonyUnknownResults.
+  ///
+  /// In zh, this message translates to:
+  /// **'有工具调用没等到结果，可能已经执行，也可能没有。处理之前，这个对话不能再调用工具。'**
+  String get harmonyUnknownResults;
+
+  /// No description provided for @harmonyUnknownResultsReview.
+  ///
+  /// In zh, this message translates to:
+  /// **'处理'**
+  String get harmonyUnknownResultsReview;
+
+  /// No description provided for @harmonyUnknownResultsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'这些工具调用的结果未知'**
+  String get harmonyUnknownResultsTitle;
+
+  /// No description provided for @harmonyUnknownResultsBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'{tools}\n\n应用在等结果时中断了，它们可能已经执行，也可能没有。可以先看看实际情况，比如文件改了没有。\n\n继续之后，这些调用不会重新运行，记录也不会改成成功。'**
+  String harmonyUnknownResultsBody(String tools);
+
+  /// No description provided for @harmonyUnknownResultsContinue.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续这个对话'**
+  String get harmonyUnknownResultsContinue;
+
+  /// No description provided for @harmonyUnknownResultsChanged.
+  ///
+  /// In zh, this message translates to:
+  /// **'情况变了，请再看一遍。'**
+  String get harmonyUnknownResultsChanged;
+
+  /// No description provided for @harmonyUnknownResultsFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有确认成功，请再试一次。'**
+  String get harmonyUnknownResultsFailed;
+
+  /// No description provided for @harmonyCallsNotRecorded.
+  ///
+  /// In zh, this message translates to:
+  /// **'本机引擎记不下工具调用的状态，工具调用已暂停。重启引擎后再试。'**
+  String get harmonyCallsNotRecorded;
+
   /// No description provided for @harmonyAccessSubtitle.
   ///
   /// In zh, this message translates to:
@@ -15635,7 +15683,7 @@ abstract class L10n {
   /// No description provided for @harmonyPageUnavailable.
   ///
   /// In zh, this message translates to:
-  /// **'鸿蒙不支持这项功能'**
+  /// **'这个版本没有这个页面'**
   String get harmonyPageUnavailable;
 
   /// No description provided for @harmonyNotificationSettingsFailed.
@@ -15647,7 +15695,7 @@ abstract class L10n {
   /// No description provided for @harmonySearchUnavailable.
   ///
   /// In zh, this message translates to:
-  /// **'鸿蒙版没有这项功能'**
+  /// **'这个版本没有这项功能'**
   String get harmonySearchUnavailable;
 
   /// No description provided for @harmonyCredentialsSection.
@@ -15959,7 +16007,7 @@ abstract class L10n {
   /// No description provided for @harmonyVoiceLocalLine.
   ///
   /// In zh, this message translates to:
-  /// **'鸿蒙本机用系统识别，没有语音模型'**
+  /// **'鸿蒙本机没有语音模型'**
   String get harmonyVoiceLocalLine;
 
   /// No description provided for @harmonyPasswordStorageHelp.
@@ -15995,7 +16043,7 @@ abstract class L10n {
   /// No description provided for @harmonyVoiceAutoHint.
   ///
   /// In zh, this message translates to:
-  /// **'用系统的语音识别'**
+  /// **'有 DeepSeek 账号或 API Key 时用 DeepSeek，否则用系统识别'**
   String get harmonyVoiceAutoHint;
 
   /// No description provided for @harmonyVoiceSystemUnavailable.
@@ -16045,6 +16093,12 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'宠物,小鲸,桌宠,鲸鱼'**
   String get harmonyKwPets;
+
+  /// No description provided for @harmonyKwVoice.
+  ///
+  /// In zh, this message translates to:
+  /// **'语音识别,麦克风,听写,说话,语音'**
+  String get harmonyKwVoice;
 
   /// No description provided for @harmonyBackgroundSubtitleLong.
   ///
@@ -18185,7 +18239,7 @@ abstract class L10n {
   /// No description provided for @linuxMemoryNote.
   ///
   /// In zh, this message translates to:
-  /// **'开着 Linux 时 App 大约多占 100 MB 以上内存；关掉开关后，要等 App 完全退出才会还给系统。'**
+  /// **'开着 Linux 时 App 大约多占 100 MB 以上内存；关掉开关会把这部分还给系统，之后要重新打开 App 才能再开启。'**
   String get linuxMemoryNote;
 
   /// No description provided for @linuxStateOn.
@@ -18263,14 +18317,74 @@ abstract class L10n {
   /// No description provided for @linuxRestartRequired.
   ///
   /// In zh, this message translates to:
-  /// **'Linux 已经停止，需要完全退出并重新打开 App 才能再开启。'**
+  /// **'Linux 已经停止，重新打开 App 后才能再开启。'**
   String get linuxRestartRequired;
+
+  /// No description provided for @linuxReopenApp.
+  ///
+  /// In zh, this message translates to:
+  /// **'重新打开 App'**
+  String get linuxReopenApp;
+
+  /// No description provided for @linuxReopenFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'没能自动重新打开，请手动退出 App 再打开。'**
+  String get linuxReopenFailed;
 
   /// No description provided for @linuxErrorWithCode.
   ///
   /// In zh, this message translates to:
   /// **'没能开启：{code}'**
   String linuxErrorWithCode(String code);
+
+  /// No description provided for @linuxReinstall.
+  ///
+  /// In zh, this message translates to:
+  /// **'重新安装 Linux'**
+  String get linuxReinstall;
+
+  /// No description provided for @linuxReinstallHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除 Linux 里的全部内容，再开启时全新安装'**
+  String get linuxReinstallHint;
+
+  /// No description provided for @linuxReinstallAfterRestart.
+  ///
+  /// In zh, this message translates to:
+  /// **'这次运行已经启动过 Linux：完全退出并重新打开 App 后才能重新安装'**
+  String get linuxReinstallAfterRestart;
+
+  /// No description provided for @linuxReinstallTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'重新安装 Linux？'**
+  String get linuxReinstallTitle;
+
+  /// No description provided for @linuxReinstallBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'会删除 Linux 里的全部内容：装过的软件和 Python 包、只存在 Linux 里的文件，以及在 Linux 里登录过的账号（比如 gh）。对话工作区里的文件不受影响。\n\n开关保持关闭；之后打开会重新下载并安装。'**
+  String get linuxReinstallBody;
+
+  /// No description provided for @linuxRetainedRefused.
+  ///
+  /// In zh, this message translates to:
+  /// **'原来的 Linux 数据没法继续用了（常见于 App 更新之后），App 不会自动覆盖它。点「重新安装 Linux」删除后再开启，即可全新安装。（{code}）'**
+  String linuxRetainedRefused(String code);
+
+  /// No description provided for @linuxReinstallRestart.
+  ///
+  /// In zh, this message translates to:
+  /// **'这次运行已经启动过 Linux，数据可能仍被占用。完全退出并重新打开 App 后，再点「重新安装 Linux」。'**
+  String get linuxReinstallRestart;
+
+  /// No description provided for @linuxReinstallFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'没能重新安装：{code}'**
+  String linuxReinstallFailed(String code);
 
   /// No description provided for @linuxProxyTitle.
   ///
@@ -18349,6 +18463,12 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'请填 http:// 或 https:// 开头的地址，例如 http://127.0.0.1:7890'**
   String get linuxProxyUrlInvalid;
+
+  /// No description provided for @searchKwLinux.
+  ///
+  /// In zh, this message translates to:
+  /// **'Linux,终端,命令行,虚拟机,gh,GitHub CLI,python,pip,代理'**
+  String get searchKwLinux;
 
   /// No description provided for @liveThinking.
   ///

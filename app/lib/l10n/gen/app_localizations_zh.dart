@@ -8414,6 +8414,32 @@ class L10nZh extends L10n {
   String get fileUploadFailed => '没能传到电脑';
 
   @override
+  String get harmonyUnknownResults => '有工具调用没等到结果，可能已经执行，也可能没有。处理之前，这个对话不能再调用工具。';
+
+  @override
+  String get harmonyUnknownResultsReview => '处理';
+
+  @override
+  String get harmonyUnknownResultsTitle => '这些工具调用的结果未知';
+
+  @override
+  String harmonyUnknownResultsBody(String tools) {
+    return '$tools\n\n应用在等结果时中断了，它们可能已经执行，也可能没有。可以先看看实际情况，比如文件改了没有。\n\n继续之后，这些调用不会重新运行，记录也不会改成成功。';
+  }
+
+  @override
+  String get harmonyUnknownResultsContinue => '继续这个对话';
+
+  @override
+  String get harmonyUnknownResultsChanged => '情况变了，请再看一遍。';
+
+  @override
+  String get harmonyUnknownResultsFailed => '没有确认成功，请再试一次。';
+
+  @override
+  String get harmonyCallsNotRecorded => '本机引擎记不下工具调用的状态，工具调用已暂停。重启引擎后再试。';
+
+  @override
   String get harmonyAccessSubtitle => '各项功能用到的系统权限';
 
   @override
@@ -8465,13 +8491,13 @@ class L10nZh extends L10n {
   String get harmonySchedulesLocal => '本机的任务只在应用运行时触发：应用被系统挂起时，到点不会运行';
 
   @override
-  String get harmonyPageUnavailable => '鸿蒙不支持这项功能';
+  String get harmonyPageUnavailable => '这个版本没有这个页面';
 
   @override
   String get harmonyNotificationSettingsFailed => '没能打开系统设置。到「设置 → 通知和状态栏 → DSH Go」里开启';
 
   @override
-  String get harmonySearchUnavailable => '鸿蒙版没有这项功能';
+  String get harmonySearchUnavailable => '这个版本没有这项功能';
 
   @override
   String get harmonyCredentialsSection => '密钥';
@@ -8628,7 +8654,7 @@ class L10nZh extends L10n {
   String get harmonyPluginRefusedHint => '可以开关随包插件，或连接电脑管理插件';
 
   @override
-  String get harmonyVoiceLocalLine => '鸿蒙本机用系统识别，没有语音模型';
+  String get harmonyVoiceLocalLine => '鸿蒙本机没有语音模型';
 
   @override
   String get harmonyPasswordStorageHelp => '只保存在这台手机上，由系统密钥库加密';
@@ -8646,7 +8672,7 @@ class L10nZh extends L10n {
   String get harmonyVoiceSystemHintChinese => '使用系统的语音识别，只认中文';
 
   @override
-  String get harmonyVoiceAutoHint => '用系统的语音识别';
+  String get harmonyVoiceAutoHint => '有 DeepSeek 账号或 API Key 时用 DeepSeek，否则用系统识别';
 
   @override
   String get harmonyVoiceSystemUnavailable => '系统语音识别不可用';
@@ -8671,6 +8697,9 @@ class L10nZh extends L10n {
 
   @override
   String get harmonyKwPets => '宠物,小鲸,桌宠,鲸鱼';
+
+  @override
+  String get harmonyKwVoice => '语音识别,麦克风,听写,说话,语音';
 
   @override
   String get harmonyBackgroundSubtitleLong => '应用离开屏幕后，正在跑的对话会尽量继续';
@@ -9798,7 +9827,7 @@ class L10nZh extends L10n {
   String get linuxFirstHint => '第一次开启会下载约 3.5 MB 的基础系统并安装，大约一两分钟；之后再开几秒就好。';
 
   @override
-  String get linuxMemoryNote => '开着 Linux 时 App 大约多占 100 MB 以上内存；关掉开关后，要等 App 完全退出才会还给系统。';
+  String get linuxMemoryNote => '开着 Linux 时 App 大约多占 100 MB 以上内存；关掉开关会把这部分还给系统，之后要重新打开 App 才能再开启。';
 
   @override
   String get linuxStateOn => '已开启';
@@ -9837,11 +9866,46 @@ class L10nZh extends L10n {
   String get linuxRequestFailed => '没能和引擎通信，请稍后重试。';
 
   @override
-  String get linuxRestartRequired => 'Linux 已经停止，需要完全退出并重新打开 App 才能再开启。';
+  String get linuxRestartRequired => 'Linux 已经停止，重新打开 App 后才能再开启。';
+
+  @override
+  String get linuxReopenApp => '重新打开 App';
+
+  @override
+  String get linuxReopenFailed => '没能自动重新打开，请手动退出 App 再打开。';
 
   @override
   String linuxErrorWithCode(String code) {
     return '没能开启：$code';
+  }
+
+  @override
+  String get linuxReinstall => '重新安装 Linux';
+
+  @override
+  String get linuxReinstallHint => '删除 Linux 里的全部内容，再开启时全新安装';
+
+  @override
+  String get linuxReinstallAfterRestart => '这次运行已经启动过 Linux：完全退出并重新打开 App 后才能重新安装';
+
+  @override
+  String get linuxReinstallTitle => '重新安装 Linux？';
+
+  @override
+  String get linuxReinstallBody =>
+      '会删除 Linux 里的全部内容：装过的软件和 Python 包、只存在 Linux 里的文件，以及在 Linux 里登录过的账号（比如 gh）。对话工作区里的文件不受影响。\n\n开关保持关闭；之后打开会重新下载并安装。';
+
+  @override
+  String linuxRetainedRefused(String code) {
+    return '原来的 Linux 数据没法继续用了（常见于 App 更新之后），App 不会自动覆盖它。点「重新安装 Linux」删除后再开启，即可全新安装。（$code）';
+  }
+
+  @override
+  String get linuxReinstallRestart => '这次运行已经启动过 Linux，数据可能仍被占用。完全退出并重新打开 App 后，再点「重新安装 Linux」。';
+
+  @override
+  String linuxReinstallFailed(String code) {
+    return '没能重新安装：$code';
   }
 
   @override
@@ -9882,6 +9946,9 @@ class L10nZh extends L10n {
 
   @override
   String get linuxProxyUrlInvalid => '请填 http:// 或 https:// 开头的地址，例如 http://127.0.0.1:7890';
+
+  @override
+  String get searchKwLinux => 'Linux,终端,命令行,虚拟机,gh,GitHub CLI,python,pip,代理';
 
   @override
   String get liveThinking => '正在思考';

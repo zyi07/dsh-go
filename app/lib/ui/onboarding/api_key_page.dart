@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../clipboard/field_paste.dart';
+import '../common/field_paste.dart';
 import '../../l10n/l10n.dart';
 import '../../state/app_info.dart';
 import '../../state/onboarding_state.dart';

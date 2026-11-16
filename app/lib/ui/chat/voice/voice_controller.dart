@@ -145,9 +145,6 @@ class VoiceInputController extends ChangeNotifier with WidgetsBindingObserver {
   bool _liveShown = false;
   VoiceCloud? _cloudRun;
 
-  /// HarmonyOS: the recogniser is the system's own, so there is none to choose,
-  /// and its engine has no model to download.
-  final bool Function() _harmony;
   final bool _observing;
   void Function(VoiceMessage message)? onMessage;
 

@@ -278,7 +278,7 @@ final hostNameProvider = Provider.autoDispose.family<String?, HostRef>((ref, hos
     HostKind.local => appL10n.commonThisPhone,
     HostKind.ssh => ref.watch(hostsProvider.select((s) => s.sshById(host.id)?.name)),
     HostKind.relay => ref.watch(relayAccountProvider.select((a) => a.value?.hostById(host.id)?.name)) ?? host.name,
-    HostKind.direct => ref.watch(hostsProvider.select((s) => s.directById(host.id)?.name)) ?? host.name,
+    HostKind.direct => host.name,
   };
 });
 

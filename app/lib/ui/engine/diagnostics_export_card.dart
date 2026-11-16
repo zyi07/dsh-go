@@ -23,7 +23,6 @@ String diagnosticsStepText(DiagnosticsStep step, {required bool harmony}) => swi
   DiagnosticsStep.collecting => appL10n.phoneDiagnosticsCollecting,
   DiagnosticsStep.packing => appL10n.phoneDiagnosticsPacking,
   DiagnosticsStep.sharing => appL10n.phoneDiagnosticsSharing,
-  DiagnosticsStep.saving => harmony ? appL10n.harmonySaving : appL10n.phoneDiagnosticsSaving,
   DiagnosticsStep.saving =>
     harmony
         ? appL10n.harmonySaving
@@ -141,8 +140,6 @@ class _DiagnosticsExportCardState extends ConsumerState<DiagnosticsExportCard> {
         ),
         ListPageRow(
           icon: AppIcons.download,
-          title: _harmony ? l10n.harmonySaveToFile : l10n.phoneDiagnosticsSave,
-          subtitle: _subtitle(_Action.save, _harmony ? l10n.harmonySaveChooseLocation : l10n.phoneDiagnosticsSaveHint),
           title: _harmony
               ? l10n.harmonySaveToFile
               : wordsForIos

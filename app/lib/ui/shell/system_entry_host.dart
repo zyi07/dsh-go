@@ -100,19 +100,15 @@ class _SystemEntryHostState extends ConsumerState<SystemEntryHost> {
     }
     // Android's native side keeps only a few unread shares, dropping the oldest
     // as the next arrives, with no way to say one is still wanted: read it now.
-    if (ref.read(operatingSystemProvider) != 'ohos') {
+    // HarmonyOS's and iOS's inboxes hold a batch until it is used. Read after
+    // the answer: shares arriving behind an unanswered 「放弃修改？」 wait in the
+    // cache, not in memory.
     final os = ref.read(operatingSystemProvider);
     if (os != 'ohos' && os != 'ios') {
       final request = await ComposeRequest.fromShare(share, heldBytes: _heldDraftBytes);
       if (mounted) await _compose(request);
       return;
     }
-    // HarmonyOS's inbox holds a batch until it is used (ShareConsumption). Read
-    // after the answer: shares arriving behind an unanswered 「放弃修改？」 wait
-    // in the cache, not in memory.
-    // HarmonyOS's and iOS's inboxes hold a batch until it is used. Read after
-    // the answer: shares arriving behind an unanswered 「放弃修改？」 wait in the
-    // cache, not in memory.
     await _showChat();
     if (!mounted) return ComposeRequest.discardShare(share);
     final request = await ComposeRequest.fromShare(share, heldBytes: _heldDraftBytes);
