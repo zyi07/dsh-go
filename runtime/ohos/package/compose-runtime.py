@@ -382,6 +382,7 @@ def deletion_variants(repo: Path, prefix: Path, output: Path):
          'runtime/bridge/dsh-go-bridge/lib/session-deletion.js', 'session-deletion.js',
          '8483c8265cfad03d9f4f1b5a483f0f4a300bb97eb0027d8d60016c9f09706837',
          'f94f045fd765b6dd99fc6f2a644c0eb144ace71123c7eea89d261ed32e910805'),
+         'c5b70e171c0da6876e0eae4e29ddacaec06ee306d7a56fed0f8533ccb2c77945'),
     ]
     patch = repo / 'runtime/ohos/package/session-deletion-ohos.diff'
     spec = importlib.util.spec_from_file_location('deletion_rtbuild', repo / 'runtime/lib/rtbuild.py')
@@ -458,6 +459,7 @@ def assemble(args):
                               packages['process'], config['processRemovePackages'], config['processRemoveFiles'])
         source_runtime = repo / 'runtime/ohos'
         for directory in ('net', 'publication', 'capabilities', 'lifecycle', 'phone', 'process', 'process/files', 'plugins', 'linux'):
+        for directory in ('net', 'publication', 'capabilities', 'lifecycle', 'phone', 'process', 'process/files', 'plugins', 'linux', 'image'):
             for source in sorted((source_runtime / directory).glob('*.mjs')):
                 if source.name.startswith(('build-', 'link-')):
                     continue

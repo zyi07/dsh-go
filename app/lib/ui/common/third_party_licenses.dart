@@ -18,11 +18,14 @@ void registerThirdPartyLicenses({String? os}) {
   );
   if (harmony) return;
   LicenseRegistry.addLicense(() async* {
-    // Preserve the complete release-tag bundle verbatim, including all upstream
-    // third-party sections. The embedded top-level notice also supplies PATENTS.
-    // Provenance and the binary/asset hashes are in THIRD_PARTY_NOTICES.md.
-    final bundledNotices = await rootBundle.loadString('assets/licenses/webrtc-150.7871.04.md');
-    yield LicenseEntryWithLineBreaks(<String>['WebRTC'], '$_webrtcBsd\n$bundledNotices');
+    // The HAP carries no WebRTC (flutter_webrtc is Android's).
+    if (!harmony) {
+      // Preserve the complete release-tag bundle verbatim, including all upstream
+      // third-party sections. The embedded top-level notice also supplies PATENTS.
+      // Provenance and the binary/asset hashes are in THIRD_PARTY_NOTICES.md.
+      final bundledNotices = await rootBundle.loadString('assets/licenses/webrtc-150.7871.04.md');
+      yield LicenseEntryWithLineBreaks(<String>['WebRTC'], '$_webrtcBsd\n$bundledNotices');
+    }
     final unicodeNotice = await rootBundle.loadString('assets/licenses/unicode-15.0.txt');
     yield LicenseEntryWithLineBreaks(<String>['Unicode Character Database (15.0.0)'], unicodeNotice);
     // The libraries a card's scripts find on the tavern's canvas page, as 酒馆助手's pages
@@ -33,10 +36,13 @@ void registerThirdPartyLicenses({String? os}) {
     yield LicenseEntryWithLineBreaks(<String>[
       'Lodash',
     ], await rootBundle.loadString('assets/licenses/lodash-4.17.21-LICENSE.txt'));
-    // The streaming recognizer's model, downloaded on demand (語音 › 实时识别).
-    yield LicenseEntryWithLineBreaks(<String>[
-      'Streaming Zipformer zh-en (sherpa-onnx)',
-    ], await rootBundle.loadString('assets/licenses/streaming-asr-model-APACHE-2.0.txt'));
+    // The streaming recognizer's model, downloaded on demand (語音 › 实时识别). HarmonyOS
+    // has no streaming recognizer (sherpa-onnx ships Android's libraries only).
+    if (!harmony) {
+      yield LicenseEntryWithLineBreaks(<String>[
+        'Streaming Zipformer zh-en (sherpa-onnx)',
+      ], await rootBundle.loadString('assets/licenses/streaming-asr-model-APACHE-2.0.txt'));
+    }
   });
 }
 

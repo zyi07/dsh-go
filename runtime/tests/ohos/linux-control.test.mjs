@@ -1,6 +1,7 @@
 import test, { after } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -25,6 +26,7 @@ after(() => rm(authDirectory, { recursive: true, force: true }));
 
 async function fixture(t, options = {}) {
   const f = await ownerFixture(t, options); let loads = 0, manifests = 0, owners = 0;
+  const f = await ownerFixture(t, options); let loads = 0, manifests = 0, owners = 0, discards = 0;
   const control = new LinuxControl({ hostPaths: { directory: f.data, nativeLibraryDirectory: '/trusted/native' },
     assetsDirectory: options.assetsDirectory ?? f.assets }, { async loadModule() {
     loads++; await options.moduleBarrier;
@@ -33,6 +35,9 @@ async function fixture(t, options = {}) {
     }, createLinuxInstallationOwner(input) {
       owners++; assert.equal(input.directory, f.data); assert.equal(input.nativeLibraryDirectory, '/trusted/native');
       return f.createOwner(input);
+    }, async discardLinuxInstallation(input) {
+      discards++; assert.deepEqual(input, { directory: f.data }); await options.discardBarrier;
+      return installation.discardLinuxInstallation(input, { lockExclusive: f.internals.lockExclusive });
     } };
   } });
   const command = (action, fields = {}) => { const state = control.status(); return control.command({ v: 1,
@@ -41,6 +46,7 @@ async function fixture(t, options = {}) {
   const run = (fields = {}) => command('runPrivateGuest', { requestId: control.status().nextRequestId,
     argv: ['python3', '-c', 'print(1)'], cwd: '/workspace', ...fields });
   return { ...f, control, command, enable, run, calls: () => ({ loads, manifests, owners }) };
+  return { ...f, control, command, enable, run, calls: () => ({ loads, manifests, owners }), discards: () => discards };
 }
 async function httpFixture(t, options) {
   const f = await fixture(t, options), ctx = new Context(), routes = new Map();
@@ -126,6 +132,22 @@ test('off waits true release and on reuses the same opened owner/session', async
   assert.equal(f.control.status().guestOpened, true); assert.equal(f.control.status().job.outcome.cancelled, true);
   assert.equal(f.command('setEnabled', { enabled: true }).admission, true);
   assert.deepEqual(f.calls(), { loads: 1, manifests: 1, owners: 1 }); assert.deepEqual(f.counts(), { created: 1, stopped: 0, joined: 0 });
+test('off waits true job release and final join; on requires App restart', async t => {
+  const f = await fixture(t); await f.enable(); f.run(); const start = await f.peer.admitted();
+  const off = f.command('setEnabled', { enabled: false }); assert.equal(off.admission, false);
+  assert.equal(off.state, 'stopping'); assert.equal(off.job.outcome, null);
+  assert.equal(off.restartRequired, true); assert.equal(off.shutdownComplete, false);
+  await until(() => f.peer.commands.some(command => command.op === 'cancel'));
+  assert.equal(f.control.status().job.cancelRequested, true); assert.equal(f.control.status().job.outcome, null);
+  assert.throws(() => f.command('setEnabled', { enabled: false }), { code: 'ERR_OHOS_LINUX_CLOSED' });
+  assert.throws(() => f.command('setEnabled', { enabled: true }), { code: 'ERR_OHOS_LINUX_CLOSED' });
+  assert.equal(f.peer.commands.filter(command => command.op === 'cancel').length, 1);
+  assert.deepEqual(f.counts(), { created: 1, stopped: 0, joined: 0 });
+  await f.peer.complete(start.job, { cancelled: true }); await until(() => f.control.status().state === 'stopped');
+  assert.equal(f.control.status().guestOpened, false); assert.equal(f.control.status().job.outcome.cancelled, true);
+  assert.equal(f.control.status().shutdownComplete, true);
+  assert.throws(() => f.command('setEnabled', { enabled: true }), { code: 'ERR_OHOS_LINUX_CLOSED' });
+  assert.deepEqual(f.calls(), { loads: 1, manifests: 1, owners: 1 }); assert.equal(f.counts().created, 1); assert.equal(f.counts().joined, 1);
 });
 
 test('actual socket loss overrides stale active owner state and preserves UNKNOWN through join', async t => {
@@ -199,6 +221,17 @@ test('native memory remains process-owned after ordinary off/on and successful f
   assert.equal(closed.shutdownComplete, true); assert.equal(closed.retirement.native.joined, true);
   assert.equal(f.counts().created, 1); assert.equal(f.counts().joined, 1);
   for (const state of [opened, disabled, reopened, closed]) assert.equal(state.nativeMemoryRelease, 'process-exit');
+test('native owner remains process-owned after ordinary off now confirms final join', async t => {
+  const f = await fixture(t); await f.enable(); const opened = f.control.status();
+  f.command('setEnabled', { enabled: false }); await until(() => f.control.status().state === 'stopped');
+  const disabled = f.control.status();
+  assert.equal(disabled.restartRequired, true); assert.equal(disabled.shutdownComplete, true);
+  assert.throws(() => f.command('setEnabled', { enabled: true }), { code: 'ERR_OHOS_LINUX_CLOSED' });
+  assert.equal(f.counts().created, 1); assert.equal(f.counts().joined, 1);
+  const closed = await f.control.shutdown();
+  assert.equal(closed.shutdownComplete, true); assert.equal(closed.retirement.native.joined, true);
+  assert.equal(f.counts().created, 1); assert.equal(f.counts().joined, 1);
+  for (const state of [opened, disabled, closed]) assert.equal(state.nativeMemoryRelease, 'process-exit');
 });
 
 test('native memory is not inferred from an owner whose download failed before VM creation', async t => {
@@ -227,4 +260,95 @@ test('native memory ownership is not cleared by an unconfirmed native retirement
   await f.enable(); const closed = await f.control.shutdown();
   assert.equal(closed.state, 'unknown'); assert.equal(closed.shutdownComplete, false);
   assert.equal(closed.retirement.native.joined, false); assert.equal(closed.nativeMemoryRelease, 'process-exit');
+});
+
+// 重新安装 Linux. A retained instance of this fixture's own asset generation,
+// installed and cleanly closed by an independent owner on the same root.
+async function retained(t, f, mutate) {
+  const seed = await ownerFixture(t), owner = seed.createOwner({ directory: f.data }), { active } = await owner.install();
+  assert.equal((await owner.dispose()).cleanCheckpoint, true);
+  const path = join(active.directory, 'instance.json'), value = JSON.parse(await readFile(path, 'utf8'));
+  mutate?.(value); await writeFile(path, JSON.stringify(value) + '\n');
+  return active;
+}
+
+test('discardRetained after a refused resume deletes the data, clears the error and the switch installs afresh in this process', async t => {
+  const f = await fixture(t);
+  await retained(t, f, value => { value.assetIdentity = '0'.repeat(64); });
+  f.command('setEnabled', { enabled: true }); await until(() => f.control.status().state === 'failed');
+  const failed = f.control.status();
+  assert.equal(failed.lastErrorCode, 'ERR_OHOS_LINUX_ASSET_GENERATION'); assert.equal(failed.enabled, true);
+  assert.equal(failed.restartRequired, true); assert.equal(failed.nativeMemoryRelease, null); assert.equal(f.counts().created, 0);
+  // The switch is still on, but the install has settled as failed with no VM.
+  const done = await f.command('discardRetained');
+  assert.equal(done.state, 'disabled'); assert.equal(done.enabled, false); assert.equal(done.lastErrorCode, null);
+  assert.equal(done.restartRequired, false); assert.equal(done.ownerRetained, false); assert.equal(done.retirement, null);
+  assert.deepEqual(await readdir(f.data), ['.lock']); assert.equal(f.discards(), 1);
+  assert.equal(f.counts().created, 0, 'discarding needs no VM');
+  await f.enable(); const fresh = f.control.status();
+  assert.equal(fresh.bootMode, 'install'); assert.notEqual(fresh.attemptId, failed.attemptId);
+  assert.deepEqual(f.calls(), { loads: 3, manifests: 2, owners: 2 }); assert.equal(f.counts().created, 1);
+});
+
+test('discardRetained is refused while on, installing, running or holding a VM, and allowed when off', async t => {
+  const barrier = Promise.withResolvers(), f = await fixture(t, { manifestBarrier: barrier.promise });
+  t.after(() => barrier.resolve());
+  f.command('setEnabled', { enabled: true }); await tick();
+  await assert.rejects(f.command('discardRetained'), { code: 'ERR_OHOS_LINUX_BUSY' });
+  barrier.resolve(); await until(() => f.control.status().admission);
+  await assert.rejects(f.command('discardRetained'), { code: 'ERR_OHOS_LINUX_BUSY' });
+  f.run(); const start = await f.peer.admitted();
+  await assert.rejects(f.command('discardRetained'), { code: 'ERR_OHOS_LINUX_BUSY' });
+  await f.peer.complete(start.job); await until(() => f.control.status().job.state === 'settled');
+  f.command('setEnabled', { enabled: false }); await until(() => f.control.status().state === 'stopped');
+  // Ordinary off ended this process's one VM lifetime. Retained data is not deleted.
+  await assert.rejects(f.command('discardRetained'), { code: 'ERR_OHOS_LINUX_CLOSED' });
+  assert.equal(f.discards(), 0); assert.equal(f.control.status().lastErrorCode, null);
+  assert.equal((await readdir(f.data)).length, 2);
+  await f.control.shutdown();
+  await assert.rejects(f.command('discardRetained'), { code: 'ERR_OHOS_LINUX_CLOSED' });
+  const g = await fixture(t), off = await g.command('discardRetained');
+  assert.equal(off.state, 'disabled'); assert.equal(g.discards(), 1); assert.deepEqual(await readdir(g.data), ['.lock']);
+});
+
+test('a failed install whose owner created a VM cannot be discarded until the App restarts', async t => {
+  const f = await fixture(t);
+  f.internals.createSession = () => {
+    const cause = Object.assign(new Error('explicit Socket construction boundary failure'), { code: 'EIO' });
+    cause.linuxJoin = Promise.resolve({ joined: true, retirementError: false, apiResult: -4 }); throw cause;
+  };
+  f.command('setEnabled', { enabled: true }); await until(() => f.control.status().state === 'failed');
+  assert.equal(f.control.status().nativeMemoryRelease, 'process-exit');
+  await assert.rejects(f.command('discardRetained'), { code: 'ERR_OHOS_LINUX_RESTART_REQUIRED' });
+  assert.equal(f.discards(), 0); assert.equal(f.control.status().lastErrorCode, 'EIO');
+});
+
+test('while a discard runs the switch cannot turn on; shutdown waits for it; a failed discard reports its code', async t => {
+  const barrier = Promise.withResolvers(), f = await fixture(t, { discardBarrier: barrier.promise });
+  t.after(() => barrier.resolve());
+  const pending = f.command('discardRetained'); await until(() => f.discards() === 1);
+  assert.throws(() => f.command('setEnabled', { enabled: true }), { code: 'ERR_OHOS_LINUX_BUSY' });
+  await assert.rejects(f.command('discardRetained'), { code: 'ERR_OHOS_LINUX_BUSY' });
+  assert.equal(f.command('setEnabled', { enabled: false }).state, 'disabled');
+  let stopped = false; const stopping = f.control.shutdown().then(() => { stopped = true; });
+  await tick(); assert.equal(stopped, false);
+  barrier.resolve(); assert.equal((await pending).lastErrorCode, null); await stopping;
+  assert.equal(f.control.status().shutdownComplete, true);
+  // An actual filesystem failure, not a refusal: its code becomes lastErrorCode.
+  const g = await fixture(t); await writeFile(g.data, 'not a directory');
+  await assert.rejects(g.command('discardRetained'), { code: 'ENOTDIR' });
+  const failed = g.control.status(); assert.equal(failed.lastErrorCode, 'ENOTDIR'); assert.equal(failed.enabled, false);
+});
+
+test('discardRetained over authenticated HTTP replies 200 when done and 409 with the code when refused', async t => {
+  const f = await httpFixture(t);
+  await retained(t, f, value => { value.state = 'booting'; });
+  const done = await f.post('discardRetained');
+  assert.equal(done.status, 200); assert.equal(JSON.parse(done.text).state, 'disabled');
+  assert.deepEqual(await readdir(f.data), ['.lock']);
+  assert.equal((await f.post('discardRetained', { force: true })).status, 400);
+  await f.enable();
+  const refused = await f.post('discardRetained');
+  assert.equal(refused.status, 409); assert.equal(JSON.parse(refused.text).error.code, 'ERR_OHOS_LINUX_BUSY');
+  assert.equal(f.discards(), 1);
 });

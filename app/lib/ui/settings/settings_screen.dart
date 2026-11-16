@@ -97,6 +97,7 @@ class SettingsScreen extends ConsumerWidget {
     final colors = DshColors.of(context);
     final notifier = ref.read(settingsProvider.notifier);
     final android = ref.watch(androidSystemFeaturesProvider);
+    final ios = ref.watch(operatingSystemProvider) == 'ios';
     final uiMode = ref.watch(uiModeProvider.select((s) => s.mode));
     final host = ref.watch(activeHostProvider);
     Widget? text(String? value, {Color? color}) =>
@@ -109,11 +110,12 @@ class SettingsScreen extends ConsumerWidget {
         : null;
     // 能力.
     final phone = android ? ref.watch(phoneProvider) : null;
+    final phone = android || ios ? ref.watch(phoneProvider) : null;
     final phoneValue = phone == null || !phone.loaded || !phone.status.ready
         ? null
         : !phone.status.enabled
         ? l10n.hubValueOff
-        : phone.status.a11y.ok
+        : (ios ? phone.status.bridgeListening : phone.status.a11y.ok)
         ? l10n.pluginsTurnedOn
         : l10n.hubValueOneStep;
     final plugins = ref.watch(installedPluginsProvider.select((s) => s.value?.length));
@@ -172,6 +174,7 @@ class SettingsScreen extends ConsumerWidget {
           title: l10n.hubGroupCapabilities,
           children: [
             if (android)
+            if (android || ios)
               SettingsTile(
                 icon: AppIcons.phoneControl,
                 tint: SettingsHues.abilities,

@@ -128,11 +128,16 @@ class ForkContract(unittest.TestCase):
         self.cli('--package-config', config, '--output', output, '--overrides', overrides)
         self.assertTrue(overrides.read_text().startswith(original))
         self.assertIn('path: "' + (output / 'webview_flutter_ohos/package').as_posix() + '"', overrides.read_text())
+        output = app / 'ohos/.vendor/forks'
+        self.cli('--package-config', config, '--output', output, '--overrides', overrides)
+        self.assertTrue(overrides.read_text().startswith(original))
+        self.assertIn('path: "ohos/.vendor/forks/webview_flutter_ohos/package"', overrides.read_text())
         self.cli('--verify-package-config', config, '--output', output, ok=False,
                  contains='pub did not select the prepared package')
         selected = output / 'webview_flutter_ohos/package'
         config.write_text(json.dumps({'packages': [{'name': 'webview_flutter_ohos',
                                                     'rootUri': (output / 'webview_flutter_ohos/package').as_uri()}]}))
+                                                    'rootUri': '../ohos/.vendor/forks/webview_flutter_ohos/package'}]}))
         self.cli('--verify-package-config', config, '--output', output)
         (selected / 'lib/webview_flutter_ohos.dart').write_text('changed')
         self.cli('--verify-package-config', config, '--output', output, ok=False,

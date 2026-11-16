@@ -2,6 +2,65 @@ diff --git a/node_modules/@deepseek-ai/dsh-fs-local/lib/index.js b/node_modules/
 --- a/node_modules/@deepseek-ai/dsh-fs-local/lib/index.js
 +++ b/node_modules/@deepseek-ai/dsh-fs-local/lib/index.js
 @@ -755,9 +755,9 @@
+@@ -590,7 +590,8 @@
+ }
+ /**
+ * Atomically replace a file through a private, synced staging file in the same directory.
+-* POSIX protects the staging directory and file with `0o700` and `0o600`. A new Windows file
++* POSIX normally protects staging with `0o700` / `0o600`; OH whole-write new files
++* retain directory creation defaults inside the private directory. A new Windows file
+ * inherits the destination directory's DACL; a replacement copies the existing target's DACL
+ * onto the empty temp before writing and preserves the target descriptor at publication.
+ * Node write errors become FsError; permission refusals use FS_PERMISSION_DENIED and other I/O uses FS_IO_ERROR.
+@@ -619,6 +620,7 @@
+ 	const stagingDir = join(directory, internals.tempDirName?.(absolutePath) ?? `.${process.pid}.${randomUUID()}.tmpdir`);
+ 	const tempPath = join(stagingDir, internals.tempName?.(absolutePath) ?? "file.tmp");
+ 	const platform = internals.platform ?? process.platform;
++	const directoryDefault = options.ohosWholeWriteDefault === true && platform === "openharmony" && mode === void 0;
+ 	const copyFileDacl = internals.copyFileDacl ?? copyFileDaclWin32;
+ 	const replaceFile = internals.replaceFile ?? replaceFileWin32;
+ 	const linkFile = internals.linkFile ?? link;
+@@ -630,11 +632,23 @@
+ 	let handle;
+ 	let stagingCreated = false;
+ 	try {
++		const parentDefaults = directoryDefault ? await lstat(directory, { bigint: true }) : void 0;
+ 		await mkdir(stagingDir, { mode: 448 });
+ 		stagingCreated = true;
+-		await chmod(stagingDir, 448);
+-		handle = await open(tempPath, "wx", 384);
+-		await handle.chmod(384);
++		if (directoryDefault) {
++			const inherited = await lstat(stagingDir, { bigint: true });
++			const sgid = Number(inherited.mode) & 0o2000;
++			if ((Number(parentDefaults.mode) & 0o2000) && (!sgid || inherited.gid !== parentDefaults.gid)) {
++				throw Object.assign(new Error("directory default group inheritance was not confirmed"), { code: "EIO" });
++			}
++			await chmod(stagingDir, 0o700 | sgid);
++			const secured = await lstat(stagingDir, { bigint: true });
++			if ((Number(secured.mode) & 0o7777) !== (0o700 | sgid) || secured.gid !== inherited.gid) {
++				throw Object.assign(new Error("private directory defaults were not preserved"), { code: "EIO" });
++			}
++		} else await chmod(stagingDir, 448);
++		handle = await open(tempPath, "wx", directoryDefault ? 0o666 : 384);
++		if (!directoryDefault) await handle.chmod(384);
+ 		if (platform === "win32" && existingDestination) await copyFileDacl(absolutePath, tempPath);
+ 		await handle.writeFile(content, {
+ 			encoding: "utf8",
+@@ -656,10 +670,10 @@
+ 				await throwGuardedCreateFailure(error, absolutePath, displayPath, inspectPublicationTarget);
+ 			}
+ 			throwIfAborted(signal, "write");
+-			handle = await (internals.openPublicationFile ?? open)(absolutePath, "wx", 384)
++			handle = await (internals.openPublicationFile ?? open)(absolutePath, "wx", directoryDefault ? 0o666 : 384)
+ 				.catch((openError) => throwGuardedCreateFailure(openError, absolutePath, displayPath, inspectPublicationTarget));
+ 			try {
+-				await handle.chmod(384);
++				if (!directoryDefault) await handle.chmod(384);
+ 				await handle.writeFile(content, { encoding: "utf8", ...signal ? { signal } : {} });
+ 				await handle.sync();
+ 				if (mode !== void 0) await handle.chmod(mode);
+@@ -755,9 +769,9 @@
  * @param signal - aborts the read (`FS_ABORTED`).
  * @returns LF-normalized content and the original format metadata to restore on write-back.
  */
@@ -14,6 +73,7 @@ diff --git a/node_modules/@deepseek-ai/dsh-fs-local/lib/index.js b/node_modules/
  	if (buffer.includes(0)) throw new FsError(`cannot edit "${displayPath}": binary file`, "FS_NOT_TEXT");
  	const raw = decodeUtf8(buffer, "edit", displayPath);
 @@ -779,10 +779,10 @@
+@@ -779,10 +793,10 @@
  * @returns the LF-normalized text, or null for a non-regular, at/above-limit, binary, non-UTF-8,
  * descriptor-size-changed, or unreadable file.
  */
@@ -27,6 +87,7 @@ diff --git a/node_modules/@deepseek-ai/dsh-fs-local/lib/index.js b/node_modules/
  		let total = 0;
  		let openedSize = 0;
 @@ -792,7 +792,8 @@
+@@ -792,7 +806,8 @@
  			throwIfAborted(signal, "read");
  			if (!info.isFile()) return null;
  			if (info.size >= maxBytes) return null;
@@ -37,6 +98,7 @@ diff --git a/node_modules/@deepseek-ai/dsh-fs-local/lib/index.js b/node_modules/
  			while (total < buffer.length) {
  				throwIfAborted(signal, "read");
 @@ -817,7 +818,10 @@
+@@ -817,7 +832,10 @@
  			return null;
  		}
  	} catch (error) {
@@ -48,6 +110,7 @@ diff --git a/node_modules/@deepseek-ai/dsh-fs-local/lib/index.js b/node_modules/
  		throw error;
  	}
 @@ -1017,6 +1021,22 @@
+@@ -1017,6 +1035,22 @@
  		}, signal));
  	}
  	async readBytes(target, signal, maxBytes) {
@@ -71,6 +134,7 @@ diff --git a/node_modules/@deepseek-ai/dsh-fs-local/lib/index.js b/node_modules/
  			displayPath: target.displayPath,
  			targetKey: target.targetKey
 @@ -1058,111 +1078,217 @@
+@@ -1058,111 +1092,220 @@
  			...entry.size !== void 0 ? { size: entry.size } : {}
  		}));
  	}
@@ -97,6 +161,8 @@ diff --git a/node_modules/@deepseek-ai/dsh-fs-local/lib/index.js b/node_modules/
 +					catch (error) {
 +						if (error.workspaceMoveEffect === 1) throw new FsError(`cannot finish creating "${target.displayPath}": ${errorMessage(error)}; file may be incomplete`, isAbortError(error) ? "FS_ABORTED" : "FS_IO_ERROR", { cause: error });
 +						if (error.workspaceMoveEffect === 0 && expected?.kind === "createIfAbsent") {
++						if (error.workspaceWholeEffect === 1) throw new FsError(`cannot finish creating "${target.displayPath}": ${errorMessage(error)}; file may be incomplete`, isAbortError(error) ? "FS_ABORTED" : "FS_IO_ERROR", { cause: error });
++						if (error.workspaceWholeEffect === 0 && expected?.kind === "createIfAbsent") {
 +							await throwGuardedCreateFailure(error, target.targetKey, target.displayPath, async () => {
 +								const found = await io.probe();
 +								if (!found) throw Object.assign(new Error("not found"), { code: "ENOENT" });
@@ -122,6 +188,10 @@ diff --git a/node_modules/@deepseek-ai/dsh-fs-local/lib/index.js b/node_modules/
 +			catch (error) {
 +				if (error.workspaceEditState === "committed") throw new FsError(`saved "${target.displayPath}", but post-save validation or resource cleanup failed: ${error.message}`, "FS_IO_ERROR", { cause: error });
 +				if (error.workspaceEditState === "partial") throw new FsError(`cannot finish creating "${target.displayPath}": file may be incomplete; resource/operation completion could not be confirmed: ${error.message}`, "FS_IO_ERROR", { cause: error });
++				if (error.workspaceEditState === "partial") {
++					const aborted = !error.workspaceEditCleanupFailed && (error.code === "ABORT_ERR" || error.code === "FS_ABORTED");
++					throw new FsError(`cannot finish creating "${target.displayPath}": file may be incomplete; ${aborted ? "write aborted" : "operation or resource completion was not confirmed"}: ${error.message}`, aborted ? "FS_ABORTED" : "FS_IO_ERROR", { cause: error });
++				}
 +				if (error.workspaceEditState === "unknown") throw new FsError(`save status for "${target.displayPath}" could not be confirmed: ${error.message}`, "FS_IO_ERROR", { cause: error });
 +				if (error.workspaceEditCleanupFailed) throw new FsError(`write of "${target.displayPath}" did not reach publication; resource cleanup was not confirmed: ${error.message}`, "FS_IO_ERROR", { cause: error });
 +				if (error instanceof FsError) throw error;
@@ -370,6 +440,7 @@ diff --git a/node_modules/@deepseek-ai/dsh-fs-local/lib/index.js b/node_modules/
  		if (expected?.kind === "replaceIfVersion") {
  			if (!existing) throw new FsError(`cannot write "${target.displayPath}": file no longer exists`, "FS_STALE_VERSION");
 @@ -1170,8 +1296,8 @@
+@@ -1170,8 +1314,8 @@
  		} else if (expected?.kind === "createIfAbsent" && existing) throw new FsError(`cannot overwrite existing "${target.displayPath}" without reading it first`, "FS_NOT_OBSERVED");
  		return existing;
  	}

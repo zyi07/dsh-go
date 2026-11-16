@@ -66,6 +66,7 @@ void main() {
   group('on HarmonyOS', () {
     late List<LicenseEntryWithLineBreaks> harmony;
     const gradle = [
+      'Google ML Kit Text Recognition (Chinese)',
       'Shizuku-API',
       'libadb-android',
       'spake2-android',
@@ -76,6 +77,14 @@ void main() {
       'flutter_webrtc',
       'AudioSwitch',
       'WebRTC',
+      'ONNX Runtime',
+      'Silero VAD',
+      'smart-turn',
+      'tawcroot (tawc)',
+      'flutter_webrtc',
+      'AudioSwitch',
+      'WebRTC',
+      'Streaming Zipformer zh-en (sherpa-onnx)',
     ];
 
     setUp(() async {
@@ -95,6 +104,7 @@ void main() {
         expect(names, isNot(contains(name)), reason: name);
       }
       expect(names, containsAll(['Node.js', 'HarmonyOS runtime packages', 'DS Bot', 'Phosphor Icons']));
+      expect(names, containsAll(['Node.js', 'HarmonyOS runtime packages', 'DS Bot', 'Libraries.dev', 'Phosphor Icons']));
     });
 
     test('Node says whose it is and its terms; each package once', () {

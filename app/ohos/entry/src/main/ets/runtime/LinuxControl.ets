@@ -148,12 +148,14 @@ export class LinuxControl {
   }
 
   private async exchange(baseUrl: string, token: string, body: string | null): Promise<string> {
+  private async exchange(baseUrl: string, token: string, body: string | null, readTimeout: number = 5000): Promise<string> {
     const session = this.host(baseUrl, token);
     const cookie = await this.login(session);
     const options: http.HttpRequestOptions = {
       method: body === null ? http.RequestMethod.GET : http.RequestMethod.POST,
       expectDataType: http.HttpDataType.STRING, header: { 'cookie': cookie, 'content-type': 'application/json' },
       usingCache: false, usingProxy: false, connectTimeout: 1000, readTimeout: 5000, maxLimit: 65536
+      usingCache: false, usingProxy: false, connectTimeout: 1000, readTimeout: readTimeout, maxLimit: 65536
     };
     if (body !== null) options.extraData = body;
     const response = await this.request(session.origin + '/dsh-go/v1/linux', options);
@@ -188,6 +190,16 @@ export class LinuxControl {
     // Session-only settings are sent directly to the trusted Node endpoint.
     // They are never persisted or included in status/error messages.
     return this.exchange(baseUrl, token, JSON.stringify(request));
+  }
+
+  // 重新安装 Linux: Node deletes the retained instance before it replies, so
+  // this one waits longer than the 202 calls. A timeout is not a failure of
+  // the deletion; the caller reads the status again.
+  async discardRetained(baseUrl: string, token: string): Promise<string> {
+    const current = decodeStatus(await this.getStatus(baseUrl, token));
+    const request: LinuxRequest = { v: 1, instanceId: current.instanceId, attemptId: current.attemptId,
+      action: 'discardRetained' };
+    return this.exchange(baseUrl, token, JSON.stringify(request), 60000);
   }
 
   runPrivateGuest(baseUrl: string, token: string, request: LinuxRunRequest): Promise<string> {

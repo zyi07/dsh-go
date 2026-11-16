@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[3]
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--out', required=True, type=Path)
+    parser.add_argument('--ios', action='store_true', help="the iOS app's addon layout (frameworks)")
     args = parser.parse_args()
     args.out = args.out.resolve()
     args.out.mkdir(parents=True, exist_ok=False)
@@ -20,6 +21,8 @@ def main():
     command = [os.environ.get('CXX', 'clang++'), '-std=c++17', '-Wall', '-Wextra', '-Werror',
                '-I', str(core), str(core / 'host_core.cpp'), str(ROOT / 'runtime/tests/ohos/host-core.cc'),
                '-pthread', '-o', str(args.out / 'host-core')]
+    if args.ios:
+        command.insert(1, '-DDSH_IOS_HOST')
     build = subprocess.run(command, text=True, capture_output=True)
     (args.out / 'build.json').write_text(json.dumps({'command': command, 'code': build.returncode,
                                                   'stdout': build.stdout, 'stderr': build.stderr}, indent=2))
@@ -47,6 +50,11 @@ def main():
             assert config[3]['config'] == {'mode': 'workspace-write', 'workspaceRoot': roots[0]}
             assert config[0] == {'id': 'subprocess', 'disabled': True}
             assert config[1] == {'id': 'sandbox', 'disabled': True}
+            plugin_ids = {entry['id'] for entry in config[-1]['insert']}
+            if args.ios:
+                assert not {'ohos-lifecycle', 'ohos-phone'} & plugin_ids
+            else:
+                assert {'ohos-lifecycle', 'ohos-phone'} <= plugin_ids
         rows.append({'case': name, 'passed': passed, 'code': result.returncode,
                      'stdout': result.stdout, 'stderr': result.stderr})
         print(name, 'PASS' if passed else 'FAIL', flush=True)

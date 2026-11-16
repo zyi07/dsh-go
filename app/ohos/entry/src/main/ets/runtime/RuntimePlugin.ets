@@ -195,6 +195,8 @@ export class RuntimePlugin implements FlutterPlugin, MethodCallHandler, StreamHa
       if (values.has('noProxy')) proxy.noProxy = values.get('noProxy') as string;
       result.success(await controller.setLinuxProxy(proxy)); return;
     }
+    // User-confirmed in the app; deletes only the retained Linux instance.
+    if (call.method === 'discardLinuxRetained') { result.success(await controller.discardLinuxRetained()); return; }
     if (call.method === 'runLinuxPrivateGuest') {
       const instance: Any = call.argument('instanceId'); const attempt: Any = call.argument('attemptId');
       const id: Any = call.argument('requestId'); const argv: Any = call.argument('argv');
@@ -235,6 +237,8 @@ export class RuntimePlugin implements FlutterPlugin, MethodCallHandler, StreamHa
       case 'getLogs': result.success(controller.recentLogs((call.argument('lines') ?? 500) as number)); return;
       case 'getLogSnapshot': result.success(controller.logSnapshot((call.argument('lines') ?? 300) as number)); return;
       case 'clearFailure': await controller.clearFailure(); result.success(null); return;
+      case 'setWorkspaceRecovery':
+        await controller.setWorkspaceRecovery(call.argument('enabled') === true); result.success(null); return;
       case 'failureLog': result.success(controller.failureLog()); return;
 
       case 'restoreLastKnownGood': result.success(await controller.restoreLastKnownGood()); return;

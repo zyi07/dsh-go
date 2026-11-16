@@ -9,6 +9,7 @@
 | `dsh/app.getTimeZoneId` | 公开 `i18n.getTimeZone().getID()`，返回系统时区字符串；查询失败返回 `ohos_timezone`。 |
 | `dsh/app.bringToFront` | 仅启动当前绑定 UIAbility 自身的 bundle/name；系统拒绝后台拉起或窗口已分离时明确报错，不承诺绕过系统限制。 |
 | `dsh/app.setRefreshRateMode` | `auto`、`max`、`system`，见下面的刷新率一节；其他值返回 `ohos_unsupported`。 |
+| `dsh/app.scanQrCode` | Scan Kit 默认界面扫码 `scanBarcode.startScanForResult(UIAbilityContext, {scanTypes: [QR_CODE], enableMultiMode: false, enableAlbum: true})`，返回 `originalValue`；用户关闭扫码页（1000500002）返回 null。非前台或无 ability 为 `no_ability`，已有扫码页为 `busy`，无 SysCap 或 Scan Kit 加载失败为 `unavailable`，其他错误或空结果为 `failed`。Scan Kit 只在首次扫码时动态加载。**UNCOMPILED_HMS**，未在真机核实。 |
 | `dsh/app.setFrameActive` | `auto` 下开关保活定时器，返回空；约每秒重发一次 true 作为续期。 |
 | `dsh/links.ready` | 返回 true，再按收到顺序回放等待中的链接。重复 ready 不重放。 |
 | `dsh/links` 原生调用 `link` | 参数必须是 Map `{uri: string}`；外来文件尚无可读副本时为 `{error: 'unreadable', name: null}`。不是裸字符串。 |

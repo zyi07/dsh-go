@@ -603,6 +603,32 @@ class _UpdateSheetState extends ConsumerState<UpdateSheet> {
       child: Text(label),
     );
 
+    // HarmonyOS only offers the release page, and only one the feed really names.
+    if (update.noticeOnly) {
+      final notice = update.noticePage;
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (notice == null)
+            FilledButton(
+              style: FilledButton.styleFrom(minimumSize: _buttonSize),
+              onPressed: close,
+              child: Text(l10n.commonClose),
+            )
+          else
+            pair(l10n.commonLater, close, l10n.updateOpenReleasePage, () => unawaited(_openPage(context, notice))),
+          if (!update.isSkipped)
+            TextButton(
+              onPressed: () {
+                unawaited(controller.skipLatest());
+                close();
+              },
+              child: Text(l10n.updateSkipVersion),
+            ),
+        ],
+      );
+    }
     if (update.selfUpdate.unresolved) {
       return Column(
         mainAxisSize: MainAxisSize.min,

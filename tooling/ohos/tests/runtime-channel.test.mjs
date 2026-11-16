@@ -182,6 +182,13 @@ await fs.writeFile(path.join(temp, 'EntryAbility.mts'),
   `import { RuntimeController } from './RuntimeController.mts';\nimport { FlutterAbility } from '${hostFixtureUrl}';\n` +
   `const OhosKeyboardLog = class { attach() {} detach() {} };\n` +
   `const VoicePlugin = { onForeground() {}, onBackground() {} };\n` +
+  `const OhosKeyboardLog = class { attach() {} detach() {} setForeground() {} };\n` +
+  `const VoicePlugin = { onForeground() {}, onBackground() {} };\n` +
+  `const SpeechPlugin = { onForeground() {}, onBackground() {} };\n` +
+  `const CompanionVoicePlugin = { onForeground() {}, onBackground() {} };\n` +
+  `const StreamingAsrPlugin = { onForeground() {}, onBackground() {} };\n` +
+  `const MediaVideoPlugin = { onForeground() {}, onBackground() {}, onDestroy() {} };\n` +
+  `const PictureShortcutPlugin = { onForeground() {}, onBackground() {} };\n` +
   `const AppLinksPlugin = { onForeground() {}, onBackground() {} };\n` +
   `const PastePlugin = { onForeground() {}, onBackground() {} };\n` +
   `const NativeFilesPlugin = { onForeground() {}, onBackground() {} };\n` +
@@ -990,6 +997,7 @@ test('930 Linux MethodChannel preserves request identity and uses only NativeHos
     async getStatus(url, token) { calls.push(['status', url, token]); return '{"fixture":"status"}'; },
     async setEnabled(url, token, enabled) { calls.push(['enable', url, token, enabled]); return '{"fixture":"accepted"}'; },
     async runPrivateGuest(url, token, request) { calls.push(['run', url, token, request]); return '{"fixture":"queued"}'; },
+    async discardRetained(url, token) { calls.push(['discard', url, token]); return '{"fixture":"discarded"}'; },
   };
   c.controller.initialize = () => { throw Error('Linux controls must not run runtime installation or recovery'); };
   try {
@@ -1007,6 +1015,12 @@ test('930 Linux MethodChannel preserves request identity and uses only NativeHos
     assert.deepEqual(Object.entries(JSON.parse(JSON.stringify(calls[2][3])).env), [...args.env]);
     assert.equal((await c.invoke('runLinuxPrivateGuest', {...args, env: new Map([['TEST_VALUE', 4]])})).code, 'ohos_linux_arguments');
     assert.equal(calls.length, 3);
+    // 重新安装 Linux: no arguments reach Node; the endpoint is NativeHost's.
+    assert.equal(await c.invoke('discardLinuxRetained', {baseUrl: 'http://untrusted.invalid', token: 'untrusted'}), '{"fixture":"discarded"}');
+    assert.deepEqual(calls[3], ['discard', 'http://127.0.0.1:3080', 'fixture-managed-token']);
+    c.controller.requestedStop = true;
+    assert.equal((await c.invoke('discardLinuxRetained')).code, 'ohos_linux_stopping');
+    assert.equal(calls.length, 4);
   } finally { c.close(); }
 });
 
@@ -2212,5 +2226,66 @@ test('942 idle diagnostics: existing poll and collect paths count calls while en
     await c.controller.stop(); native.state.phase = 'idle'; c.controller.collect();
     for (const undo of restore) undo();
     channel.close(); t.mock.timers.reset();
+  }
+});
+
+test('1200 background polling: an acknowledged idle minute suspends periodic collection and lifecycle refresh', async t => {
+  t.mock.timers.enable({ apis: ['setInterval'] });
+  const c = await controllerCase('background-idle-minute');
+  await c.controller.install(false);
+  await c.controller.start(null, false, null, false);
+  native.state.phase = 'running'; native.state.baseUrl = 'http://127.0.0.1:3080';
+  native.state.token = 'idle-poll-fixture-token';
+  c.controller.collect(); await Promise.resolve(); await new Promise(setImmediate);
+  c.controller.setIdleDiagnosticsEnabled(true);
+  try {
+    for (let second = 0; second < 60; second++) {
+      t.mock.timers.tick(1000);
+      await Promise.resolve(); await new Promise(setImmediate);
+    }
+    const counts = idlePlain942(c.controller.getIdleDiagnostics()).window.counters;
+    assert.equal(counts.pollTicks, 0, 'a confirmed idle background owner needs no periodic collection');
+    assert.equal(counts.collectCalls, 0);
+    assert.equal(counts.lifecycleRefreshRequests, 0, 'idle/released admission does not spend an activity window');
+    assert.equal(native.stops, 0, 'idle throttling does not stop the engine');
+  } finally {
+    await c.controller.stop(); native.state.phase = 'idle'; c.controller.collect(); t.mock.timers.reset();
+  }
+});
+
+test('1200 background polling: real ability callbacks restore fast foreground collection and reject a stale background callback', async t => {
+  t.mock.timers.enable({ apis: ['setInterval'] });
+  const c = await controllerCase('background-idle-ability');
+  await c.controller.install(false); await c.controller.start(null, false, null, false);
+  native.state.phase = 'running'; native.state.baseUrl = 'http://127.0.0.1:3080';
+  native.state.token = 'idle-ability-fixture-token';
+  c.controller.collect(); await Promise.resolve();
+  const previous = RuntimeController.shared; RuntimeController.shared = c.controller;
+  const old = new EntryAbility(), current = new EntryAbility();
+  c.controller.setIdleDiagnosticsEnabled(true);
+  const ticks = () => idlePlain942(c.controller.getIdleDiagnostics()).window.counters.pollTicks;
+  try {
+    old.onForeground(); current.onForeground(); old.onBackground();
+    await Promise.resolve();
+    let before = ticks(); t.mock.timers.tick(1000); await Promise.resolve();
+    assert.equal(ticks() - before, 10, 'current foreground owner retains 100 ms polling');
+    current.onBackground(); await Promise.resolve();
+    before = ticks(); t.mock.timers.tick(1000); await Promise.resolve();
+    assert.equal(ticks() - before, 0, 'a matching idle ACK suspends the background interval');
+    current.onForeground(); await Promise.resolve();
+    native.events.push({ kind: 'log', stream: 'stdout', line: 'foreground output' });
+    before = ticks(); t.mock.timers.tick(100); await Promise.resolve();
+    assert.equal(ticks() - before, 1);
+    assert(c.controller.recentLogs(10).some(line => line.includes('foreground output')));
+    await c.controller.stop();
+    before = ticks(); t.mock.timers.tick(100); await Promise.resolve();
+    assert.equal(ticks() - before, 1, 'stopping retains its original 100 ms observation');
+    native.state.phase = 'exited'; native.state.exitCode = 0;
+    c.controller.collect(); await Promise.resolve();
+    before = ticks(); t.mock.timers.tick(5000); await Promise.resolve();
+    assert.equal(ticks(), before, 'a settled engine has no collection timer');
+  } finally {
+    current.onDestroy(); RuntimeController.shared = previous;
+    native.state.phase = 'idle'; c.controller.collect(); t.mock.timers.reset();
   }
 });

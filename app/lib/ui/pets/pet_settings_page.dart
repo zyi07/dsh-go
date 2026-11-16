@@ -60,6 +60,7 @@ class PetSettingsPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
+    final hasOutsideOverlay = ref.watch(androidSystemFeaturesProvider) || ref.watch(operatingSystemProvider) == 'ios';
     final prefs = ref.watch(petPrefsProvider);
     final now = ref.watch(petClockProvider)();
     final hidden = prefs.hiddenAt(now) ? prefs.hiddenUntil : null;
@@ -130,6 +131,8 @@ class PetSettingsPage extends ConsumerWidget {
               ),
               // App 外显示 (the overlay), Android's own.
               if (ref.watch(androidSystemFeaturesProvider)) const PetOverlaySettingsSection(),
+              // App 外显示 (the overlay).
+              if (hasOutsideOverlay) const PetOverlaySettingsSection(),
             ],
           ),
         ),

@@ -105,3 +105,35 @@ DSH_WORKSPACE_API int dsh_workspace_move_output_publish_v1(void*,struct DshWorks
 }
 #endif
 #endif
+
+
+#ifndef DSH_WORKSPACE_GRANTS_WHOLE_WRITE_ABI_V1
+#define DSH_WORKSPACE_GRANTS_WHOLE_WRITE_ABI_V1
+#ifdef __cplusplus
+extern "C" {
+#endif
+// An independent optional group. All old stat/edit/move layouts and symbols
+// are unchanged. policy0 preserves prior_mode (including zero); policy1 uses
+// actual directory defaults from an O_CREAT request of 0666, prior_mode=0.
+DSH_WORKSPACE_API int dsh_workspace_whole_output_begin_v1(void*,const char*,uint32_t policy,uint32_t prior_mode,int create_if_absent);
+DSH_WORKSPACE_API int64_t dsh_workspace_whole_output_write_v1(void*,const void*,size_t);
+// Sync/attributes/checked write-FD close only. A private duplicate of the same
+// open object remains under this lease for possible copying and checked cleanup.
+DSH_WORKSPACE_API int dsh_workspace_whole_output_close_v1(void*);
+struct DshWorkspaceWholePublishV1 {
+ uint32_t version,reserved,effect_known,effect,continuation,staging_removed;
+};
+// A step does not necessarily publish. continuation: 0=done, 1=exclusive open
+// after a supported link failure, 2=bounded copy, 3=body complete; finish sync/
+// mode/checked-close without another JS cancellation check. Caller checks its
+// signal before 1/2. Copy has at most one <=64KiB read and one write per call.
+// effect0=no final produced, 1=exclusive final may be incomplete, 2=committed.
+// Valid out facts survive -1; effect_known=0 must not be interpreted as effect0.
+// staging_removed is only a best-effort diagnostic, never FD/lease retirement.
+DSH_WORKSPACE_API int dsh_workspace_whole_output_publish_step_v1(void*,struct DshWorkspaceWholePublishV1*,size_t);
+// Cleanup is available after cancellation/retirement. Never unlink final.
+DSH_WORKSPACE_API int dsh_workspace_whole_output_abort_v1(void*);
+#ifdef __cplusplus
+}
+#endif
+#endif

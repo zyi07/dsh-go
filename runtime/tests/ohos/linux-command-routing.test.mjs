@@ -176,6 +176,9 @@ test('the App proxy applies to routed jobs; switching Linux off cancels a runnin
   // The guest killed it; the shell sees 128+SIGKILL, as from any killed command.
   assert.equal((await running).exitCode, 137);
   await until(() => f.control.status().state === 'disabled');
+  await until(() => f.control.status().state === 'stopped');
+  assert.equal(f.control.status().shutdownComplete, true);
+  assert.equal(f.control.status().restartRequired, true);
 });
 
 test('an unconfirmed guest exit is never reported as exited, and its output errors are handled', async t => {

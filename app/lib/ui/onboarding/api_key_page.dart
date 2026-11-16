@@ -8,6 +8,7 @@ import '../../l10n/l10n.dart';
 import '../../state/app_info.dart';
 import '../../state/onboarding_state.dart';
 import '../../state/settings_state.dart';
+import '../common/field_paste.dart';
 import '../providers/provider_widgets.dart' show FormBottomBar;
 import '../settings/credential_recovery_dialog.dart';
 import '../shell/page_frame.dart';

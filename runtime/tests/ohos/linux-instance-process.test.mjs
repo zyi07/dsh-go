@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { mkdtemp, mkdir, stat, readFile, writeFile, rename, rm, link, symlink } from 'node:fs/promises';
+import { mkdtemp, mkdir, stat, readFile, readdir, writeFile, rename, rm, link, symlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -94,6 +95,53 @@ test('SIGKILL releases the real FD lock but cannot promote the durable pre-boot 
   await rm(booting.fixtureRoot, { recursive: true, force: true });
   t.diagnostic(JSON.stringify({ scope: 'real SIGKILL/flock/files; native create is a controlled boundary, not a VM', pids: [booting.pid, result.pid], target: booting.disk, lockInode: lock.ino }));
 });
+
+test('重新安装 Linux: a real cross-process flock holder blocks discard; after release only the lock inode remains', async t => {
+  const f = await fixture(t), first = f.start('clean'), seeded = await first.next();
+  assert.equal(seeded.retirement.cleanCheckpoint, true); assert.deepEqual(await first.exited, { code: 0, signal: null });
+  const lock = await stat(join(f.directory, '.lock')), bytes = await readFile(seeded.disk.path);
+  const holder = f.start('hold', join(f.root, 'unused.json')); assert.equal((await holder.next()).locked, true);
+  const outcome = name => discardActor(f, name);
+  assert.deepEqual(await outcome('discard-busy'), { removed: null, errorCode: 'ERR_OHOS_LINUX_BUSY' });
+  assert.deepEqual(await readFile(seeded.disk.path), bytes);
+  holder.child.stdin.end('release\n'); assert.deepEqual(await holder.exited, { code: 0, signal: null });
+  assert.deepEqual(await outcome('discard-released'), { removed: 1, errorCode: null });
+  assert.deepEqual(await readdir(f.directory), ['.lock']); unchanged(lock, await stat(join(f.directory, '.lock')));
+  const reopened = f.start('released', join(f.root, 'fresh.json')); assert.deepEqual(await reopened.exited, { code: 0, signal: null });
+  assert.equal(JSON.parse(await readFile(join(f.root, 'fresh.json'), 'utf8')).downloads, 1, 'after discard the next owner installs afresh');
+});
+
+// Links are planted by this coordinator: an OHOS process (the strict actor) cannot create them.
+async function discardActor(f, name) {
+  const path = join(f.root, name + '.json'), actor = f.start('discard', path);
+  assert.deepEqual(await actor.exited, { code: 0, signal: null }); return JSON.parse(await readFile(path, 'utf8'));
+}
+test('strict discard removes planted links as links and never touches what they point to', async t => {
+  const f = await fixture(t), first = f.start('clean'), seeded = await first.next();
+  assert.deepEqual(await first.exited, { code: 0, signal: null });
+  const outside = join(f.root, 'outside'), instance = seeded.active.directory;
+  await mkdir(outside); await writeFile(join(outside, 'keep'), 'user data');
+  await symlink(outside, join(f.directory, '.installation-link')); await symlink(join(outside, 'keep'), join(f.directory, 'file-link'));
+  await symlink(outside, join(instance, 'inner-link'));
+  await mkdir(join(instance, 'nested')); await symlink(outside, join(instance, 'nested', 'deeper-link'));
+  assert.deepEqual(await discardActor(f, 'links'), { removed: 3, errorCode: null });
+  assert.deepEqual(await readdir(f.directory), ['.lock']);
+  assert.deepEqual(await readdir(outside), ['keep']); assert.equal(await readFile(join(outside, 'keep'), 'utf8'), 'user data');
+});
+
+for (const kind of ['root-symlink', 'lock-symlink', 'lock-hardlink']) {
+  test('strict discard refuses an actual ' + kind + ' before renaming or deleting anything', async t => {
+    const f = await fixture(t), first = f.start('clean'), seeded = await first.next();
+    assert.deepEqual(await first.exited, { code: 0, signal: null });
+    const target = seeded.disk.path, bytes = await readFile(target); let preserved = target;
+    if (kind === 'root-symlink') { await rename(f.directory, f.directory + '.original'); preserved = target.replace(f.directory, f.directory + '.original'); await symlink(f.directory + '.original', f.directory); }
+    if (kind === 'lock-symlink') { const path = join(f.directory, '.lock'); await rename(path, join(f.root, 'lock.original')); await symlink(join(f.root, 'lock.original'), path); }
+    if (kind === 'lock-hardlink') await link(join(f.directory, '.lock'), join(f.root, 'lock-alias'));
+    const result = await discardActor(f, kind);
+    assert.equal(result.removed, null); assert.ok(result.errorCode); assert.deepEqual(await readFile(preserved), bytes);
+    t.diagnostic(JSON.stringify({ fixture: kind, errorCode: result.errorCode }));
+  });
+}
 
 for (const kind of ['target-symlink', 'target-hardlink', 'target-directory', 'lock-symlink', 'lock-hardlink', 'root-symlink', 'metadata-target']) {
   test('independent strict owner rejects actual ' + kind + ' without modifying the retained target', async t => {

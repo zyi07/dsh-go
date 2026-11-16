@@ -11,6 +11,7 @@ import { VoiceFailure, VoiceNotice, VoiceResource, retiredVoice } from './VoiceT
 import { OhosVoiceRecorder } from './OhosVoiceRecorder';
 import { HmsVoiceRecognizer } from './HmsVoiceRecognizer';
 import { VoiceMicLease, VoiceMicToken } from './VoiceMicLease';
+import { VoicePcmTap, VoicePcmTapToken } from './VoicePcmTap';
 
 const MICROPHONE = 'ohos.permission.MICROPHONE';
 
@@ -41,6 +42,7 @@ export default class VoicePlugin implements FlutterPlugin, AbilityAware {
   private session?: VoiceLease;
   // Resource retry handle only; VoiceMicLease is the sole admission authority.
   private physicalLease?: VoiceLease;
+  private pcmTap?: VoicePcmTapToken;
 
   getUniqueClassName(): string { return 'DshVoicePlugin'; }
 
@@ -51,6 +53,7 @@ export default class VoicePlugin implements FlutterPlugin, AbilityAware {
     VoicePlugin.foregroundAbilities.delete(ability);
     const owner = VoicePlugin.owner;
     if (owner?.ability?.getAbility() === ability) owner.cancel().catch((): void => {});
+    if (owner?.ability?.getAbility() === ability) { owner.clearPcm(); owner.cancel().catch((): void => {}); }
   }
 
   onAttachedToEngine(binding: FlutterPluginBinding): void {
@@ -61,6 +64,7 @@ export default class VoicePlugin implements FlutterPlugin, AbilityAware {
     this.events = new EventChannel(messenger, 'dsh/voice/events');
     this.methods.setMethodCallHandler({ onMethodCall: (call: MethodCall, result: MethodResult): void => {
       if (!['capabilities', 'permission', 'requestPermission', 'openSettings', 'startRecognizer', 'startRecorder', 'stop', 'cancel'].includes(call.method)) {
+      if (!['capabilities', 'permission', 'requestPermission', 'openSettings', 'startRecognizer', 'startRecorder', 'streamingPcm', 'stop', 'cancel'].includes(call.method)) {
         try { result.notImplemented(); } catch (_) {} return;
       }
       this.handle(call, binding).then((value: Any): void => {
@@ -68,6 +72,7 @@ export default class VoicePlugin implements FlutterPlugin, AbilityAware {
       }).catch((error: Error): void => {
         const failure = error instanceof VoiceFailure ? error : new VoiceFailure('audio', '语音操作未完成，请重试。', 100);
         const details: Map<string, Any> = new Map<string, Any>([['code', failure.voiceCode]]);
+        const details: Map<string, Any> | null = failure.code === 'pcm-source' ? null : new Map<string, Any>([['code', failure.voiceCode]]);
         try { result.error(failure.code, failure.message, details); } catch (_) {}
       });
     } });
@@ -77,6 +82,7 @@ export default class VoicePlugin implements FlutterPlugin, AbilityAware {
       },
       onCancel: (_args: Any): void => {
         if (this.binding === binding) { this.sink = undefined; this.cancel().catch((): void => {}); }
+        if (this.binding === binding) { this.clearPcm(); this.sink = undefined; this.cancel().catch((): void => {}); }
       }
     });
   }
@@ -91,6 +97,7 @@ export default class VoicePlugin implements FlutterPlugin, AbilityAware {
 
   onAttachedToAbility(binding: AbilityPluginBinding): void {
     if (this.ability && this.ability !== binding) this.cancel().catch((): void => {});
+    if (this.ability && this.ability !== binding) { this.clearPcm(); this.cancel().catch((): void => {}); }
     this.ability = binding;
   }
 
@@ -101,6 +108,46 @@ export default class VoicePlugin implements FlutterPlugin, AbilityAware {
   private retire(): void {
     this.sink = undefined; this.ability = undefined;
     this.cancel().then((): Promise<void> => HmsVoiceRecognizer.releaseIdle()).catch((): void => {});
+  }
+
+    this.clearPcm(); this.ability = undefined; this.cancel().catch((): void => {});
+  }
+
+  private retire(): void {
+    this.clearPcm(); this.sink = undefined; this.ability = undefined;
+    this.cancel().then((): Promise<void> => HmsVoiceRecognizer.releaseIdle()).catch((): void => {});
+  }
+
+  private clearPcm(): void { VoicePcmTap.clear(this.pcmTap); this.pcmTap = undefined; }
+
+  private streamingPcm(call: MethodCall, binding: FlutterPluginBinding): void {
+    const source: Any = call.argument('source');
+    const idValue: Any = call.argument('pcmSession');
+    const id: number = typeof idValue === 'number' && Number.isSafeInteger(idValue) ? idValue : 0;
+    if (source === undefined || source === null) {
+      if (this.pcmTap?.id === id) this.clearPcm();
+      return;
+    }
+    if (source !== 'call' && source !== 'dictation') throw new VoiceFailure('pcm-source', 'unknown PCM source', 5);
+    const ability: AbilityPluginBinding | undefined = this.ability;
+    if (!ability || !VoicePlugin.foregroundAbilities.has(ability.getAbility())) throw retiredVoice();
+    const current: (tap: VoicePcmTapToken) => boolean = (tap: VoicePcmTapToken): boolean => {
+      return this.pcmTap === tap && this.binding === binding && this.ability === ability && VoicePlugin.owner === this &&
+        VoicePlugin.foregroundAbilities.has(ability.getAbility());
+    };
+    this.pcmTap = VoicePcmTap.enable(source, id, (tap: VoicePcmTapToken, bytes: Uint8Array): void => {
+      if (!current(tap)) return;
+      const event: Map<string, Any> = new Map<string, Any>([
+        ['type', 'pcm'], ['bytes', bytes], ['rate', 16000], ['source', tap.source], ['pcmSession', tap.id]
+      ]);
+      try { this.sink?.success(event); } catch (_) { /* Flutter listener was retired. */ }
+    }, (tap: VoicePcmTapToken, reason: string): void => {
+      if (!current(tap)) return;
+      const event: Map<string, Any> = new Map<string, Any>([
+        ['type', 'pcmReset'], ['source', tap.source], ['pcmSession', tap.id], ['reason', reason]
+      ]);
+      try { this.sink?.success(event); } catch (_) { /* Flutter listener was retired. */ }
+    });
   }
 
   private live(lease: VoiceLease): boolean {
@@ -259,6 +306,7 @@ export default class VoicePlugin implements FlutterPlugin, AbilityAware {
       case 'openSettings': await this.permission(true); return null;
       case 'startRecognizer': await this.begin(call, false); return null;
       case 'startRecorder': await this.begin(call, true); return null;
+      case 'streamingPcm': this.streamingPcm(call, binding); return null;
       case 'stop': return await this.stop();
       case 'cancel': await this.cancel(); return null;
       default: throw new VoiceFailure('ohos_unsupported', '此语音操作尚不支持。', 5);

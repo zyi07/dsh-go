@@ -6,6 +6,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import '../common/field_paste.dart';
 import 'numeric_edit_math.dart';
 
 import 'package:flutter/material.dart';
@@ -1543,7 +1544,7 @@ class _ObjectItemPageState extends State<_ObjectItemPage> {
           padding: EdgeInsets.zero,
           child: EngineFieldRow(
             title: label,
-            trailing: Switch(
+            trailing: Switch.adaptive(
               value: _draft[key] == true || (_draft[key] == null && node.effective.meta.defaultValue == true),
               onChanged: (v) => setState(() => _draft = {..._draft, key: v}),
             ),

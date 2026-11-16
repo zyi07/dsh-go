@@ -800,11 +800,16 @@ Future<void> openNativePage(BuildContext context, WidgetRef ref, String id, {Str
   // On HarmonyOS, Android's own pages lead to its form of them; with none, say so.
   final page = ref.read(androidSystemFeaturesProvider) ? id : SettingsIndex.ohosLink(id);
   if (!ref.read(androidSystemFeaturesProvider) && SettingsIndex.androidOnlyLink(page)) {
+  final os = ref.read(operatingSystemProvider);
+  // On HarmonyOS, Android's own pages lead to its form of them; with none, say so.
+  final page = os == 'ohos' ? SettingsIndex.ohosLink(id) : id;
+  if (!ref.read(androidSystemFeaturesProvider) && SettingsIndex.androidOnlyLink(page, ios: os == 'ios')) {
     _toast(context, context.l10n.harmonyPageUnavailable);
     return;
   }
   // A page only HarmonyOS has is no page at all elsewhere.
   if (ref.read(androidSystemFeaturesProvider) && SettingsIndex.ohosOnlyLink(page)) return;
+  if (os != 'ohos' && SettingsIndex.ohosOnlyLink(page)) return;
   final navigator = Navigator.of(context);
   switch (page) {
     case 'new-chat':

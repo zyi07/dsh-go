@@ -88,6 +88,9 @@
 --- a/node_modules/@deepseek-ai/dsh-plugin-manager/lib/types/operations.js
 +++ b/node_modules/@deepseek-ai/dsh-plugin-manager/lib/types/operations.js
 @@ -53,2 +53,6 @@
+@@ -51,6 +51,10 @@
+     return e.name = "SuppressedError", e.error = error, e.suppressed = suppressed, e;
+ });
  /** Shared profile package operations used by dsh plugin and the running manager. */
 +const OHOS_PLUGIN_INSTALL_MESSAGE = "[OHOS_PLUGIN_INSTALL_UNAVAILABLE] 鸿蒙本机不支持安装、更新或卸载插件包；可启停随包插件，或连接电脑管理插件。";
 +function requirePackageManager() {
@@ -95,6 +98,9 @@
 +}
  import { once } from 'node:events';
 @@ -313,6 +317,7 @@
+ import { StringDecoder } from 'node:string_decoder';
+ import { existsSync, readFileSync } from 'node:fs';
+@@ -314,6 +318,7 @@
   * The diagnostic file is closed on return or rejection, including preparation and spawn failures.
   */
  export async function runProfilePnpm(context, args, options) {
@@ -103,6 +109,7 @@
      try {
          const dir = context.dir ?? resolveProfileDir(context.profile, context.home);
 @@ -614,6 +619,7 @@
+@@ -629,6 +634,7 @@
   * @returns Completed package-manager result.
   */
  export async function runPluginCommand(context, args, options) {
@@ -111,6 +118,7 @@
      await mkdir(dir, { recursive: true });
      return withFileLock(join(dir, 'package.json'), async () => {
 @@ -633,6 +639,7 @@
+@@ -648,6 +654,7 @@
   * @returns The registry URL as pnpm printed it, or null when pnpm did not answer with one.
   */
  export async function readProfileRegistry(dir, options) {
@@ -119,6 +127,7 @@
          cwd: dir, env: { ...scrubbedParentEnv(), ...options.env }, extendEnv: false, reject: false, stdin: 'ignore', timeout: options.timeoutMs,
      });
 @@ -660,6 +667,7 @@
+@@ -675,6 +682,7 @@
   * @returns pnpm's exit, output, and how the lookup ended.
   */
  export async function viewProfilePackage(dir, spec, options) {

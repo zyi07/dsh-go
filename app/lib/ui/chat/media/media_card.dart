@@ -900,6 +900,7 @@ Future<void> saveMediaItems(BuildContext context, WidgetRef ref, String sessionI
       }
       saved++;
     } on PlatformException catch (error) {
+      // Backed out of HarmonyOS's album window: stop asking, nothing to report.
       if (saveWindowDismissed(error)) break;
       failure ??= error.code;
     } catch (_) {

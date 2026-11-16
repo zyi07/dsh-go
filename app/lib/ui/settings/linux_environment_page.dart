@@ -9,6 +9,13 @@ import '../../state/ohos_linux_state.dart';
 import '../common/status_chip.dart';
 import '../shell/page_frame.dart';
 import '../theme/app_icons.dart';
+import '../../runtime/runtime_state.dart' show runtimeBridgeProvider;
+import '../../state/ohos_linux_state.dart';
+import '../common/app_dialog.dart';
+import '../common/status_chip.dart';
+import '../shell/page_frame.dart';
+import '../theme/app_icons.dart';
+import '../theme/theme.dart';
 import '../workspace/text_prompt.dart';
 import 'settings_widgets.dart';
 
@@ -21,6 +28,44 @@ import 'settings_widgets.dart';
   OhosLinuxState.disabled || OhosLinuxState.stopped || OhosLinuxState.unknown => (StatusTone.idle, l10n.linuxStateOff),
 };
 
+/// The engine's refusals to resume the Linux kept from before (an app update
+/// changed its system, an unclean stop, damaged or ambiguous files). Nothing
+/// overwrites that data by itself; 重新安装 Linux is the way out.
+const _retainedRefusals = {
+  'ERR_OHOS_LINUX_ASSET_GENERATION',
+  'ERR_OHOS_LINUX_RECOVERY_REQUIRED',
+  'ERR_OHOS_LINUX_RETAINED_INSTANCE',
+  'ERR_OHOS_LINUX_INSTANCE_CORRUPT',
+  'ERR_OHOS_LINUX_IMAGE_INTEGRITY',
+  'ERR_OHOS_LINUX_TARGET_IDENTITY',
+  'ERR_OHOS_LINUX_DIRECTORY_IDENTITY',
+};
+
+/// 「重新安装 Linux？」: what goes, what stays; the confirm key is red.
+Future<bool> confirmLinuxReinstall(BuildContext context) async {
+  final l10n = context.l10n;
+  final ok = await showAppDialog<bool>(
+    context: context,
+    builder: (dialog) => AlertDialog(
+      title: Text(l10n.linuxReinstallTitle),
+      content: Text(l10n.linuxReinstallBody),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(dialog, false), child: Text(l10n.commonCancel)),
+        FilledButton(
+          key: const ValueKey('linux-reinstall-confirm'),
+          style: FilledButton.styleFrom(
+            backgroundColor: DshColors.of(dialog).danger,
+            foregroundColor: DshColors.of(dialog).onDanger,
+          ),
+          onPressed: () => Navigator.pop(dialog, true),
+          child: Text(l10n.commonDelete),
+        ),
+      ],
+    ),
+  );
+  return ok == true;
+}
+
 /// The row in 设置 · 能力 that opens [LinuxEnvironmentPage] (HarmonyOS only).
 class LinuxEnvironmentTile extends ConsumerWidget {
   const LinuxEnvironmentTile({super.key, this.tint = 0});
@@ -32,6 +77,7 @@ class LinuxEnvironmentTile extends ConsumerWidget {
     final (tone, label) = linuxStatus(l10n, ref.watch(ohosLinuxProvider));
     return SettingsTile(
       key: const ValueKey('settings-linux'),
+      spot: SettingsIndex.entry(SettingsPageId.linuxEnvironment),
       icon: AppIcons.command,
       tint: tint,
       title: l10n.linuxTitle,
@@ -59,6 +105,22 @@ class _LinuxEnvironmentPageState extends ConsumerState<LinuxEnvironmentPage> {
   }
 
   OhosLinuxController get _linux => ref.read(ohosLinuxProvider.notifier);
+
+  Future<void> _reopen() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final failed = context.l10n.linuxReopenFailed;
+    try {
+      await ref.read(runtimeBridgeProvider).reopenApp();
+    } catch (_) {
+      // The system says no while the app isn't on top, or within 3 s of the last time.
+      messenger.showSnackBar(SnackBar(content: Text(failed)));
+    }
+  }
+
+  Future<void> _reinstall() async {
+    if (!await confirmLinuxReinstall(context) || !mounted) return;
+    await _linux.reinstall();
+  }
 
   String _stage(L10n l10n, String stage) => switch (stage) {
     'archive' || 'download' => l10n.linuxStageDownload,
@@ -127,11 +189,22 @@ class _LinuxEnvironmentPageState extends ConsumerState<LinuxEnvironmentPage> {
     final code = snapshot?.lastErrorCode;
     final String? problem = view.error != null
         ? (snapshot == null ? l10n.linuxEngineOffline : l10n.linuxRequestFailed)
+    final error = view.error;
+    final String? problem = error is OhosLinuxReinstallFailure
+        ? (error.needsRestart ? l10n.linuxReinstallRestart : l10n.linuxReinstallFailed(error.code))
+        : error != null
+        ? (snapshot == null ? l10n.linuxEngineOffline : l10n.linuxRequestFailed)
+        : code != null && _retainedRefusals.contains(code)
+        ? l10n.linuxRetainedRefused(code)
         : restart
         ? l10n.linuxRestartRequired
         : code != null
         ? l10n.linuxErrorWithCode(code)
         : null;
+    // A VM started in this app process may hold the data until the app quits.
+    final vmHeld = snapshot?.nativeMemoryRelease != null;
+    final canReinstall = snapshot != null && !view.busy && !view.moving && !vmHeld &&
+        (view.state == OhosLinuxState.disabled || view.state == OhosLinuxState.failed);
 
     return AppPage.list(
       title: l10n.linuxTitle,
@@ -153,11 +226,25 @@ class _LinuxEnvironmentPageState extends ConsumerState<LinuxEnvironmentPage> {
                   : (value) => unawaited(_linux.setEnabled(value)),
             ),
             SettingsTile(title: l10n.linuxStatus, value: StatusChip(tone: tone, label: label), chevron: false),
+            if (restart)
+              SettingsTile(
+                key: const ValueKey('linux-reopen'),
+                title: l10n.linuxReopenApp,
+                onTap: () => unawaited(_reopen()),
+              ),
             if (progress != null)
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
                 child: LinearProgressIndicator(value: fraction),
               ),
+            SettingsTile(
+              key: const ValueKey('linux-reinstall'),
+              title: l10n.linuxReinstall,
+              subtitle: vmHeld && !on ? l10n.linuxReinstallAfterRestart : l10n.linuxReinstallHint,
+              danger: canReinstall,
+              chevron: false,
+              onTap: canReinstall ? () => unawaited(_reinstall()) : null,
+            ),
           ],
         ),
         SettingsSection(

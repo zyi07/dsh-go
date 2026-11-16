@@ -220,6 +220,8 @@ void main() {
       ),
       // HarmonyOS's own page: its row is there instead of 手机操控's.
       absent: {'page:systemActions'},
+      // HarmonyOS's own pages: 系统操作 stands in for 手机操控, Linux 环境 is extra.
+      absent: {'page:systemActions', 'page:linuxEnvironment'},
     );
   });
 

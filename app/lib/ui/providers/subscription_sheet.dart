@@ -14,6 +14,7 @@ import '../../state/account_state.dart' show accountBrowserProvider;
 import '../../state/app_foreground.dart';
 import '../../state/subscriptions_state.dart';
 import '../common/app_sheet.dart';
+import '../common/field_paste.dart';
 import '../common/sheet_title_bar.dart';
 import '../common/smooth_size.dart';
 import '../theme/app_icons.dart';

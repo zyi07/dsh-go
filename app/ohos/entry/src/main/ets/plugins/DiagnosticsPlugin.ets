@@ -11,6 +11,9 @@ import { ohosDeviceIdentity, systemMemoryBytes } from './OhosDeviceFacts';
 import { PersistedRuntimeLog } from '../runtime/PersistedRuntimeLog';
 import { RuntimeFile, RuntimeManifest } from '../runtime/RuntimeCore';
 import { OhosRuntimeStorage } from '../runtime/OhosRuntimeStorage';
+import { DiagnosticEvidenceError, EvidenceFields, OhosDiagnosticEvidence } from './OhosDiagnosticEvidence';
+import { OhosFaultEvents } from './OhosFaultEvents';
+import { OhosKeyboardLog } from './OhosKeyboardLog';
 
 export default class DiagnosticsPlugin implements FlutterPlugin, AbilityAware {
   private binding: FlutterPluginBinding | null = null;
@@ -18,6 +21,13 @@ export default class DiagnosticsPlugin implements FlutterPlugin, AbilityAware {
   private methods: MethodChannel | null = null;
   private request: number = 0;
   private busy: boolean = false;
+  private evidence: OhosDiagnosticEvidence | null = null;
+  private faults: OhosFaultEvents | null = null;
+  private keyboard: OhosKeyboardLog;
+
+  constructor(keyboard: OhosKeyboardLog = new OhosKeyboardLog()) {
+    this.keyboard = keyboard;
+  }
 
   getUniqueClassName(): string { return 'DshDiagnosticsPlugin'; }
   onAttachedToEngine(binding: FlutterPluginBinding): void {
@@ -26,6 +36,24 @@ export default class DiagnosticsPlugin implements FlutterPlugin, AbilityAware {
     this.methods = new MethodChannel(binding.getBinaryMessenger(), 'dsh/diagnostics');
     this.methods.setMethodCallHandler({ onMethodCall: (call: MethodCall, result: MethodResult): void => {
       if (this.binding !== binding) { this.error(result, 'detached'); return; }
+    try {
+      this.evidence = OhosDiagnosticEvidence.get(binding.getApplicationContext().filesDir);
+      this.faults = new OhosFaultEvents(this.evidence); this.faults.start();
+    } catch (_) { this.evidence = null; this.faults = null; }
+    this.methods = new MethodChannel(binding.getBinaryMessenger(), 'dsh/diagnostics');
+    this.methods.setMethodCallHandler({ onMethodCall: (call: MethodCall, result: MethodResult): void => {
+      if (this.binding !== binding) { this.error(result, 'detached'); return; }
+      if (call.method === 'recordAppError' || call.method === 'recordVoiceStage') {
+        this.record(binding, call, result); return;
+      }
+      if (call.method === 'collectSystemIme') {
+        try { result.success(this.keyboard.snapshot(this.ability !== null)); } catch (_) {}
+        return;
+      }
+      if (call.method === 'cancelSystemIme') {
+        try { result.success(null); } catch (_) {}
+        return;
+      }
       if (!['info', 'engineLog'].includes(call.method)) { try { result.notImplemented(); } catch (_) {} return; }
       if (this.busy) { this.error(result, 'busy'); return; }
       this.busy = true; const request = ++this.request;
@@ -51,6 +79,7 @@ export default class DiagnosticsPlugin implements FlutterPlugin, AbilityAware {
   onDetachedFromEngine(binding: FlutterPluginBinding): void {
     if (this.binding !== binding) return;
     this.request++; this.busy = false; this.binding = null; this.ability = null;
+    this.faults?.stop(); this.faults = null; this.evidence = null;
     this.methods?.setMethodCallHandler(null); this.methods = null;
   }
   onAttachedToAbility(binding: AbilityPluginBinding): void { this.ability = binding; }
@@ -60,6 +89,25 @@ export default class DiagnosticsPlugin implements FlutterPlugin, AbilityAware {
   }
 
   private async info(context: common.Context, logs: PersistedRuntimeLog): Promise<Map<string, Any>> {
+  private record(binding: FlutterPluginBinding, call: MethodCall, result: MethodResult): void {
+    const evidence: OhosDiagnosticEvidence | null = this.evidence;
+    if (evidence === null) { this.error(result, 'evidence_unavailable'); return; }
+    const fields: EvidenceFields = call.method === 'recordAppError' ? {
+      source: call.argument('source'), errorType: call.argument('errorType'), stack: call.argument('stack')
+    } : { stage: call.argument('stage'), backend: call.argument('backend'), code: call.argument('code') };
+    const kind: string = call.method === 'recordAppError' ? 'appErrors' : 'voiceStages';
+    evidence.record(kind, fields).then((): void => {
+      if (this.binding !== binding) { this.error(result, 'detached'); return; }
+      try { result.success(null); } catch (_) {}
+    }, (error: Error): void => {
+      this.error(result, this.binding !== binding ? 'detached' :
+        error instanceof DiagnosticEvidenceError ? error.code : 'evidence_unavailable');
+    });
+  }
+
+  private async info(context: common.Context, logs: PersistedRuntimeLog): Promise<Map<string, Any>> {
+    const evidence: OhosDiagnosticEvidence | null = this.evidence;
+    const faults: OhosFaultEvents | null = this.faults;
     const device: Map<string, Any> = ohosDeviceIdentity();
     const memory = systemMemoryBytes(); if (memory !== null) device.set('memoryMb', memory / (1024 * 1024));
     try {
@@ -86,6 +134,12 @@ export default class DiagnosticsPlugin implements FlutterPlugin, AbilityAware {
     const value: Map<string, Any> = new Map<string, Any>();
     value.set('app', app); value.set('device', device); value.set('manifest', manifest);
     value.set('voice', new Map<string, Any>()); return value;
+    value.set('voice', new Map<string, Any>());
+    if (evidence !== null) {
+      await faults?.drain();
+      value.set('evidence', await evidence.snapshot(faults?.availability() ?? 'unavailable'));
+    }
+    return value;
   }
   private async manifest(context: common.Context, target: Map<string, Any>): Promise<void> {
     try {

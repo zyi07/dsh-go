@@ -14,6 +14,7 @@ enum VoiceMode { auto, deepseek, system, engine, cloud }
 VoiceMode voiceModeOnHarmonyLocal(VoiceMode mode) => mode == VoiceMode.engine ? VoiceMode.auto : mode;
 
 /// HarmonyOS, talking to its own engine: only the system's recognition.
+/// HarmonyOS, talking to its own engine, which has no voice model.
 final harmonyLocalVoiceProvider = Provider<bool>(
   (ref) => ref.watch(operatingSystemProvider) == 'ohos' && ref.watch(activeHostProvider).isLocal,
 );

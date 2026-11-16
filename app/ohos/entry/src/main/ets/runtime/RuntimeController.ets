@@ -5,6 +5,7 @@ import util from '@ohos.util';
 import connection from '@ohos.net.connection';
 import UIAbility from '@ohos.app.ability.UIAbility';
 import type { HostState, HostEvent, HostOptions } from 'libdsh_host.so';
+import type { HostState, HostEvent, HostOptions, HostLifecycleSnapshot } from 'libdsh_host.so';
 import { loadNativeHost, peekNativeHost, nativeHostState, nativeHostTouched, configureNativeRecovery, NativeRecoveryGate } from './NativeHost';
 import { RuntimeChannelError, RuntimeManifest, RuntimeFile, RuntimeInstaller, RuntimeLogs, RuntimeLogEntry,
   InstallProgress, validateEnvironment, validateStartOptions, resolveNativeLibraryDir } from './RuntimeCore';
@@ -77,6 +78,12 @@ export class RuntimeController {
   private ownerAbility: UIAbility | null = null;
   private lifecycleTicks: number = 0;
   private idleDiagnosticsEnabled: boolean = false;
+  private ownerlessIdle: HostLifecycleSnapshot | null = null;
+  private retiredOwners: TransientTaskOwner[] = [];
+  private ownerAbility: UIAbility | null = null;
+  private lifecycleElapsedMs: number = 0;
+  private idleDiagnosticsEnabled: boolean = false;
+  private workspaceRecovery: boolean = false;
   private idleDiagnosticsWindow: IdleDiagnosticsWindow | null = null;
   private lastLifecycleError: string | null = null;
   private sinks: RuntimeSink[] = [];
@@ -96,6 +103,8 @@ export class RuntimeController {
   private stopping: Promise<void> | null = null;
   private linux: LinuxControl = new LinuxControl();
   private timer: number | null = null;
+  private qualificationTimer: number | null = null;
+  private pollIntervalMs: number = 100;
   private lastNative: HostState | null = null;
   private runtimeGeneration: number = 0;
   private recovery: RuntimeRecovery;
@@ -126,6 +135,7 @@ export class RuntimeController {
     RuntimeController.foreground = false;
     RuntimeController.shared?.taskOwner?.observe(false);
     RuntimeController.shared?.lifecycle.observe(false);
+    RuntimeController.shared?.startPolling();
   }
 
   static onDestroy(ability: UIAbility): void {
@@ -133,6 +143,7 @@ export class RuntimeController {
     RuntimeController.foreground = false; RuntimeController.ability = null;
     RuntimeController.shared?.retireOwner();
     RuntimeController.shared?.lifecycle.observe(false);
+    RuntimeController.shared?.startPolling();
   }
 
   constructor(context: common.Context) {
@@ -144,6 +155,10 @@ export class RuntimeController {
       (): string => backgroundComputePermission(context.applicationInfo.accessTokenId),
       (): void => this.lifecycleChanged(),
       (ack: HostLifecycleAck): void => this.taskOwner?.acknowledge(ack));
+      (ack: HostLifecycleAck): void => {
+        this.ownerlessIdle = this.taskOwner === null && !ack.busy ? ack.nativeHost : null;
+        this.taskOwner?.acknowledge(ack);
+      });
     this.lifecycle.observe(RuntimeController.foreground);
     this.paths = new RuntimePaths(context.filesDir);
     this.runtimeGeneration = nativeHostState().consumed ? 1 : 0;
@@ -178,6 +193,7 @@ export class RuntimeController {
     if (this.ownerAbility !== ability) this.bindOwner();
     this.taskOwner?.observe(true);
     this.lifecycle.observe(true);
+    this.collect();
   }
 
   private bindOwner(): void {
@@ -191,6 +207,7 @@ export class RuntimeController {
   }
 
   private retireOwner(): void {
+    this.ownerlessIdle = null;
     if (this.taskOwner !== null) {
       this.taskOwner.retire();
       if (this.taskOwner.cleanupPending()) this.retiredOwners.push(this.taskOwner);
@@ -236,6 +253,7 @@ export class RuntimeController {
     if (this.resetRequested) throw new RuntimeChannelError('ohos_restart_required', '重置已请求，请重新打开应用后继续。');
     const recovering = this.recovery.status().resetPending;
     await this.readInstallation();
+    this.workspaceRecovery = await this.storage.exists(this.workspaceRecoveryPath());
     await this.recovery.initialize(Date.now(), (): Promise<void> => this.installPayload(), nativeHostTouched);
     this.lkgRecovering = true;
     try { this.assertLkgStopped(); await this.lastGood.recoverPending(); }
@@ -340,6 +358,7 @@ export class RuntimeController {
       ['safeState', recovery.nextMode === 'safe' ? 'on' : 'off'],
       ['safeReason', recovery.nextMode === 'safe' ? 'manual' : null], ['strikes', recovery.strikes], ['autoSafe', false],
       ['failure', recoveryFailure], ['mainFailure', null], ['healthyAt', null], ['networkBlocked', false], ['networkBlockedAt', null],
+      ['workspaceRecovery', this.workspaceRecovery],
       ['directEngineEnabled', false], ['directEngineAvailable', false], ['directEngineActive', false],
       ['directEngineFallbackReason', null], ['currentExecutionMode', active ? 'ohos-embedded' : null],
       ['launchSelectedMode', native.consumed ? 'ohos-embedded' : null], ['launchSpawned', native.consumed],
@@ -367,6 +386,8 @@ export class RuntimeController {
     }
     this.lastLifecycleError = error;
     this.emitStatus();
+    if (this.canPausePolling()) this.collect();
+    else if (!RuntimeController.foreground && this.timer === null) this.startPolling();
   }
 
   subscribe(sink: RuntimeSink): void {
@@ -400,6 +421,63 @@ export class RuntimeController {
         this.collect();
       }, 100);
     }
+  private canPausePolling(): boolean {
+    if (RuntimeController.foreground || this.requestedStop || this.pending !== null || !this.lifecycle.synchronized() ||
+        this.retiredOwners.some((owner: TransientTaskOwner): boolean => owner.cleanupPending())) return false;
+    if (this.taskOwner !== null) return this.taskOwner.canPausePolling();
+    // An Ability can be destroyed while the process remains alive. There is no
+    // owner to grant CPU then; require a fresh idle ACK of that retired state.
+    const acknowledged: HostLifecycleSnapshot | null = this.ownerlessIdle;
+    if (acknowledged === null) return false;
+    try {
+      const current: HostLifecycleSnapshot | undefined = peekNativeHost()?.lifecycleSnapshot();
+      return current !== undefined && current.engineGeneration === acknowledged.engineGeneration &&
+        current.ownerGeneration === acknowledged.ownerGeneration && current.revision === acknowledged.revision &&
+        current.available === 0 && current.clockFailed === 0 && current.foreground === 0 &&
+        (current.phase === 0 || current.phase === 4);
+    } catch (_) { return false; }
+  }
+
+  private scheduleQualification(): void {
+    if (this.qualificationTimer !== null) clearTimeout(this.qualificationTimer);
+    this.qualificationTimer = null;
+    if (this.attempt === null || this.runningSince === null || this.runMode === 'safe') return;
+    let due: number | null = this.markedHealthy ? null : this.runningSince + HEALTHY_MS;
+    if (this.runMode === 'normal' && this.bootProfile !== null && !this.pinnedProfile) {
+      const pinDue: number = this.runningSince + 120000;
+      if (due === null || pinDue < due) due = pinDue;
+    }
+    if (due === null) return;
+    this.qualificationTimer = setTimeout((): void => {
+      this.qualificationTimer = null;
+      // collect re-reads native state before either existing qualification.
+      this.collect();
+    }, Math.max(1, due - Date.now()));
+  }
+
+  private startPolling(state: HostState = nativeHostState()): void {
+    const active: boolean = ['starting', 'running', 'stopping'].includes(state.phase);
+    if (state.phase === 'running' && this.canPausePolling()) {
+      if (this.timer !== null) clearInterval(this.timer);
+      this.timer = null;
+      this.scheduleQualification();
+      return;
+    }
+    if (this.qualificationTimer !== null) clearTimeout(this.qualificationTimer);
+    this.qualificationTimer = null;
+    // Busy background work keeps its one-second owner heartbeat. Foreground,
+    // startup and stop retain 100 ms; parked logs wait for the next collection.
+    const interval: number = state.phase === 'running' && !RuntimeController.foreground && !this.requestedStop ? 1000 : 100;
+    if (this.timer !== null && active && interval === this.pollIntervalMs) return;
+    if (this.timer !== null) clearInterval(this.timer);
+    this.timer = null;
+    if (!active) return;
+    this.pollIntervalMs = interval;
+    this.timer = setInterval(() => {
+      if (this.idleDiagnosticsEnabled && this.idleDiagnosticsWindow !== null) this.idleDiagnosticsWindow.pollTicks++;
+      this.lifecycleElapsedMs += this.pollIntervalMs;
+      this.collect();
+    }, interval);
   }
 
   collect(): void {
@@ -424,6 +502,8 @@ export class RuntimeController {
     this.noteLastGood(state);
     if (++this.lifecycleTicks >= 10) {
       this.lifecycleTicks = 0;
+    if (this.lifecycleElapsedMs >= 1000) {
+      this.lifecycleElapsedMs = 0;
       if (this.idleDiagnosticsEnabled && this.idleDiagnosticsWindow !== null) this.idleDiagnosticsWindow.lifecycleRefreshRequests++;
       this.lifecycle.refresh();
     }
@@ -458,6 +538,7 @@ export class RuntimeController {
       clearInterval(this.timer);
       this.timer = null;
     }
+    this.startPolling(state);
   }
 
   private noteHealthy(state: HostState): void {
@@ -506,6 +587,7 @@ export class RuntimeController {
       throw new RuntimeChannelError('ohos_lkg_pending', '启动或配置恢复尚未完成，未预览半套配置。');
     }
     this.pending = 'restore';
+    this.pending = 'restore'; this.startPolling();
     try {
       // Read-only preview never initiates initialization or intent replay.
       await initialized;
@@ -514,18 +596,21 @@ export class RuntimeController {
       await this.lkgPin;
       return await this.lastGood.preview();
     } finally { this.pending = null; }
+    } finally { this.pending = null; this.startPolling(); }
   }
 
   async restoreLastKnownGood(): Promise<Map<string, Object | null>> {
     if (this.pending !== null) throw new RuntimeChannelError('ohos_lkg_busy', '运行时操作尚未完成。');
     if (this.resetRequested || this.recovery.status().resetPending) throw new RuntimeChannelError('ohos_restart_required', '重置尚未完成，请重新打开应用。');
     this.pending = 'restore';
+    this.pending = 'restore'; this.startPolling();
     try {
       await this.initialize(); this.assertLkgStopped(); await this.lkgPin;
       const result = await this.lastGood.restore();
       this.logNote('主配置已恢复。');
       return result;
     } finally { this.pending = null; this.emitStatus(); }
+    } finally { this.pending = null; this.startPolling(); this.emitStatus(); }
   }
 
   async install(dropKept: boolean): Promise<void> {
@@ -566,11 +651,13 @@ export class RuntimeController {
     if (this.pending === 'start') return;
     if (this.pending !== null) throw new RuntimeChannelError('start_busy', '运行时正在安装。');
     this.pending = 'start'; this.startCancelled = false; this.lastError = null;
+    this.startPolling();
     this.startBegan = Date.now();
     this.emitStatus();
     try {
       await this.initialize();
       this.traceStart('initialized');
+      environment['DSH_APP_WORKSPACE_RECOVERY'] = this.workspaceRecovery ? '1' : '0';
       const selectedMode = await this.recovery.selectMode(mode);
       this.traceStart('mode ' + selectedMode);
       if ((native.phase === 'starting' || native.phase === 'running') && selectedMode === this.runMode) return;
@@ -635,6 +722,26 @@ export class RuntimeController {
     hilog.info(0x3F00, 'DshRuntime', 'start %{public}s at %{public}d ms', step, Date.now() - this.startBegan);
   }
 
+  // 下次启动改用独立的救援工作区索引；只在引擎停下时改，写入落盘后才算数。
+  // 标记放在运行时目录里，重置时随运行时一起清掉，和 Android 一样。
+  async setWorkspaceRecovery(enabled: boolean): Promise<void> {
+    if (this.pending !== null || ['starting', 'running', 'stopping'].includes(nativeHostState().phase)) {
+      throw new RuntimeChannelError('runtime_not_stopped', '引擎尚未停止，未切换工作区索引。');
+    }
+    try {
+      if (enabled) await this.storage.writeTextAtomic(this.workspaceRecoveryPath(), '1\n');
+      else await this.storage.removeFile(this.workspaceRecoveryPath());
+    } catch (_error) {
+      throw new RuntimeChannelError('workspace_recovery_save_failed', '工作区索引模式未保存。');
+    }
+    this.workspaceRecovery = enabled;
+    this.emitStatus();
+  }
+
+  private workspaceRecoveryPath(): string {
+    return this.installer.base + '/workspace-recovery';
+  }
+
   async reset(keep: string[], reinstall: boolean): Promise<void> {
     // A restore cut short that can't finish must not lock out the one way past it:
     // the committed reset drops it on reopening. Only a write in progress waits.
@@ -654,6 +761,7 @@ export class RuntimeController {
   stop(): Promise<void> {
     if (this.pending === 'start') this.startCancelled = true;
     this.requestedStop = true;
+    this.startPolling();
     this.managedSkills.stop(this.runtimeGeneration);
     if (this.stopping !== null) return this.stopping;
     this.stopping = this.finishStop().finally((): void => { this.stopping = null; });
@@ -705,6 +813,12 @@ export class RuntimeController {
     if (this.requestedStop || this.resetRequested) throw new RuntimeChannelError('ohos_linux_stopping', '引擎正在停止，未更改 Linux 代理。');
     const state = this.linuxHost();
     return this.linux.setProxy(state.baseUrl as string, state.token as string, proxy);
+  }
+
+  discardLinuxRetained(): Promise<string> {
+    if (this.requestedStop || this.resetRequested) throw new RuntimeChannelError('ohos_linux_stopping', '引擎正在停止，未删除 Linux 数据。');
+    const state = this.linuxHost();
+    return this.linux.discardRetained(state.baseUrl as string, state.token as string);
   }
 
   runLinuxPrivateGuest(request: LinuxRunRequest): Promise<string> {

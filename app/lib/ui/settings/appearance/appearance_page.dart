@@ -75,7 +75,8 @@ class AppearancePage extends ConsumerWidget {
     final l10n = context.l10n;
     final appearance = ref.watch(appearanceProvider);
     final wallpaper = ref.watch(wallpaperAccentProvider).value;
-    final androidFeatures = ref.watch(androidSystemFeaturesProvider);
+    // A picture as a launcher shortcut: Android and HarmonyOS, not iOS.
+    final pictureShortcut = ref.watch(operatingSystemProvider) != 'ios';
     return AppPage.list(
       title: l10n.pluginsTheme,
       children: [
@@ -99,7 +100,7 @@ class AppearancePage extends ConsumerWidget {
           title: l10n.pluginsAppIcon,
           children: [
             SpotAnchor(spot: Spots.appIcon, child: const AppIconPicker()),
-            if (androidFeatures) const IconShortcutTile(),
+            if (pictureShortcut) const IconShortcutTile(),
           ],
         ),
         SettingsSection(
@@ -929,7 +930,7 @@ class _WallpaperRow extends ConsumerWidget {
         title: l10n.pluginsFollowWallpaper,
         value: AccentDot(color: seed),
         onTap: () => set(!on),
-        trailing: Switch(value: on, onChanged: set),
+        trailing: Switch.adaptive(value: on, onChanged: set),
       ),
     );
   }

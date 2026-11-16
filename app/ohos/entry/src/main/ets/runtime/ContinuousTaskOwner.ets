@@ -51,6 +51,7 @@ export class ContinuousTaskOwner {
       if (this.generation !== generation || !this.wanted) return;
       this.stop(); this.fallback();
     }).finally((): void => { this.pending--; });
+    }).finally((): void => { this.pending--; if (!this.wanted) this.wake(); });
     return true;
   }
 
@@ -109,6 +110,7 @@ export class ContinuousTaskOwner {
     this.cleanup.add(id);
     backgroundTaskManager.stopBackgroundRunning(this.context, id).then((): void => {
       this.cleanup.delete(id);
+      this.cleanup.delete(id); this.wake();
     }, (): void => {
       if (attempt < 2) setTimeout((): void => this.stopTask(id, attempt + 1), 1000);
       else this.failure = 'ohos_continuous_cancel_failed';

@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { STATUS_CODES } from 'node:http';
+import { performance } from 'node:perf_hooks';
 import { fileURLToPath } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
 import { isMainThread } from 'node:worker_threads';
@@ -31,6 +32,32 @@ function retirement(value) {
     dataRetained: value.dataRetained === true, ownerQuarantined: value.ownerQuarantined === true,
     native: native ? { joined: native.joined === true, retirementError: native.retirementError,
       apiResult: native.apiResult } : null,
+function nativeRetirement(native) {
+  if (!native) return null;
+  const result = { joined: native.joined === true, retirementError: native.retirementError, apiResult: native.apiResult };
+  for (const key of ['joinAttempted', 'joinError', 'waitError']) if (Object.hasOwn(native, key)) result[key] = native[key];
+  if (Object.hasOwn(native, 'stopNotification')) {
+    const wake = native.stopNotification;
+    result.stopNotification = plain(wake) ? { attempted: wake.attempted === true, notified: wake.notified === true,
+      unnecessary: wake.unnecessary === true, errorCode: wake.errorCode } : null;
+  }
+  if (Object.hasOwn(native, 'fdRetirement')) {
+    const fds = native.fdRetirement;
+    result.fdRetirement = plain(fds) ? { retired: fds.retired === true, consoleError: fds.consoleError,
+      wakeReadError: fds.wakeReadError, wakeWriteError: fds.wakeWriteError } : null;
+  }
+  if (Object.hasOwn(native, 'ramRetirement')) {
+    const ram = native.ramRetirement;
+    result.ramRetirement = plain(ram) ? { eligible: ram.eligible === true, attempted: ram.attempted === true,
+      trackedBytes: ram.trackedBytes, eligibleBytes: ram.eligibleBytes,
+      advisedBytes: ram.advisedBytes, errorCode: ram.errorCode } : null;
+  }
+  return result;
+}
+function retirement(value) {
+  return { resourcesRetired: value.resourcesRetired === true, filesRemoved: value.filesRemoved === true,
+    dataRetained: value.dataRetained === true, ownerQuarantined: value.ownerQuarantined === true,
+    native: nativeRetirement(value.native),
     releaseErrorCode: value.releaseError ? codeOf(value.releaseError) : null,
     guestClose: value.guestClose ? { ...value.guestClose } : null, cleanCheckpoint: value.cleanCheckpoint === true };
 }
@@ -56,6 +83,8 @@ export class LinuxControl {
   #instanceId = randomUUID(); #attemptId = null; #phase = 'disabled'; #enabled = false;
   #paths; #assets; #loadModule; #owner; #backend; #installAbort; #installPromise;
   #disablePromise; #shutdownPromise; #closing = false; #shutdownComplete = false;
+  #paths; #assets; #loadModule; #owner; #backend; #installAbort; #installPromise; #installSettled = false;
+  #disablePromise; #discardPromise; #shutdownPromise; #closing = false; #shutdownComplete = false;
   #failed = false; #unknown = false; #lastError = null; #progress = null; #retirement = null;
   #job; #nextRequestId = 1; #lastRequestDigest; #routed = null; #exports = Object.freeze([]);
   #proxy = new LinuxProxyPolicy();
@@ -75,6 +104,15 @@ export class LinuxControl {
     // The VM learns its exports at boot; a later owner cannot change a started attempt,
     // and its commands outside those directories are refused as not exported.
     if (this.#attemptId === null) this.#exports = Object.freeze(roots.map((path, index) => Object.freeze({ tag: 'dsh' + index, path })));
+  }
+  /** Retained results and an idle retained VM are not work; uncertain retirement is. */
+  hasActiveWork() {
+    if (this.#shutdownComplete) return false;
+    return this.#unknown || this.#backend?.state === 'quarantined'
+      || (this.#job !== undefined && this.#job.state !== 'settled') || this.#routed !== null
+      || (this.#installPromise !== undefined && !this.#installSettled)
+      || this.#disablePromise !== undefined || this.#discardPromise !== undefined
+      || (this.#closing && !this.#shutdownComplete);
   }
   status() {
     const backendState = this.#backend?.state ?? null;
@@ -96,12 +134,14 @@ export class LinuxControl {
         errorCode: job.errorCode, diagnostic: job.diagnostic && { ...job.diagnostic },
         stdout: output(job.handle.collected.stdout), stderr: output(job.handle.collected.stderr) } : null,
       retirement: this.#retirement && { ...this.#retirement, native: this.#retirement.native && { ...this.#retirement.native },
+      retirement: this.#retirement && { ...this.#retirement, native: nativeRetirement(this.#retirement.native),
         guestClose: this.#retirement.guestClose && { ...this.#retirement.guestClose } } };
   }
   command(body) {
     if (!plain(body) || body.v !== 1 || typeof body.instanceId !== 'string' ||
         !(body.attemptId === null || typeof body.attemptId === 'string')) throw requestError('Invalid control identity');
     const fields = { setEnabled: ['enabled'], setProxy: ['proxy'], runPrivateGuest: ['requestId', 'argv', 'cwd', 'env', 'stdin'], shutdown: [] };
+    const fields = { setEnabled: ['enabled'], setProxy: ['proxy'], runPrivateGuest: ['requestId', 'argv', 'cwd', 'env', 'stdin'], shutdown: [], discardRetained: [] };
     if (!Object.hasOwn(fields, body.action) || Object.keys(body).some(key => !['v', 'instanceId', 'attemptId', 'action', ...fields[body.action]].includes(key))) {
       throw requestError('Unknown action or field');
     }
@@ -113,6 +153,8 @@ export class LinuxControl {
       if (this.#closing) throw fail('ERR_OHOS_LINUX_CLOSED', 'Final shutdown already started');
       this.#proxy.set(body.proxy);
     } else if (body.action === 'runPrivateGuest') this.#run(body);
+    // The only action that completes before replying: a promise of the status.
+    else if (body.action === 'discardRetained') return this.#discard();
     else this.shutdown();
     return this.status();
   }
@@ -126,6 +168,7 @@ export class LinuxControl {
     if (this.#closing) throw fail('ERR_OHOS_LINUX_CLOSED', 'Final shutdown already started');
     if (enabled) {
       if (this.#disablePromise) throw fail('ERR_OHOS_LINUX_BUSY', 'Disable has not settled');
+      if (this.#discardPromise) throw fail('ERR_OHOS_LINUX_BUSY', 'Retained Linux data is being discarded');
       if (this.#failed || this.status().state === 'unknown') throw fail('ERR_OHOS_LINUX_RESTART_REQUIRED', 'This owner cannot be restarted');
       if (!this.#paths) throw fail('ERR_OHOS_LINUX_HOST_PATHS', 'Trusted preload paths are unavailable', 503);
       this.#enabled = true;
@@ -141,6 +184,12 @@ export class LinuxControl {
     if (this.#disablePromise) return;
     if (!this.#installPromise) { this.#phase = 'disabled'; return; }
     const installing = !this.#backend;
+    if (this.#disablePromise || this.#discardPromise) return;
+    if (!this.#installPromise) { this.#phase = 'disabled'; return; }
+    const installing = !this.#backend;
+    // A running VM has one native lifetime. Ordinary off uses its final join
+    // barrier; discarded RAM pages cannot resume in this App process.
+    if (!installing) { this.shutdown(); return; }
     this.#phase = 'disabling';
     if (installing) this.#installAbort.abort(fail('ABORT_ERR', 'Installation cancelled by explicit switch'));
     this.#disablePromise = (async () => {
@@ -171,6 +220,44 @@ export class LinuxControl {
       if (!this.#closing && !signal.aborted) this.#phase = cause.code === 'ERR_OHOS_LINUX_ASSETS_UNAVAILABLE' ? 'unavailable' : 'failed';
       throw cause;
     }
+    } finally { this.#installSettled = true; }
+  }
+  /**
+   * The explicit 重新安装 Linux: deletes the retained instance, for one that
+   * openLinuxInstance refuses to resume. Only while Linux is off (or its
+   * install has settled as failed), nothing is in flight, and an owner of
+   * this process, if any, never created a VM and is confirmed retired; one
+   * that did may still hold the disk until the App process exits. Such a
+   * VM-less attempt is then forgotten, so the next switch-on in this same
+   * process is a fresh install. The switch stays off; nothing turns it on.
+   */
+  async #discard() {
+    if (this.#closing) throw fail('ERR_OHOS_LINUX_CLOSED', 'Final shutdown already started');
+    const failedInstall = this.#installSettled && ['failed', 'unavailable'].includes(this.#phase);
+    if (this.#discardPromise || this.#disablePromise || (this.#installPromise && !this.#installSettled) ||
+        (this.#enabled && !failedInstall) || (this.#job && this.#job.state !== 'settled') || this.#routed) {
+      throw fail('ERR_OHOS_LINUX_BUSY', 'Linux must be off and idle before its data is discarded');
+    }
+    const owner = this.#owner, attempt = this.#installPromise;
+    if (this.status().state === 'unknown' || (owner && (owner.nativeOwnerCreated || this.#retirement?.resourcesRetired !== true))) {
+      throw fail('ERR_OHOS_LINUX_RESTART_REQUIRED', 'A Linux owner of this process may still hold the retained data');
+    }
+    if (!this.#paths) throw fail('ERR_OHOS_LINUX_HOST_PATHS', 'Trusted preload paths are unavailable', 503);
+    this.#enabled = false;
+    this.#discardPromise = (async () => {
+      try {
+        const module = await this.#loadModule();
+        await module.discardLinuxInstallation({ directory: this.#paths.directory });
+      } catch (cause) { this.#lastError = codeOf(cause); throw cause; }
+      this.#lastError = null;
+      if (attempt) {
+        this.#owner = undefined; this.#installPromise = undefined; this.#installAbort = undefined;
+        this.#installSettled = false; this.#failed = false; this.#retirement = null; this.#progress = null;
+      }
+      if (!this.#closing) this.#phase = 'disabled';
+    })();
+    try { await this.#discardPromise; } finally { this.#discardPromise = undefined; }
+    return this.status();
   }
   #run(body) {
     const request = runRequest(body), digest = createHash('sha256').update(JSON.stringify(request)).digest('hex');
@@ -200,6 +287,7 @@ export class LinuxControl {
    */
   async spawnRouted(spec, { signal, label, waitMs = 10000, resumeMs = 120000 } = {}) {
     const resumeBy = Date.now() + resumeMs, busyBy = Date.now() + waitMs;
+    const resumeBy = performance.now() + resumeMs, busyBy = performance.now() + waitMs;
     for (;;) {
       signal?.throwIfAborted();
       const status = this.status(), busy = (this.#job && this.#job.state !== 'settled') || this.#routed;
@@ -213,6 +301,10 @@ export class LinuxControl {
           throw routed(127, 'ERR_OHOS_LINUX_UNAVAILABLE', `Linux 环境当前不可用（${status.state}${status.lastErrorCode ? '，' + status.lastErrorCode : ''}）：请在 ${settings} 查看，必要时重启 App。`);
         }
       } else if (Date.now() >= busyBy) {
+        if (status.state !== 'installing' || performance.now() >= resumeBy) {
+          throw routed(127, 'ERR_OHOS_LINUX_UNAVAILABLE', `Linux 环境当前不可用（${status.state}${status.lastErrorCode ? '，' + status.lastErrorCode : ''}）：请在 ${settings} 查看，必要时重启 App。`);
+        }
+      } else if (performance.now() >= busyBy) {
         throw routed(126, 'ERR_OHOS_LINUX_BUSY', `Linux 环境同一时间只运行一个命令，现在被 ${this.#routed?.label ?? '另一个命令'} 占用；请等它结束后重试。`);
       }
       await delay(100, undefined, { signal });
@@ -247,6 +339,8 @@ export class LinuxControl {
       // Await the whole chain, including lazy module/manifest reads before an
       // owner exists. No-owner is safe only after those continuations ended.
       await this.#installPromise?.catch(() => {}); await this.#disablePromise;
+      // A discard holds the root flock but no VM; let it finish before stopping.
+      await this.#discardPromise?.catch(() => {});
       try { await this.#drainJob(); } catch (cause) { this.#recordUnknown(cause); }
       if (this.#backend?.state === 'quarantined') this.#recordUnknown(fail('ERR_OHOS_LINUX_UNKNOWN', 'Guest transport failed'));
       this.#retirement = this.#owner ? retirement(await this.#owner.dispose()) : noOwner();
@@ -295,6 +389,11 @@ export function registerLinuxControlRoutes(ctx, control) {
       if (req.url !== route) throw requestError('Control route does not accept query or path arguments');
       if (req.method === 'GET') reply(200, control.status());
       else reply(202, control.command(await readJson(req)));
+      else {
+        // 202: accepted, may still be running. 200: discardRetained has finished.
+        const body = await readJson(req), status = await control.command(body);
+        reply(body.action === 'discardRetained' ? 200 : 202, status);
+      }
     } catch (cause) {
       const status = cause.status ?? (cause instanceof TypeError ? 400 : 409);
       reply(status, { v: 1, error: { code: codeOf(cause), message: STATUS_CODES[status] ?? 'Linux control failed' }, status: control.status() });

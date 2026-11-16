@@ -11,6 +11,8 @@
 # was. The host needs oh-flutter's AOT tools (macOS arm64 works; the Windows x64
 # gen_snapshot published for 3.47.9 is Dart 3.12.2 and cannot read its 3.13.3
 # kernel, so release AOT fails there) plus hvigor and ohpm (DevEco Studio 26 bundles them).
+# was. The host needs oh-flutter's AOT tools, published for macOS arm64 only so far
+# (see app/ohos/README.md), plus hvigor and ohpm from HarmonyOS Command Line Tools.
 #
 # The Node-side native libraries come from runtime/ohos/native/build-hap-libs.py and are placed only for this run.
 # The runtime is one Stored dsh-runtime/runtime.zip, which the app streams from rawfile; it is never expanded here.
@@ -62,6 +64,8 @@ if [[ -f "$NATIVE_LIBS/libdsh_python.so" || -f "$NATIVE_LIBS/libpython3.14.so" ]
 fi
 if [[ -f "$NATIVE_LIBS/libdsh_linux.so" ]]; then PREBUILT+=(libdsh_linux.so); fi
 if [[ -f "$NATIVE_LIBS/libdsh_workspace_grants.so" ]]; then PREBUILT+=(libdsh_workspace_grants.so); fi
+# Image is an explicit optional product library; SDK dependencies remain system libraries.
+if [[ -f "$NATIVE_LIBS/libdsh_image_codec.so" ]]; then PREBUILT+=(libdsh_image_codec.so); fi
 for lib in "${PREBUILT[@]}"; do
   [[ -f "$NATIVE_LIBS/$lib" ]] || { printf 'Missing native library: %s\n' "$NATIVE_LIBS/$lib" >&2; exit 1; }
 done
@@ -81,6 +85,7 @@ restore() {
   if [[ -n "$ENGINE_KEPT" ]]; then mv -f "$ENGINE_KEPT" "$ENGINE_HAR"; fi
   if [[ -n "$PREPARED" ]]; then rm -rf "$PREPARED"; fi
   rm -rf pubspec_overrides.yaml .vendor ohos/.vendor
+  rm -rf pubspec_overrides.yaml ohos/.vendor
   for lib in "${PREBUILT[@]}"; do rm -f "$LIBS/$lib"; done
   rmdir "$LIBS" ohos/entry/libs 2>/dev/null || true
   rm -rf "$RAWFILE/dsh-runtime"
@@ -166,6 +171,16 @@ if [[ "$SIGN" == 0 ]]; then UNSIGNED=(--no-codesign); fi
 "$FLUTTER" build hap "$MODE" --target-platform ohos-arm64 --no-tree-shake-icons "${UNSIGNED[@]}" --dart-define=ENABLE_FLEX_OVERFLOW=false
 python3 -I -B "$APP/../tooling/ohos/prepare-forks.py" \
   --verify-package-config "$APP/.dart_tool/package_config.json" --output "$APP/.vendor/forks" --after-build
+  --output "$APP/ohos/.vendor/forks" --overrides "$APP/pubspec_overrides.yaml"
+"$FLUTTER" pub get
+python3 -I -B "$APP/../tooling/ohos/prepare-forks.py" \
+  --verify-package-config "$APP/.dart_tool/package_config.json" --output "$APP/ohos/.vendor/forks"
+# No icon tree shaking: oh-flutter's const_finder fails on its own Dart ("Invalid SDK hash").
+# ENABLE_FLEX_OVERFLOW: oh-flutter's release-only strategy shrinks the whole app's
+# device pixel ratio when a Column overflows. Android clips the overflow and carries on.
+"$FLUTTER" build hap "$MODE" --target-platform ohos-arm64 --no-tree-shake-icons --dart-define=ENABLE_FLEX_OVERFLOW=false
+python3 -I -B "$APP/../tooling/ohos/prepare-forks.py" \
+  --verify-package-config "$APP/.dart_tool/package_config.json" --output "$APP/ohos/.vendor/forks" --after-build
 python3 -I -B "$APP/../tooling/ohos/prepare-forks.py" --verify-installed "$APP/ohos"
 if [[ "$MODE" == --release ]]; then
   # What ohpm installed is what hvigor compiled.

@@ -20,6 +20,10 @@
 #   --aot DIR         app.so and flutter_assets: the ohos-aot-<sha> Actions artifact
 #   --native DIR      libnode.so, libdsh_flock.so, libdsh_require_builtin.so
 #                     (runtime/ohos/native/build-hap-libs.py)
+#                     (runtime/ohos/native/build-hap-libs.py), optionally libdsh_linux.so,
+#                     libdsh_workspace_grants.so and libdsh_image_codec.so (runtime/ohos/image),
+#                     and an OH build of every native asset the AOT
+#                     carries (libsqlite3.so: runtime/ohos/native/build-sqlite.py)
 #   --runtime ZIP     dsh-runtime-rawfile.zip, one Stored dsh-runtime/runtime.zip
 #                     (runtime/ohos/package/compose-runtime.py)
 #   --node-headers D  Node 24.22.1 src/ or include/node, for CMakeLists.txt's N-API gate
@@ -119,6 +123,9 @@ if [ "$FULL" = 1 ]; then
       "$NATIVE/libdsh_flock.so" "$NATIVE/libdsh_require_builtin.so" "$NODE_HEADERS/node_api.h"; do
     [ -f "$file" ] || die "$file is missing"
   done
+  # Dart hooks built the AOT's native assets for another libc; each needs its OH build here.
+  python3 -I -B "$REPO/tooling/ohos/native_assets.py" --aot "$AOT" --native "$NATIVE" >/dev/null ||
+    die "--native lacks an OH build of the AOT's native assets (see above)"
 fi
 
 [ "$CLEAN" = 0 ] || rm -rf "$WORK"
@@ -361,6 +368,8 @@ if [ "$FULL" = 1 ]; then
   cp -a "$AOT/flutter_assets" "$RAWFILE/flutter_assets"
   cp "$AOT/arm64-v8a/app.so" "$LIBS/libapp.so"
   if [ -d "$AOT/native_assets/libs/arm64-v8a" ]; then cp "$AOT/native_assets/libs/arm64-v8a/"*.so "$LIBS/"; fi
+  # Never the AOT's own native assets: their OH builds, by the same name, from --native.
+  python3 -I -B "$REPO/tooling/ohos/native_assets.py" --aot "$AOT" --native "$NATIVE" --copy-to "$LIBS"
   # FlutterLoader reads these from rawfile; copyConfigsFile moves them there.
   for config in buildinfo.json5 framesconfig.json; do
     if [ -f "$ENTRY/src/main/resources/base/profile/$config" ]; then
@@ -370,6 +379,9 @@ if [ "$FULL" = 1 ]; then
   # libdsh_host.so is hvigor's to build; libc++_shared.so is its to add.
   cp "$NATIVE/libnode.so" "$NATIVE/libdsh_flock.so" "$NATIVE/libdsh_require_builtin.so" "$LIBS/"
   if [ -f "$NATIVE/libdsh_linux.so" ]; then cp "$NATIVE/libdsh_linux.so" "$LIBS/"; fi
+  for optional in libdsh_linux.so libdsh_workspace_grants.so libdsh_image_codec.so; do
+    if [ -f "$NATIVE/$optional" ]; then cp "$NATIVE/$optional" "$LIBS/"; fi
+  done
   # The transport contains exactly one Stored asset; never expand its members.
   python3 -I - "$RUNTIME" "$RAWFILE" <<'PY_RUNTIME_ARCHIVE'
 import pathlib, sys, zipfile

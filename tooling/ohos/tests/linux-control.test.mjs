@@ -290,3 +290,36 @@ test('proxy response rejects configuration strings, invalid revisions and contra
     finally { await fixture.close(); }
   }
 });
+
+test('重新安装 Linux: discardRetained sends the current identity, waits for the deletion and keeps refusal codes', async () => {
+  let discards = 0;
+  const control = new NodeLinuxControl({ hostPaths: { directory: directory + '/linux-tools', nativeLibraryDirectory: '/trusted/native' } }, {
+    async loadModule() { return { async discardLinuxInstallation(input) {
+      discards++; assert.deepEqual(input, { directory: directory + '/linux-tools' }); return { removed: 1 };
+    } }; },
+  });
+  const fixture = await serverFor(async (request, response) => {
+    if (request.method === 'GET') { reply(response, 200, control.status()); return; }
+    // Preserve the production route: the discard reply comes after the deletion.
+    try { reply(response, request.body.action === 'discardRetained' ? 200 : 202, await control.command(request.body)); }
+    catch (error) { reply(response, 409, { v: 1, error: { code: error.code, message: 'Conflict' }, status: control.status() }); }
+  });
+  try {
+    calls.length = 0;
+    const client = new LinuxControl();
+    const done = JSON.parse(await client.discardRetained(fixture.url, 'test-only-token'));
+    assert.equal(done.state, 'disabled'); assert.equal(done.lastErrorCode, null); assert.equal(discards, 1);
+    assert.deepEqual(fixture.observed.find(row => row.method === 'POST').body,
+      { v: 1, instanceId: done.instanceId, attemptId: null, action: 'discardRetained' });
+    const post = calls.find(row => row.options.method === 'POST');
+    assert.equal(post.options.readTimeout, 60000); assert.ok(post.destroyed);
+    assert.ok(calls.filter(row => row.options.method === 'GET' && !row.url.includes('token=')).every(row => row.options.readTimeout === 5000));
+  } finally { await control.shutdown(); await fixture.close(); }
+  const refused = await serverFor((request, response) => request.method === 'GET' ? reply(response, 200, snapshot())
+    : reply(response, 409, { v: 1, error: { code: 'ERR_OHOS_LINUX_RESTART_REQUIRED', message: 'must not surface this text' } }));
+  try {
+    await assert.rejects(new LinuxControl().discardRetained(refused.url, 'test-only-token'),
+      error => error.code === 'ERR_OHOS_LINUX_RESTART_REQUIRED' && !error.message.includes('must not surface'));
+    assert.equal(refused.observed.filter(row => row.method === 'POST').length, 1);
+  } finally { await refused.close(); }
+});

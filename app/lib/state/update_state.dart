@@ -130,11 +130,12 @@ class AppUpdateState {
         (page.scheme != 'https' && page.scheme != 'http') ||
         page.host.isEmpty ||
         page.userInfo.isNotEmpty) {
+    if (page == null || (page.scheme != 'https' && page.scheme != 'http') ||
+        page.host.isEmpty || page.userInfo.isNotEmpty) {
       return null;
     }
     return page;
   }
-
   final bool autoCheck;
 
   /// Installed version (native versionName + versionCode).
@@ -422,18 +423,20 @@ class AppUpdateController extends Notifier<AppUpdateState> {
       check: latest != null ? UpdateCheckPhase.available : UpdateCheckPhase.idle,
       patchFailedVersion: () => prefs.getString(_patchFailedKey),
     );
-    await reconcileSelfUpdate();
+    // No APK installer on this build: there is no self-update journal to read.
+    if (installable) await reconcileSelfUpdate();
     if (ref.mounted) unawaited(_hashIfPatched());
   }
 
   void selectInstallRoute(UpdateInstallRoute route) {
+    if (_noticeOnly) return;
     if (state.busy || state.loadingInstallStatus) return;
     state = state.copyWith(installRoute: route, privilegedErrorCode: () => null);
     if (route != UpdateInstallRoute.system) unawaited(refreshInstallStatus());
   }
 
   Future<void> refreshInstallStatus() async {
-    if (state.loadingInstallStatus) return;
+    if (_noticeOnly || state.loadingInstallStatus) return;
     state = state.copyWith(loadingInstallStatus: true);
     try {
       final status = await _privileged.status();
@@ -446,6 +449,7 @@ class AppUpdateController extends Notifier<AppUpdateState> {
   }
 
   Future<void> requestUpdateShizukuPermission() async {
+    if (_noticeOnly) return;
     if (state.busy || state.loadingInstallStatus) return;
     state = state.copyWith(loadingInstallStatus: true, privilegedErrorCode: () => null);
     var granted = false;
@@ -641,6 +645,8 @@ class AppUpdateController extends Notifier<AppUpdateState> {
         state.hasUpdate &&
         !state.isSkipped &&
         (state.asset != null || state.noticePage != null);
+    return ref.mounted && state.autoCheck && state.hasUpdate && !state.isSkipped &&
+        (state.noticeOnly ? state.noticePage != null : state.asset != null);
   }
 
   /// Asks the sources for the latest release. Concurrent calls share one check;
@@ -650,6 +656,7 @@ class AppUpdateController extends Notifier<AppUpdateState> {
     if (!ref.mounted) return UpdateCheckPhase.idle;
     // A build that can neither install nor notice has nothing to check.
     if (!state.checkable) return UpdateCheckPhase.idle;
+    if (!ref.mounted || !state.checkable) return UpdateCheckPhase.idle;
     if (state.busy) return state.check;
     return _checking ??= _check().whenComplete(() => _checking = null);
   }
@@ -796,6 +803,7 @@ class AppUpdateController extends Notifier<AppUpdateState> {
 
   Future<void> startDownload() async {
     if (_noticeOnly || !state.installable) return;
+    if (_noticeOnly) return;
     await ready;
     final release = state.latest;
     final asset = state.asset;
@@ -985,6 +993,7 @@ class AppUpdateController extends Notifier<AppUpdateState> {
   /// is one no later update can cover: the signature check stays, so that phone
   /// goes on signing and installing every version itself.
   Future<String?> exportApk() async {
+    if (_noticeOnly) return null;
     final apk = _apk;
     if (!ref.mounted || apk == null || state.busy || !apk.isFile(state)) return null;
     final files = ref.read(filesChannelProvider);
@@ -1188,6 +1197,7 @@ class AppUpdateController extends Notifier<AppUpdateState> {
   /// without reporting; after [confirmGrace] the person can try again.
   Future<void> onAppResumed({Duration confirmGrace = const Duration(seconds: 3)}) async {
     if (_noticeOnly || !state.installable) return;
+    if (_noticeOnly) return;
     await ready;
     if (!ref.mounted) return;
     if (state.selfUpdate.unresolved || state.installRoute != UpdateInstallRoute.system) {

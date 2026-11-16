@@ -22,6 +22,7 @@
 ```
 
 成功接受返回 `202` 和完整状态对象。第一次 true 后后台加载固定 manifest，按可信持久记录选择首次下载/安装或同一数据盘的直接恢复；`202` 仅表示接受。再次 true 只复用同一个健康 owner/backend。false 立即关闭准入，然后异步 terminate 本 service 持有的未结局 job 并等待真实 `waitForExit`；正常已打开的空闲 VM 保留。false 在安装中取消安装并收尾；本期取消/失败的安装 owner 不重建，再次 true 明确报错并要求退出并重新启动整个App；保留数据仍须满足干净恢复条件。请求断连或 HTTP 超时不等于 false。
+成功接受返回 `202` 和完整状态对象。第一次 true 后后台加载固定 manifest，按可信持久记录选择首次下载/安装或同一数据盘的直接恢复；`202` 仅表示接受。已开启期间的再次 true 只复用同一个健康 owner/backend。false 立即关闭准入；已有 backend 时进入与最终 `shutdown` 相同的屏障，异步 terminate 并等待本 service 的未结局 private/routed job，再等 guest close 与真实 native join。完成后为 stopped，restartRequired 为 true；再次开启须退出并重新启动整个 App。false 在安装中取消安装并收尾；本期取消/失败的安装 owner 不重建，再次 true 明确报错并要求退出并重新启动整个App；保留数据仍须满足干净恢复条件。请求断连或 HTTP 超时不等于 false。
 
 ### 明确的私有 guest 运行
 
@@ -46,6 +47,16 @@ backend 不再隐式继承宿主环境，仅提供客体 PATH/HOME/TMPDIR/LANG �
 同一规范化配置不递增revision。配置可在作业运行时改变，但只影响后续新requestId；原号同参重试先去重，仍返回原作业。manual/direct不允许作业env再携任何代理别名，否则400 `ERR_OHOS_LINUX_PROXY_ENV_CONFLICT`。inherit保留既有活动策略、父环境及显式env优先级；revision只反映setProxy配置，不是外部策略的完整版本，也不是跨客户端租约。
 
 App的HTTP localhost/127.0.0.1代理映射到TinyEMU宿主端10.0.2.2；其他127/8、IPv6 loopback和HTTPS loopback明确拒绝。合并gitee.com及huaweicloud.com直连项，保留整值`*`的客户端语义。控制HTTP本身不走该代理。完整别名、地址、错误码、传输范围和实际客户端验证边界见同目录`PROXY.zh.md`；不影响App归档下载器或全部插件路由。
+
+### 删除保留数据（重新安装 Linux）
+
+```json
+{"v":1,"instanceId":"<GET返回>","attemptId":"<GET返回或null>","action":"discardRetained"}
+```
+
+保留实例无法恢复（下文 §4 的各类拒绝）时唯一的出路，由 App 在用户确认「重新安装 Linux」后发送，没有其他字段。与其他 POST 不同，它在删除完成后才回复：成功为 `200` 和完整状态对象，`lastErrorCode` 清为 null，开关保持关闭，不会自动开启。删除不需要 VM，只用文件系统和锁：取同一个根 `.lock` 的真实 `flock`（被占用为 `ERR_OHOS_LINUX_BUSY`），按 `openLinuxInstance` 同样核对根与锁的规范路径、FD 身份和私有权限，把除 `.lock` 外的每一项先在根内改名为 `.discard-<随机>` 并同步根目录，再逐项删除（目录递归删除不跟随链接，其余一律按名字 unlink，不打开也不跟随）并再次同步。根目录和 `.lock` inode 保留，下一次启用就是全新安装。删除中途崩溃留下的 `.discard-*` 只是垃圾：`openLinuxInstance` 持锁后先删掉它们再判断有无保留数据，绝不把它们当实例恢复。
+
+只在本 service 没有进行中的安装/关闭/删除、没有作业或路由命令、不在最终停止、且开关关闭（或安装已以 failed/unavailable 结束）时受理，否则 `409 ERR_OHOS_LINUX_BUSY`；最终停止开始后为 `ERR_OHOS_LINUX_CLOSED`。本进程的 owner 若曾创建 native VM，或其退役未确认、状态为 unknown，则 `409 ERR_OHOS_LINUX_RESTART_REQUIRED`：数据可能仍被占用，须退出整个 App 后再删。未曾创建 VM 且已确认退役的失败尝试在删除成功后被丢弃，`restartRequired` 随之恢复 false，同一进程内再开启即全新安装；这是“失败的安装 owner 不重建”的唯一例外，前提是该尝试从未持有 native 资源。删除本身失败时 `lastErrorCode` 为其错误码，数据可能已部分删除，再次删除会继续。删除进行中 `setEnabled(true)` 为 busy，`setEnabled(false)` 无动作，`shutdown` 等它结束后才收尾。
 
 ### 最终停止
 
@@ -90,6 +101,7 @@ App的HTTP localhost/127.0.0.1代理映射到TinyEMU宿主端10.0.2.2；其他12
 
 - `state` 为 `disabled | installing | enabled | disabling | stopping | stopped | unavailable | failed | unknown`。后端真实 `quarantined` / closed fault 和 job UNKNOWN 优先派生 unknown，不能只读可能陈旧的 owner.state=active。`enabled` 是用户请求的开关值；`admission` 仅在同一实际 opened backend 健康且不在关闭过程中时为 true。
 - `guestOpened` 来自当前 backend 的实际状态，关闭开关但保留 VM 时仍可 true；不代表生产每任务授权、宿主 workspace、PTY 或所有插件命令就绪。
+- `guestOpened` 来自当前 backend 的实际状态，普通关闭进入最终屏障后，在 backend 真正关闭前仍可 true；不代表生产每任务授权、宿主 workspace、PTY 或所有插件命令就绪。
 - `ownerRetained` 只表示 service 仍持有同一 owner 对象；不是“完整 VM 内存已释放”的反义测量。`ownerState`、`backendState` 是既有状态字符串或 null，状态源必须真实。
 - `progress` 为 `null` 或 `{stage:string,done:number|null,total:number|null,step:string|null}`，只有固定/有界阶段与计数，不含文件名/URL。观察回调异常不得改变安装成败。
 - `job` 为最近一个 job，接受新 job 才替换已结局记录；UNKNOWN 不允许被新 job 覆盖。最多一个 active job，不维护无界历史。
@@ -114,6 +126,7 @@ App的HTTP localhost/127.0.0.1代理映射到TinyEMU宿主端10.0.2.2；其他12
 错误体为 `{"v":1,"error":{"code":"ERR_...","message":"HTTP标准短语"},"status":<当前完整状态>}`；鉴权拒绝不附 status。400/413/415 为请求问题；409 为 stale/busy/disabled/failed/unknown 等拒绝；shutdown 已受理但未确认只在 GET 状态中报告，不能把 202 当完成；503 为缺 connection 或可信 host path。仅在首次显式启用后才可能发现 assets 缺失，此时后台状态 `unavailable`。
 
 setEnabled(true) 在 installing 时为幂等保持；setEnabled(false) 在 disabling 时同样保持，不重发 cancel；在 disabling 完成前 true 拒绝 busy。shutdown 一旦开始不可重新开启。不存在自动换号重试、后台重建或每任务grant已完成的声明。931在新的App进程中仅按当前可见且完整合格的clean持久记录恢复同代数据盘；该记录的生成路径要求本epoch的guest syncfs和native成功退役。旧v1、dirty/booting、资产变更或身份错误明确拒绝并保留，不自动重装覆盖。正常shutdown后退出整个App再开与突然杀进程/掉电恢复是不同范围。
+setEnabled(true) 在 installing 时为幂等保持；setEnabled(false) 在 disabling 时同样保持，不重发 cancel；在 disabling 完成前 true 拒绝 busy。shutdown 一旦开始不可重新开启。不存在自动换号重试、后台重建或每任务grant已完成的声明。931在新的App进程中仅按当前可见且完整合格的clean持久记录恢复同代数据盘；该记录的生成路径要求本epoch的guest syncfs和native成功退役。旧v1、dirty/booting、资产变更或身份错误明确拒绝并保留，不自动重装覆盖；用户确认的 `discardRetained`（App 的「重新安装 Linux」）是删除它们的唯一途径。正常shutdown后退出整个App再开与突然杀进程/掉电恢复是不同范围。
 
 ## 5. 需要联测的实际边界
 
@@ -121,6 +134,7 @@ setEnabled(true) 在 installing 时为幂等保持；setEnabled(false) 在 disab
 2. 通过真实 SubprocessRuntime 注册 route；唯一 preload 在插件前捕获可信路径，插件修改 env 后不能重定向目录/库；worker 不注册第二 owner。
 3. 实际 914 socket protocol：opened→执行→双 EOF/ACK→完成；active 后真实 socket 断流→GET unknown，后续 run 拒绝，shutdown 后不改写 job UNKNOWN。
 4. off→terminate 请求→真实 waitForExit→disabled→on，同一 owner/session 创建计数仍 1。
+4. off→terminate 请求→真实 waitForExit→guest close→join→stopped；同一 owner/session 创建与 join 计数各 1，再次 on 明确拒绝并要求重启 App。
 5. 安装 progress observer throw 不破坏安装；安装 cancel 的真实边界与已发布 dataRetained / native joined / filesRemoved 区分。
 6. 真实 RuntimeController stop/reset 必须等上述 shutdownComplete，HTTP 失败或 UNKNOWN 未确认不能先 nativeStop/reset。此项由 root / 独审实现验证。
 
@@ -134,6 +148,13 @@ setEnabled(true) 在 installing 时为幂等保持；setEnabled(false) 在 disab
 `cleanCheckpoint:false`表示本轮未确认持久提交，不承诺磁盘记录已回滚。若clean记录已rename可见、随后目录fsync失败，下一新owner仍可能读到完整且合格的clean记录并恢复；它重新验证当前记录，不读取上一进程的内存布尔。该可见性不构成掉电耐久性证明。手机CLI的两阶段验收保守要求前轮cleanCheckpoint严格true，才接受那份SUMMARY作为恢复对照。
 
 `nativeMemoryRelease`为`null | 'process-exit'`。owner真正持有native session后为process-exit，包括Socket封装失败但仍有linuxJoin债务。普通off/on复用同一VM；最终join或UNKNOWN收尾都不清除此事实。null只是缺少该持有事实，不等于零内存、已释放或任意字节数。VM allocation/owner当前保留到整个App进程退出，Node线程stop不是整个App进程退出。Dart提供固定中文notice供界面展示；不从全App PSS推定VM专属内存。
+`nativeMemoryRelease`为`null | 'process-exit'`。owner真正持有native session后为process-exit，包括Socket封装失败但仍有linuxJoin债务。已打开的普通off也走最终join；join或UNKNOWN收尾都不清除此持有事实。null只是缺少该持有事实，不等于零内存、已释放或任意字节数。VM allocation/owner当前保留到整个App进程退出，Node线程stop不是整个App进程退出。Dart提供固定中文notice供界面展示；不从全App PSS推定VM专属内存。
+
+1203 增加可选的 `retirement.native.ramRetirement` 观测。它可为 null（join 未确认），或包含 `eligible`、`attempted`、`trackedBytes`、`eligibleBytes`、`advisedBytes`、`errorCode` 六项。只在正常受控退出和真实 join 后，对主 RAM 内部完整页发出丢弃建议；虚拟地址和 VM 对象继续隔离。`advisedBytes` 记录系统调用成功接受的范围，不能当作 PSS 或设备实际回收量。失败保留非零 errno 与 0 成功建议字节，磁盘关闭结果与 `cleanCheckpoint` 独立。控制层复制这个观测，既不吞掉内存错误，也不让调用者修改 status 快照污染内部状态。
+
+已安装后的普通 `setEnabled(false)` 会在关闭准入后进入现有 `shutdown()` 的不可逆屏障，经 drain job、guest close、owner.dispose 到达真实 join；符合原生正常退出条件时才对主 RAM 内部完整页发出丢弃建议。它不会完整析构 VM/owner，也不允许同一 App 进程重新开启；须重启 App 才能以干净持久记录恢复。安装中的取消仍走原有取消处置，未开启过的 off 不创建 VM。应分别记录请求接受、真实 join、RAM 建议结果、包含 VMA 的 RSS/PSS 与整个 App force-stop；不能用202、shutdownComplete或advisedBytes代替内存量化。
+
+旧 native 未返回该字段时，GET 保持旧形状。持久化 `instance.json` 的 native 记录仍精确只有 joined/retirementError/apiResult 三项，RAM 观测不进入 clean 判断或下一次恢复依据。现有 ETS 解码器不拒绝 native 的额外可选字段；现有 Dart 只取已知三项，因此允许它存在但不展示此观测。本改动不修改 Dart/ETS/UI，也不改变 `nativeMemoryRelease` 枚举。
 
 ## 7. 931非零作业的固定诊断
 

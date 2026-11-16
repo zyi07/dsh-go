@@ -17,6 +17,7 @@ namespace {
 #define METHODS(X) X(release) X(error) X(errno) X(read) X(write_flags) X(stat) X(readdir) X(rename) X(remove) X(mkdir) X(ticket_issue) X(ticket_consume) X(ticket_retire) X(snapshot)
 #define EDIT_METHODS(X) X(stat_exact_v1) X(edit_input_open_v1) X(edit_input_read_v1) X(edit_input_close_v1) X(edit_begin_v1) X(edit_write_v1) X(edit_close_v1) X(edit_publish_v1) X(edit_abort_v1)
 #define MOVE_METHODS(X) X(move_output_begin_v1) X(move_output_publish_v1)
+#define WHOLE_METHODS(X) X(whole_output_begin_v1) X(whole_output_write_v1) X(whole_output_close_v1) X(whole_output_publish_step_v1) X(whole_output_abort_v1)
 struct Api {
 #define FIELD(name) decltype(&dsh_workspace_##name) fn_##name=nullptr;
  METHODS(FIELD)
@@ -24,6 +25,9 @@ struct Api {
  MOVE_METHODS(FIELD)
 #undef FIELD
  void* library=nullptr;bool edit_ready=false,move_ready=false;
+ WHOLE_METHODS(FIELD)
+#undef FIELD
+ void* library=nullptr;bool edit_ready=false,move_ready=false,whole_ready=false;
 } api;
 std::mutex owner_mutex;napi_env owner=nullptr;bool owner_dead=false;
 struct State;
@@ -38,6 +42,7 @@ void Owner(napi_env env){std::lock_guard<std::mutex> lock(owner_mutex);if(owner!
 void Connected(){std::lock_guard<std::mutex> lock(owner_mutex);if(!owner||owner_dead||!api.library)throw std::runtime_error("ERR_WORKSPACE_OWNER_UNINITIALIZED");}
 void EditApi(){if(!api.edit_ready)throw std::runtime_error("ERR_WORKSPACE_EDIT_ABI");}
 void MoveApi(){EditApi();if(!api.move_ready)throw std::runtime_error("ERR_WORKSPACE_MOVE_ABI");}
+void WholeApi(){EditApi();if(!api.whole_ready)throw std::runtime_error("ERR_WORKSPACE_WHOLE_ABI");}
 struct Args {napi_env env;size_t count=7;napi_value values[7];State* state;
  Args(napi_env e,napi_callback_info info):env(e){void* data;Check(napi_get_cb_info(env,info,&count,values,nullptr,&data));state=static_cast<State*>(data);}
  napi_value operator[](size_t i){if(i>=count)throw std::runtime_error("ERR_WORKSPACE_ARGUMENT");return values[i];}
@@ -71,6 +76,10 @@ napi_value Bind(napi_env env,napi_callback_info info){return Run(env,[&]{Args ar
 #define LOAD_MOVE(name) candidate.fn_##name=reinterpret_cast<decltype(candidate.fn_##name)>(dlsym(lib,"dsh_workspace_" #name));candidate.move_ready=candidate.move_ready&&candidate.fn_##name;
  MOVE_METHODS(LOAD_MOVE)
 #undef LOAD_MOVE
+ candidate.whole_ready=candidate.edit_ready;
+#define LOAD_WHOLE(name) candidate.fn_##name=reinterpret_cast<decltype(candidate.fn_##name)>(dlsym(lib,"dsh_workspace_" #name));candidate.whole_ready=candidate.whole_ready&&candidate.fn_##name;
+ WHOLE_METHODS(LOAD_WHOLE)
+#undef LOAD_WHOLE
  api=candidate;owner=env;return Num(env,1);});}
 struct SnapshotRow {std::string id;uint64_t generation;bool writable;};
 int SnapshotEntry(const char* id,size_t size,uint64_t generation,int writable,void* data){try{
@@ -174,6 +183,47 @@ napi_value PublishMoveOutput(napi_env env,napi_callback_info info){return Run(en
  if(result.effect!=2)throw std::runtime_error("ERR_WORKSPACE_MOVE_ABI");
  return result.staging_removed?yes:no;
  });}
+
+napi_value BeginWholeOutput(napi_env env,napi_callback_info info){return Run(env,[&]{
+ Args a(env,info);auto* handle=Get(a);WholeApi();auto path=Text(env,a[1]);
+ const auto policy=Number(env,a[2]),mode=Number(env,a[3]);bool absent;Check(napi_get_value_bool(env,a[4],&absent));
+ if(policy>1||mode>0777||(policy==1&&mode!=0))throw std::runtime_error("ERR_WORKSPACE_ARGUMENT");
+ napi_value result=Num(env,1);Native(api.fn_whole_output_begin_v1(handle->lease,path.c_str(),static_cast<uint32_t>(policy),static_cast<uint32_t>(mode),absent));return result;});}
+napi_value WriteWholeOutput(napi_env env,napi_callback_info info){return Run(env,[&]{
+ Args a(env,info);auto* handle=Get(a);WholeApi();void* bytes;size_t length;Check(napi_get_buffer_info(env,a[1],&bytes,&length));
+ const auto count=api.fn_whole_output_write_v1(handle->lease,bytes,length);Native(count);
+ if(static_cast<uint64_t>(count)>length)throw std::runtime_error("ERR_WORKSPACE_WHOLE_ABI");
+ return Num(env,count);});}
+napi_value CloseWholeOutput(napi_env env,napi_callback_info info){return Run(env,[&]{
+ Args a(env,info);auto* handle=Get(a);WholeApi();napi_value result=Num(env,1);Native(api.fn_whole_output_close_v1(handle->lease));return result;});}
+napi_value WholeResult(napi_env env,uint32_t effect,uint32_t next,bool removed){
+ napi_value result,yes,clean;Check(napi_create_object(env,&result));Check(napi_get_boolean(env,true,&yes));Check(napi_get_boolean(env,removed,&clean));
+ Check(napi_set_named_property(env,result,"schemaVersion",Num(env,1)));
+ Check(napi_set_named_property(env,result,"effectKnown",yes));Check(napi_set_named_property(env,result,"effect",Num(env,effect)));
+ Check(napi_set_named_property(env,result,"continuation",Num(env,next)));Check(napi_set_named_property(env,result,"stagingRemoved",clean));return result;
+}
+napi_value StepWholeOutput(napi_env env,napi_callback_info info){return Run(env,[&]{
+ Args a(env,info);auto* handle=Get(a);WholeApi();
+ // Allocate every normal result before the native mutation. A failed error
+ // construction is still unknown to JS; it must not be guessed as effect0.
+ napi_value results[5]={WholeResult(env,0,1,false),WholeResult(env,1,2,false),WholeResult(env,1,3,false),WholeResult(env,2,0,false),WholeResult(env,2,0,true)};
+ napi_value effects[3]={Num(env,0),Num(env,1),Num(env,2)};
+ DshWorkspaceWholePublishV1 out{};const int status=api.fn_whole_output_publish_step_v1(handle->lease,&out,sizeof(out));
+ if(out.version!=1||out.reserved||out.effect_known>1||out.effect>2||out.continuation>3||out.staging_removed>1)throw std::runtime_error("ERR_WORKSPACE_WHOLE_ABI");
+ if(status<0){
+  const int number=api.fn_errno();const char* code=number?ErrnoCode(number):api.fn_error();napi_value error;
+  Check(napi_create_error(env,String(env,code),String(env,code),&error));
+  if(out.effect_known)Check(napi_set_named_property(env,error,"workspaceWholeEffect",effects[out.effect]));
+  Check(napi_throw(env,error));return static_cast<napi_value>(nullptr);
+ }
+ if(!out.effect_known)throw std::runtime_error("ERR_WORKSPACE_WHOLE_ABI");
+ if(out.effect==0&&out.continuation==1&&!out.staging_removed)return results[0];
+ if(out.effect==1&&out.continuation==2&&!out.staging_removed)return results[1];
+ if(out.effect==1&&out.continuation==3&&!out.staging_removed)return results[2];
+ if(out.effect==2&&out.continuation==0)return results[out.staging_removed?4:3];
+ throw std::runtime_error("ERR_WORKSPACE_WHOLE_ABI");});}
+napi_value AbortWholeOutput(napi_env env,napi_callback_info info){return Run(env,[&]{
+ Args a(env,info);auto* handle=Get(a);WholeApi();napi_value result=Num(env,1);Native(api.fn_whole_output_abort_v1(handle->lease));return result;});}
 struct Entries {std::vector<std::string> names;};
 int Entry(const char* name,size_t size,void* data){try{static_cast<Entries*>(data)->names.emplace_back(name,size);return 0;}catch(...){return -1;}}
 napi_value Readdir(napi_env env,napi_callback_info info){return Run(env,[&]{Args a(env,info);auto* handle=Get(a);auto path=Text(env,a[1]);Entries entries;Native(api.fn_readdir(handle->lease,path.c_str(),Entry,&entries));napi_value out;Check(napi_create_array_with_length(env,entries.names.size(),&out));uint32_t i=0;for(const auto& name:entries.names)Check(napi_set_element(env,out,i++,String(env,name.data(),name.size())));return out;});}
@@ -184,6 +234,7 @@ napi_value Mutate(napi_env env,napi_callback_info info){return Run(env,[&]{Args 
  Native(result);return Num(env,0);});}
 napi_value Init(napi_env env,napi_value exports){return Run(env,[&]{auto state=std::make_shared<State>(env);auto* holder=new std::shared_ptr<State>(state);Check(napi_add_env_cleanup_hook(env,Cleanup,holder));
  const std::map<std::string,napi_callback> methods={{"bindOwner",Bind},{"snapshot",Snapshot},{"issue",Issue},{"retire",Retire},{"consume",Consume},{"close",Close},{"read",Read},{"write",Write},{"stat",Stat},{"readdir",Readdir},{"mutate",Mutate},{"statExact",StatExact},{"openEditInput",OpenEditInput},{"readEditInput",ReadEditInput},{"closeEditInput",CloseEditInput},{"beginEdit",BeginEdit},{"writeEdit",WriteEdit},{"closeEdit",CloseEdit},{"publishEdit",PublishEdit},{"abortEdit",AbortEdit},{"beginMoveOutput",BeginMoveOutput},{"publishMoveOutput",PublishMoveOutput}};
+ const std::map<std::string,napi_callback> methods={{"bindOwner",Bind},{"snapshot",Snapshot},{"issue",Issue},{"retire",Retire},{"consume",Consume},{"close",Close},{"read",Read},{"write",Write},{"stat",Stat},{"readdir",Readdir},{"mutate",Mutate},{"statExact",StatExact},{"openEditInput",OpenEditInput},{"readEditInput",ReadEditInput},{"closeEditInput",CloseEditInput},{"beginEdit",BeginEdit},{"writeEdit",WriteEdit},{"closeEdit",CloseEdit},{"publishEdit",PublishEdit},{"abortEdit",AbortEdit},{"beginMoveOutput",BeginMoveOutput},{"publishMoveOutput",PublishMoveOutput},{"beginWholeOutput",BeginWholeOutput},{"writeWholeOutput",WriteWholeOutput},{"closeWholeOutput",CloseWholeOutput},{"stepWholeOutput",StepWholeOutput},{"abortWholeOutput",AbortWholeOutput}};
  for(const auto& pair:methods){napi_value method;Check(napi_create_function(env,pair.first.c_str(),NAPI_AUTO_LENGTH,pair.second,state.get(),&method));Check(napi_set_named_property(env,exports,pair.first.c_str(),method));}return exports;});}
 }
 NAPI_MODULE(NODE_GYP_MODULE_NAME,Init)

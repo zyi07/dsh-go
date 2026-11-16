@@ -27,6 +27,15 @@ import LauncherIconPlugin from '../plugins/LauncherIconPlugin';
 import LaunchPlugin from '../plugins/LaunchPlugin';
 import LaunchClipPlugin from '../plugins/LaunchClipPlugin';
 import VoicePlugin from '../plugins/VoicePlugin';
+import PictureShortcutPlugin from '../plugins/PictureShortcutPlugin';
+import LaunchPlugin from '../plugins/LaunchPlugin';
+import LaunchClipPlugin from '../plugins/LaunchClipPlugin';
+import MediaVideoPlugin from '../plugins/MediaVideoPlugin';
+import VoicePlugin from '../plugins/VoicePlugin';
+import SpeechPlugin from '../plugins/SpeechPlugin';
+import CompanionVoicePlugin from '../plugins/CompanionVoicePlugin';
+import StreamingAsrPlugin from '../plugins/StreamingAsrPlugin';
+import CompanionWidgetPlugin from '../plugins/CompanionWidgetPlugin';
 import Want from '@ohos.app.ability.Want';
 import AbilityConstant from '@ohos.app.ability.AbilityConstant';
 import window from '@ohos.window';
@@ -58,6 +67,7 @@ export default class EntryAbility extends FlutterAbility {
   }
 
   onForeground(): void {
+    this.keyboardLog.setForeground(true);
     PastePlugin.onForeground(this);
     AppLinksPlugin.onForeground(this);
     RuntimeController.onForeground(this);
@@ -65,10 +75,19 @@ export default class EntryAbility extends FlutterAbility {
     NativeFilesPlugin.onForeground(this);
     AuthorizedWorkspacesPlugin.onForeground(this);
     NativeMediaPlugin.onForeground(this);
+    SpeechPlugin.onForeground(this);
+    CompanionVoicePlugin.onForeground(this);
+    StreamingAsrPlugin.onForeground(this);
+    NativeFilesPlugin.onForeground(this);
+    AuthorizedWorkspacesPlugin.onForeground(this);
+    NativeMediaPlugin.onForeground(this);
+    MediaVideoPlugin.onForeground(this);
+    PictureShortcutPlugin.onForeground(this);
     super.onForeground();
   }
 
   onBackground(): void {
+    this.keyboardLog.setForeground(false);
     PastePlugin.onBackground(this);
     AppLinksPlugin.onBackground(this);
     RuntimeController.onBackground(this);
@@ -76,10 +95,25 @@ export default class EntryAbility extends FlutterAbility {
     NativeFilesPlugin.onBackground(this);
     AuthorizedWorkspacesPlugin.onBackground(this);
     NativeMediaPlugin.onBackground(this);
+    SpeechPlugin.onBackground(this);
+    CompanionVoicePlugin.onBackground(this);
+    StreamingAsrPlugin.onBackground(this);
+    NativeFilesPlugin.onBackground(this);
+    AuthorizedWorkspacesPlugin.onBackground(this);
+    NativeMediaPlugin.onBackground(this);
+    MediaVideoPlugin.onBackground(this);
+    PictureShortcutPlugin.onBackground(this);
     super.onBackground();
   }
 
   onDestroy(): void {
+    MediaVideoPlugin.onDestroy(this);
+    PictureShortcutPlugin.onBackground(this);
+    this.keyboardLog.setForeground(false);
+    this.keyboardLog.detach();
+    SpeechPlugin.onBackground(this);
+    CompanionVoicePlugin.onBackground(this);
+    StreamingAsrPlugin.onBackground(this);
     PastePlugin.onBackground(this);
     RuntimeController.onDestroy(this);
     AuthorizedWorkspacesPlugin.onBackground(this);
@@ -106,6 +140,7 @@ export default class EntryAbility extends FlutterAbility {
     }, new NativeVoiceStopControl(this.context)))
     flutterEngine.getPlugins()?.add(new PerformancePlugin())
     flutterEngine.getPlugins()?.add(new DiagnosticsPlugin())
+    flutterEngine.getPlugins()?.add(new DiagnosticsPlugin(this.keyboardLog))
     flutterEngine.getPlugins()?.add(new UsagePlugin())
     flutterEngine.getPlugins()?.add(new PastePlugin())
     flutterEngine.getPlugins()?.add(new HmsSharePlugin())
@@ -114,5 +149,17 @@ export default class EntryAbility extends FlutterAbility {
     flutterEngine.getPlugins()?.add(new LauncherIconPlugin())
     flutterEngine.getPlugins()?.add(new LaunchPlugin())
     flutterEngine.getPlugins()?.add(new LaunchClipPlugin())
+    flutterEngine.getPlugins()?.add(new SpeechPlugin())
+    flutterEngine.getPlugins()?.add(new CompanionVoicePlugin())
+    flutterEngine.getPlugins()?.add(new StreamingAsrPlugin())
+    flutterEngine.getPlugins()?.add(new CompanionWidgetPlugin())
+    flutterEngine.getPlugins()?.add(new ShortcutsPlugin())
+    flutterEngine.getPlugins()?.add(new LauncherIconPlugin())
+    flutterEngine.getPlugins()?.add(new PictureShortcutPlugin())
+    flutterEngine.getPlugins()?.add(new LaunchPlugin())
+    flutterEngine.getPlugins()?.add(new LaunchClipPlugin())
+    flutterEngine.getPlugins()?.add(new MediaVideoPlugin(async (root: string, relative: string): Promise<number> => {
+      return (await loadNativeHost()).openUserFile(root, relative);
+    }))
   }
 }

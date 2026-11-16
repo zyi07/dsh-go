@@ -426,6 +426,56 @@ void main() {
       expect(android.methods.where((m) => m == 'saveToDownloads'), hasLength(1));
       expect(find.byType(SnackBar), findsNothing);
       expect(find.text('已保存'), findsNothing);
+    testWidgets('a batch of videos: Android saves them to the gallery and counts files', (tester) async {
+      usePhoneView(tester);
+      final android = _Android()..install(tester);
+      final gallery = <MethodCall>[];
+      const media = MethodChannel('dsh/media');
+      final messenger = tester.binding.defaultBinaryMessenger;
+      messenger.setMockMethodCallHandler(media, (call) async {
+        gallery.add(call);
+        return 'Movies/DSH Go/${(call.arguments as Map)['name']}';
+      });
+      addTearDown(() => messenger.setMockMethodCallHandler(media, null));
+      await tester.pumpWidget(batch());
+      await tester.tap(find.text('go'));
+      await tester.pumpAndSettle();
+      expect(gallery.map((c) => c.method), ['saveVideoFile', 'saveVideoFile']);
+      expect(android.calls.where((c) => c.method == 'saveToDownloads'), isEmpty);
+      expect(find.text('已保存 2 个文件到相册'), findsOneWidget);
+    });
+
+    testWidgets('a batch of videos: HarmonyOS saves them to the album too; backing out stops asking, without a failure', (
+      tester,
+    ) async {
+      usePhoneView(tester);
+      final android = _Android()..install(tester);
+      final gallery = <MethodCall>[];
+      var backOut = false;
+      const media = MethodChannel('dsh/media');
+      final messenger = tester.binding.defaultBinaryMessenger;
+      messenger.setMockMethodCallHandler(media, (call) async {
+        gallery.add(call);
+        if (backOut) throw PlatformException(code: 'cancelled');
+        return 'file://media/Photo/1/VID_1/movie.mp4';
+      });
+      addTearDown(() => messenger.setMockMethodCallHandler(media, null));
+      await tester.pumpWidget(batch(os: 'ohos'));
+      await tester.tap(find.text('go'));
+      await tester.pumpAndSettle();
+      expect(gallery.map((c) => c.method), ['saveVideoFile', 'saveVideoFile']);
+      expect(android.calls.where((c) => c.method == 'saveToDownloads'), isEmpty);
+      expect(find.text('已保存 2 个文件到相册'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpAndSettle();
+
+      gallery.clear();
+      backOut = true;
+      await tester.tap(find.text('go'));
+      await tester.pumpAndSettle();
+      expect(gallery, hasLength(1));
+      expect(find.byType(SnackBar), findsNothing);
+      expect(find.textContaining('已保存'), findsNothing);
     });
   });
 

@@ -117,6 +117,9 @@ try {
   await command('setEnabled', { enabled: true }); await waitFor(state => state.admission, 'same owner on');
   result = await run(['python3', '-c', 'print(open("persist930.txt").read(),end="")']);
   check('off/on reuses same owner epoch target and real guest data', ownerCreations === 1 && downloads === 1 && owner.active.epoch === active.epoch && owner.active.target === active.target && text(result.job.stdout) === 'same guest\n',
+  await command('setEnabled', { enabled: true }); await waitFor(state => state.admission, 'already enabled owner');
+  result = await run(['python3', '-c', 'print(open("persist930.txt").read(),end="")']);
+  check('repeated enable preserves the live owner epoch target and real guest data', ownerCreations === 1 && downloads === 1 && owner.active.epoch === active.epoch && owner.active.target === active.target && text(result.job.stdout) === 'same guest\n',
     { ownerCreations, downloads, sameOpenDataDescriptors: JSON.stringify(await dataDescriptors()) === JSON.stringify(descriptors) });
   const next = (await status()).nextRequestId;
   await command('runPrivateGuest', { requestId: next, argv: ['python3', '-c', 'import time;print("cancel-started",flush=True);time.sleep(60)'], cwd: '/workspace' });
@@ -130,6 +133,22 @@ try {
   const requested = await command('shutdown'); check('shutdown acceptance is not native join', requested.shutdownComplete === false);
   shutdown = await waitFor(state => state.shutdownComplete, 'real native join', 30000);
   check('final shutdown confirms real native join and drive retirement', shutdown.retirement.resourcesRetired && shutdown.retirement.native.joined === true && shutdown.retirement.native.retirementError === false,
+  const off = await command('setEnabled', { enabled: false });
+  check('ordinary off acceptance closes admission without claiming native join', !off.enabled && !off.admission && off.state === 'stopping' && off.shutdownComplete === false);
+  const cancelled = await waitFor(state => state.job?.id === next && state.job.state === 'settled', 'real guest cancellation', 20000);
+  check('off confirms true guest cancellation and sink completion', cancelled.job.cancelRequested && cancelled.job.outcome.cancelled === true && cancelled.job.outcome.signal === 'SIGKILL', { outcome: cancelled.job.outcome });
+  shutdown = await waitFor(state => state.shutdownComplete, 'ordinary off native join', 30000);
+  const reopen = await request('/dsh-go/v1/linux', { v: 1, instanceId: shutdown.instanceId,
+    attemptId: shutdown.attemptId, action: 'setEnabled', enabled: true }, cookie);
+  const rejected = JSON.parse(reopen.text);
+  observations.push({ action: 'setEnabled', enabled: true, afterOrdinaryOff: true,
+    httpStatus: reopen.status, errorCode: rejected.error?.code });
+  check('retired same-process owner rejects reopen and requires App restart', reopen.status === 409 &&
+    rejected.error?.code === 'ERR_OHOS_LINUX_CLOSED' && rejected.status?.restartRequired && ownerCreations === 1 && downloads === 1);
+  const requested = await command('shutdown');
+  check('explicit shutdown after ordinary off preserves the completed retirement', requested.shutdownComplete === true &&
+    JSON.stringify(requested.retirement) === JSON.stringify(shutdown.retirement));
+  check('ordinary off confirms real native join and drive retirement', shutdown.retirement.resourcesRetired && shutdown.retirement.native.joined === true && shutdown.retirement.native.retirementError === false,
     { retirement: shutdown.retirement });
   const marker = JSON.parse(await readFile(join(active.directory, 'instance.json'), 'utf8'));
   check('published target remains and no native data descriptor survives', shutdown.retirement.filesRemoved === false && shutdown.retirement.dataRetained &&

@@ -63,6 +63,17 @@ export class BoundaryCoordinator {
     this.#journal = journal;
     this.bootId = bootId;
     this.clock = new ActiveBudgetClock(bootId);
+  #gateWaiters = 0;
+  #admissionTarget = true;
+  constructor({ journal, bootId, flushSession, readEvents, resolveAgent = () => undefined,
+    revalidateTransport = async () => {}, onStage = () => {}, readHost = readNativeHost, hasActiveRounds = () => false, hasActiveWork = () => false }) {
+    if (!journal || !knownString(bootId) || typeof flushSession !== 'function' || typeof readEvents !== 'function') throw new TypeError('Lifecycle requires durable session adapters and boot identity');
+    this.#readHost = readHost;
+    this.hasActiveRounds = hasActiveRounds;
+    this.hasActiveWork = hasActiveWork;
+    this.#journal = journal;
+    this.bootId = bootId;
+    this.clock = new ActiveBudgetClock(bootId, () => this.#updateNativePolling());
     this.flushSession = flushSession;
     this.readEvents = readEvents;
     this.resolveAgent = resolveAgent;
@@ -78,6 +89,7 @@ export class BoundaryCoordinator {
       this.#nativeTimer = setTimeout(poll, 250); this.#nativeTimer.unref?.();
     };
     this.#nativeTimer = setTimeout(poll, 250); this.#nativeTimer.unref?.();
+    this.#updateNativePolling();
   }
   get protocolVersion() { return 1; }
   #fold(body) {
@@ -162,6 +174,28 @@ export class BoundaryCoordinator {
   }
   #refreshNative() {
     try { this.#nativeHost = validateHostSnapshot(this.#readHost()); this.#nativeFailure = undefined; }
+  #updateNativePolling() {
+    if (this.#closing) return;
+    // Admission/host requests always read native facts themselves. Poll only
+    // while live work or a gate needs to observe an otherwise unannounced change.
+    const needed = this.#pending.size > 0 || this.#active.size > 0 || this.#gateWaiters > 0
+      || this.clock.pendingCount > 0 || this.hasActiveRounds() === true;
+    if (!needed) {
+      clearTimeout(this.#nativeTimer); this.#nativeTimer = undefined;
+    } else if (this.#nativeTimer === undefined) {
+      this.#nativeTimer = setTimeout(() => {
+        this.#nativeTimer = undefined;
+        if (!this.#closing) this.#refreshNative();
+      }, 250);
+      this.#nativeTimer.unref?.();
+    }
+  }
+  #refreshNative() {
+    try {
+      // The native reader returns a fresh validated, frozen snapshot itself.
+      this.#nativeHost = this.#readHost === readNativeHost ? this.#readHost() : validateHostSnapshot(this.#readHost());
+      this.#nativeFailure = undefined;
+    }
     catch { this.#nativeHost = undefined; this.#nativeFailure = 'ERR_OHOS_LIFECYCLE_NATIVE'; }
     const desired = !this.#manualPaused && nativeAllows(this.#nativeHost);
     if (desired !== this.#admissionTarget) {
@@ -170,6 +204,7 @@ export class BoundaryCoordinator {
       // Polling has no request caller to consume failure; #controlTail retains the fault.
       this.#hostControl.catch(() => {});
     }
+    this.#updateNativePolling();
     return desired;
   }
   // Call after the caller's final await, then dispatch/claim synchronously.
@@ -200,6 +235,12 @@ export class BoundaryCoordinator {
       signal?.addEventListener('abort', abort, { once: true });
       try { await Promise.race([this.#gate.promise, interrupted.promise]); }
       finally { signal?.removeEventListener('abort', abort); }
+      this.#gateWaiters++; this.#updateNativePolling();
+      try { await Promise.race([this.#gate.promise, interrupted.promise]); }
+      finally {
+        this.#gateWaiters--; this.#updateNativePolling();
+        signal?.removeEventListener('abort', abort);
+      }
     }
   }
   async prepared(meta) {
@@ -216,6 +257,7 @@ export class BoundaryCoordinator {
       const identity = { sessionId: meta.session.id, callSeq: meta.callSeq, callId: meta.block.id,
         name: meta.block.name, turn: meta.turn, step: meta.step, originBootId: this.bootId, callHash: hash(event) };
       this.#pending.set(keyOf(identity), Promise.withResolvers());
+      this.#updateNativePolling();
       await this.#record({ kind: 'prepared', bootId: this.bootId, identity });
     } catch (error) {
       if (error?.code !== 'ERR_OHOS_LIFECYCLE_CANCELLED' && !meta.signal?.aborted) this.#fault ??= error;
@@ -268,6 +310,7 @@ export class BoundaryCoordinator {
     const pending = this.#pending.get(key);
     this.#pending.delete(key); pending?.resolve();
     this.#resources.delete(key);
+    this.#updateNativePolling();
   }
   failedGroup(sessionId, callSeqs) {
     for (const callSeq of callSeqs) if (callSeq !== undefined) this.#finishCall(keyOf({ sessionId, callSeq }));
@@ -491,6 +534,7 @@ export class BoundaryCoordinator {
     const blocked = this.#fault || this.#journal.failed || this.#journal.corruption;
     return { v: 1, nativeHost: this.#nativeHost ?? null, closed: this.#closing, paused: !!this.#gate, confirmedPause: this.clock.paused,
       manualPaused: this.#manualPaused, busy: this.#pending.size > 0 || this.hasActiveRounds() === true,
+      manualPaused: this.#manualPaused, busy: this.#pending.size > 0 || this.hasActiveRounds() === true || this.hasActiveWork() === true,
       blocked: !!blocked, controlVersion: this.#controlVersion,
       host: { revision: this.#nativeHost?.revision ?? 0,
         foreground: this.#nativeHost?.available === 1 && this.#nativeHost?.foreground === 1,

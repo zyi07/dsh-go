@@ -32,6 +32,9 @@ abstract final class BackgroundPausePolicy {
   /// the [local] host (a remote one kept going), and its turn [wasRunning] on
   /// leaving and is [running] still (one that ended first has nothing to go on with),
   /// and no long-running task [keptRunning] the turn going all that time.
+  /// and no long-running task [keptRunning] the turn going all that time (HarmonyOS).
+  /// Nor did it pause if the system is still letting it [continued] (iOS 26); one that
+  /// lost that did.
   static bool onReturn({
     required Duration away,
     required bool local,
@@ -39,6 +42,8 @@ abstract final class BackgroundPausePolicy {
     required bool running,
     bool keptRunning = false,
   }) => local && wasRunning && running && !keptRunning && away >= suspendedAfter;
+    bool continued = false,
+  }) => local && wasRunning && running && !keptRunning && !continued && away >= suspendedAfter;
 }
 
 /// Whether the line shows. It follows the app on and off screen by itself; a
@@ -106,6 +111,7 @@ class BackgroundPauseController extends Notifier<bool> {
       wasRunning: _wasRunning,
       running: _turnRunning,
       keptRunning: _taskHeld && !_taskLost,
+      continued: ref.read(localRuntimeProvider).status.continuedRun,
     );
     if (!due) return;
     ref.read(launchNoticeShownProvider.notifier).set(true);

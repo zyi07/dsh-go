@@ -54,6 +54,15 @@ for (const platform of ['linux', 'android']) {
       code: 'FS_IO_ERROR', cause: failure,
     });
     await assert.rejects(stat(target.targetKey), { code: 'ENOENT' });
+// The common chain (fs-create-link-denial.diff) now takes EACCES this way everywhere;
+// OpenHarmony no longer carries a platform condition of its own for it.
+for (const platform of ['linux', 'android']) {
+  test(`${platform} takes the same exclusive creation after EACCES`, async () => {
+    const other = await provider(platform);
+    const target = await other.resolve('shared.txt');
+    await other.writeText(target, 'ours', { kind: 'createIfAbsent' });
+    assert.equal(await readFile(target.targetKey, 'utf8'), 'ours');
+    assert.equal((await stat(target.targetKey)).mode & 0o777, 0o600);
   });
 }
 

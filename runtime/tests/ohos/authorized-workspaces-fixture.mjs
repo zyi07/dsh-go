@@ -14,6 +14,7 @@ import { entryAbilityImports } from './entry-ability-fixture.mjs';
 const repo = fileURLToPath(new URL('../../../', import.meta.url));
 const ts = createRequire(resolve(process.env.OHOS_TYPESCRIPT_PREFIX, 'package.json'))('typescript');
 assert.equal(ts.version, '5.9.3');
+assert.match(ts.version, /^5\.9\./);
 export const plain = value => value instanceof Map ? Object.fromEntries([...value].map(([key, val]) => [key, plain(val)])) :
   Array.isArray(value) ? Array.from(value, plain) : value;
 export const deferred = () => Promise.withResolvers();
@@ -35,6 +36,7 @@ export async function workspaceFixture(t, initial = {}) {
   class Stub {
     static registerWith() {} static onForeground() {} static onBackground() {} static onDestroy() {}
     static receive() {} static applyFrameCache() {} attach() {} detach() {}
+    static receive() {} static applyFrameCache() {} attach() {} detach() {} setForeground() {}
   }
   class DocumentPicker {
     constructor(context) { assert.equal(context, app); }

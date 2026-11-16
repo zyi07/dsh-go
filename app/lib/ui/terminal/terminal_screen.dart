@@ -13,6 +13,7 @@ import '../../clipboard/field_paste.dart';
 import '../../l10n/l10n.dart';
 import '../../state/terminal_state.dart';
 import '../common/empty_view.dart';
+import '../common/field_paste.dart';
 import '../theme/app_icons.dart';
 import '../theme/theme.dart';
 import 'terminal_keyboard.dart';
@@ -238,6 +239,7 @@ class TerminalScreenState extends ConsumerState<TerminalScreen> with FieldPaste<
     _selection.clearSelection();
     final text = await readClipboard();
     if (text == null || text.isEmpty || !mounted || !_canType) return;
+    if (text == null || text.isEmpty || !mounted) return;
     // A reconnect can replace the attachment before this widget rebuilds.
     final current = ref.read(terminalWorkspaceProvider(widget.sessionId)).selected;
     if (current == null || current.terminal != terminal || current.phase != TerminalPhase.live || !current.writable) {

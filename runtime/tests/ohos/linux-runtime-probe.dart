@@ -552,6 +552,22 @@ Future<void> main() async {
               'proxy': {'mode': 'inherit'},
             }),
   );
+  await client.discardRetained();
+  check(
+    'reinstall sends no identity, path or switch: the engine reads its own',
+    calls[7]['method'] == 'discardLinuxRetained' &&
+        calls[7]['channel'] == 'dsh/runtime' &&
+        calls[7]['arguments'] == null,
+  );
+  MethodChannel.handler = (_, __, ___) async =>
+      throw PlatformException(code: 'ERR_OHOS_LINUX_RESTART_REQUIRED');
+  String? refused;
+  try {
+    await client.discardRetained();
+  } on PlatformException catch (error) {
+    refused = error.code;
+  }
+  check('a refused reinstall keeps the engine code', refused == 'ERR_OHOS_LINUX_RESTART_REQUIRED');
   MethodChannel.handler = (_, __, ___) async =>
       throw PlatformException(code: 'ERR_OHOS_LINUX_STALE');
   bool preserved = false;

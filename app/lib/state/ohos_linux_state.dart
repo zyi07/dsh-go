@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -34,6 +35,18 @@ class OhosLinuxView {
         busy: busy ?? this.busy,
         proxy: proxy ?? this.proxy,
       );
+}
+
+/// [OhosLinuxController.reinstall] did not go through; [code] is the engine's.
+class OhosLinuxReinstallFailure implements Exception {
+  const OhosLinuxReinstallFailure(this.code);
+  final String code;
+
+  /// Linux created a VM in this app process, which may still hold the data.
+  bool get needsRestart => code == 'ERR_OHOS_LINUX_RESTART_REQUIRED';
+
+  @override
+  String toString() => 'OhosLinuxReinstallFailure($code)';
 }
 
 final ohosLinuxRuntimeProvider = Provider<OhosLinuxRuntime>((ref) => const OhosLinuxRuntime());
@@ -80,6 +93,18 @@ class OhosLinuxController extends Notifier<OhosLinuxView> {
     if (enabled) await _run(() => _runtime.setProxy(state.proxy));
     await _run(() => _runtime.setEnabled(enabled));
   }
+
+  /// 重新安装 Linux, after the page's confirmation: everything inside Linux
+  /// goes, the switch stays off and the next switch-on installs afresh. It
+  /// never switches Linux on, even when the user's saved wish is on.
+  Future<void> reinstall() => _run(() async {
+    try {
+      await _runtime.discardRetained();
+    } on PlatformException catch (error) {
+      throw OhosLinuxReinstallFailure(error.code);
+    }
+    return _runtime.getStatus();
+  });
 
   /// Saves the proxy and gives it to the engine now.
   Future<void> setProxy(OhosLinuxProxyConfiguration proxy) async {

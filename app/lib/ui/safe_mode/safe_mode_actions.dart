@@ -241,7 +241,7 @@ abstract final class SafeModeActions {
   static void requestRepair(BuildContext context, {bool popToRoot = true}) {
     final container = _container(context);
     final status = container.read(localRuntimeProvider).status;
-    container.read(repairDraftProvider.notifier).request(repairPrompt(status));
+    container.read(repairDraftProvider.notifier).request(repairPrompt(status, harmony: _harmony(container)));
     if (popToRoot) Navigator.of(context).popUntil((route) => route.isFirst);
   }
 

@@ -10,6 +10,12 @@ if (mode === 'hold') {
   process.stdout.write(JSON.stringify({ locked: true, dev: info.dev, ino: info.ino }) + '\n');
   await new Promise(resolve => process.stdin.once('data', resolve));
   await file.close();
+} else if (mode === 'discard') {
+  // The production composition: owner.mjs takes the lock captured by the sole preload.
+  const { discardLinuxInstallation } = await import(pathToFileURL(join(source, 'runtime/ohos/linux/owner.mjs')));
+  let removed = null, errorCode = null;
+  try { ({ removed } = await discardLinuxInstallation({ directory })); } catch (error) { errorCode = error.code ?? 'unknown'; }
+  await writeFile(result, JSON.stringify({ removed, errorCode }, null, 2) + '\n', { flag: 'wx' });
 } else {
   const { LinuxInstallationOwner } = await import(pathToFileURL(join(source, 'runtime/ohos/linux/owner.mjs')));
   const asset = { path: '/unused-test-boundary', bytes: 1, sha256: '1'.repeat(64), expandedBytes: 1024, expandedSha256: '2'.repeat(64) };

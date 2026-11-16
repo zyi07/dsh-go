@@ -34,6 +34,8 @@ bash -c '<脚本>'（虚拟 shell Worker）
 - 未开启：退出 127，`ERR_OHOS_LINUX_DISABLED: Linux 环境未开启：请在 设置 · 能力 · Linux 环境 中打开后重试。`（虚拟 shell 不再追加“鸿蒙本机不可用”的通用提示）。`resolveExecutable` 此时抛 SubprocessExecutableNotFoundError。路由命令从不触发安装。
 - 已开启、正在恢复保留的实例：最多等 120 秒到 opened；首次安装（要下载）不等，127 并指向设置页进度；其他状态（failed/unknown/stopped…）127 并带状态与错误码。
 - 客体同一时间只跑一个作业，`runPrivateGuest` 与路由命令共用。路由命令最多等 10 秒，之后 126 `ERR_OHOS_LINUX_BUSY` 并说出占用者的命令名；`runPrivateGuest` 忙时照旧立即 409。**限制**：一个常驻的 stdio MCP 服务器会一直占着通道，期间 agent 的每条 gh/python3/pip 都会在 10 秒后报忙。等待是轮询，不保证先来先得。
+
+恢复和忙等待的两个预算都从 `spawnRouted` 调用时起算；每轮先检查准入及空闲，仍需等待时才检查预算，继续使用 100 ms 定时轮询。预算使用 Node 的单调计时，日历时钟前后调整不会被算作等待时长。Linux 的 `CLOCK_MONOTONIC` 不包含整机 suspend；进程暂停或回调晚调度也不会让本方法提前执行。因此这不是包含深睡和任意 OS 调度延迟的硬墙钟截止，也不改变权限／lease 使用的时钟。
 - 开关 false 与最终停止会取消正在跑的路由命令（与 `runPrivateGuest` 作业相同）。
 - 代理：931 的 LinuxProxyPolicy 逐作业生效。shell 环境里从 App 进程继承来的代理变量（值与父进程相同）先去掉，由策略决定；脚本里刻意设置的不同值在 manual/direct 下冲突，126 并说明。
 
@@ -42,6 +44,18 @@ bash -c '<脚本>'（虚拟 shell Worker）
 agent 变了（mounts、opened 里 `mounts:true`），六件资产必须重建；931 资产代际的已装实例会以 `ERR_OHOS_LINUX_ASSET_GENERATION` 拒绝恢复，需要用户在设置里重新安装（本期没有迁移）。新 host 配旧 agent：无 mounts 的作业照常，带 mounts 的明确拒绝。`libdsh_linux.so` 需要用含 `fs_export.c` 与补丁 0016 的源码重建（宿主测试与 OH arm64 两份）。
 
 ## 验证
+
+agent 变了（mounts、opened 里 `mounts:true`），六件资产必须重建；931 资产代际的已装实例会以 `ERR_OHOS_LINUX_ASSET_GENERATION` 拒绝恢复，需要用户在 设置 · 能力 · Linux 环境 点「重新安装 Linux」（控制动作 `discardRetained`，见 [CONTROL.zh.md](CONTROL.zh.md)）删掉旧数据再开启（本期没有迁移）。新 host 配旧 agent：无 mounts 的作业照常，带 mounts 的明确拒绝。`libdsh_linux.so` 需要用含 `fs_export.c` 与补丁 0016 的源码重建（宿主测试与 OH arm64 两份）。
+
+## 命令适配器的最终关闭
+
+`LinuxCommandBackend.dispose()` 封闭该适配器并取消存活作业，也放弃该适配器尚未消费的输出：先解除自有 pipe 到调用方 sink 的连接，再排空自有 stdout/stderr 和实际 guest 输出流。它不关闭或销毁调用方的 Writable，也不操作全局 stdout/stderr。这样，已停止读取输出的插件不会仅因宿主背压而阻断 guest EOF/ACK 收尾。每个存活 handle 的排空函数在 settle 时移除；`spawnRouted` 晚于 dispose 返回 raw handle 时，也在接好流后排空，重复 dispose 仍返回同一完成 Promise。
+
+这只适用于适配器的最终 dispose。普通 `terminate()` 保留原有背压和输出消费合同；最终排空也不会替代 guest 的双 EOF、全部 ACK 和真实 complete。只收到 EOF/ACK、未确认客体任务树退出时，原取消宽限仍产生 UNKNOWN，并保留原错误、隔离状态及未确认的 raw owner。此处没有改变 VM stop/join、普通 Linux 开关或 native FD 生命周期。
+
+## 验证
+
+- `runtime/tests/ohos/linux-routed-disposal.test.mjs`（linux-routed-disposal-plain/strict）：实际控制器、路由适配器、底层 backend/流与 TCP 协议；客体及 native owner 为明确夹具。覆盖两路背压、最终关闭/普通取消的区别、外部 sink 所有权、晚到准入、排队取消及 EOF/ACK 不得冒充 complete；不代表真实 VM、SDK 或设备结果。
 
 - `runtime/tests/ohos/linux-command-routing.test.mjs`（command-router-plain/strict）：生产 router、虚拟 shell Worker、LinuxCommandBackend、LinuxControl、LinuxRuntimeBackend，客体为真实 socket 上按协议应答的替身。
 - `tooling/ohos/tests/guest-mounts.test.py`（linux-guest-mounts）：真实 agent 的 mounts 校验与挂载序列，在宿主内核的非特权 user+mount 命名空间里执行；9P 由 tmpfs 代替。

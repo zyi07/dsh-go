@@ -204,6 +204,7 @@ void main() {
       });
 
       test('only one link of Android\'s is left with nowhere to go', () {
+      test('only the links of what HarmonyOS hasn\'t built yet are left with nowhere to go', () {
         final left = {
           for (final id in SettingsIndex.linkIds)
             if (SettingsIndex.androidOnlyLink(SettingsIndex.ohosLink(id))) id,

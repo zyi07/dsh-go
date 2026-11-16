@@ -13,10 +13,12 @@ import 'package:webview_flutter_android/webview_flutter_android.dart';
 /// into Dart or granting the page access to app-private filesystem paths.
 class WebFileChooser {
   WebFileChooser({MethodChannel? channel, this._canChoose, bool? ohos})
+  WebFileChooser({MethodChannel? channel, bool? ohos, this._canChoose})
     : _channel = channel ?? const MethodChannel('dsh/web-files'),
       _ohos = ohos ?? Platform.operatingSystem == 'ohos';
 
   final MethodChannel _channel;
+  final bool _ohos;
   final bool Function()? _canChoose;
   final bool _ohos;
   int _generation = 0;

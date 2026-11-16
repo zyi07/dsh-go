@@ -134,7 +134,9 @@ class DiagnosticsPage extends ConsumerWidget {
             InfoRow(label: 'API Key', value: settings.hasApiKey ? l10n.pluginsConfigured : l10n.commonNotSet),
           ],
         ),
+        // Its failure evidence is recorded natively: Android's own, HarmonyOS's from HiAppEvent.
         const AutomaticDiagnosticsSection(),
+        // Android reads the system log through a privileged channel; HarmonyOS, this app's own window.
         const SystemImeDiagnosticsSection(),
         DiagnosticsExportCard(
           title: l10n.pluginsExport,
@@ -356,13 +358,15 @@ class _SystemImeDiagnosticsSectionState extends ConsumerState<SystemImeDiagnosti
     builder: (context, _) {
       final l10n = context.l10n;
       final evidence = _diagnostics.evidence;
+      // HarmonyOS records this app's own window geometry: no privileged log, nothing to grant.
+      final ohos = ref.watch(operatingSystemProvider) == 'ohos';
       final status = _diagnostics.collecting
           ? l10n.systemImeCollecting
           : switch (evidence?.code) {
               null => l10n.systemImeNotCollected,
               'ok' => l10n.systemImeRetained,
               'noEvents' => l10n.systemImeNoEvents,
-              'unavailable' => l10n.systemImeUnavailable,
+              'unavailable' => ohos ? l10n.systemImeOhosUnavailable : l10n.systemImeUnavailable,
               'unsupported' => l10n.systemImeUnsupported,
               'denied' => l10n.systemImeDenied,
               'cancelled' => l10n.systemImeCancelled,
@@ -372,12 +376,12 @@ class _SystemImeDiagnosticsSectionState extends ConsumerState<SystemImeDiagnosti
               _ => l10n.systemImeFailed,
             };
       return SettingsSection(
-        title: l10n.systemImeTitle,
+        title: ohos ? l10n.systemImeOhosTitle : l10n.systemImeTitle,
         children: [
           SettingsTile(
             icon: AppIcons.exportLog,
-            title: l10n.systemImeCollect,
-            subtitle: l10n.systemImePrivacy,
+            title: ohos ? l10n.systemImeOhosCollect : l10n.systemImeCollect,
+            subtitle: ohos ? l10n.systemImeOhosPrivacy : l10n.systemImePrivacy,
             onTap: _diagnostics.collecting
                 ? null
                 : () => _diagnostics.collect(isCurrent: () => mounted && (_route?.isCurrent ?? true)),
@@ -390,7 +394,7 @@ class _SystemImeDiagnosticsSectionState extends ConsumerState<SystemImeDiagnosti
               label: l10n.systemImeCapturedAt,
               value: DateTime.fromMillisecondsSinceEpoch(evidence.capturedAt).toString().split('.').first,
             ),
-          if (evidence?.code == 'unavailable')
+          if (evidence?.code == 'unavailable' && !ohos)
             SettingsTile(
               icon: AppIcons.permissions,
               title: l10n.systemImePermissions,
@@ -428,6 +432,7 @@ class RuntimeLaunchFacts extends StatelessWidget {
       'proot' => l10n.phoneLaunchCompatible,
       'ohos-embedded' => l10n.harmonyLaunchEmbedded,
       'tawcroot' => l10n.phoneLaunchTawcroot,
+      'ohos-embedded' => l10n.harmonyLaunchEmbedded,
       _ => mode,
     };
     // One child of the card: keep SheetGroup's 2dp between its rows.

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import * as fs from 'node:fs/promises';
 import { join } from 'node:path';
 import { LinuxInstallationOwner } from '../../ohos/linux/owner.mjs';
+import { discardLinuxInstance, openLinuxInstance } from '../../ohos/linux/instance.mjs';
 import { ownerFixture, until } from './linux-control-fixture.mjs';
 
 const record = active => join(active.directory, 'instance.json');
@@ -164,4 +165,73 @@ test('replacement of the fixed lock name after a genuine flock is detected befor
   assert.equal(typeof nativeLock, 'function');
   await assert.rejects(second.install(), { code: 'ERR_OHOS_LINUX_LOCK_IDENTITY' }); assert.equal(g.counts().created, 0);
   await fs.access(active.target); assert.equal((await read(active)).state, 'clean');
+});
+
+// 重新安装 Linux: the explicit, user-confirmed discard under the real flock.
+const discard = (f, extra) => discardLinuxInstance({ directory: f.data, lockExclusive: f.internals.lockExclusive }, extra);
+const entries = async f => (await fs.readdir(f.data)).sort();
+async function opensFresh(f) {
+  const store = await openLinuxInstance({ directory: f.data, manifest: f.manifest, lockExclusive: f.internals.lockExclusive });
+  try { return store.existing; } finally { await store.removeUnpublished(); await store.release(); }
+}
+
+test('discard of a clean retained instance keeps the root and lock inode, and the next owner installs afresh', async t => {
+  const { f, owner, active } = await installed(t); await owner.dispose();
+  const root = await fs.stat(f.data), lock = await fs.stat(join(f.data, '.lock'));
+  assert.deepEqual(await discard(f), { removed: 1 });
+  assert.deepEqual(await entries(f), ['.lock']);
+  for (const [before, after] of [[root, await fs.stat(f.data)], [lock, await fs.stat(join(f.data, '.lock'))]]) {
+    assert.equal(after.ino, before.ino); assert.equal(after.dev, before.dev);
+  }
+  assert.equal((await fs.stat(f.data)).mode & 0o777, 0o700);
+  await assert.rejects(fs.access(active.target), { code: 'ENOENT' });
+  const g = await ownerFixture(t), fresh = g.createOwner({ directory: f.data }), reopened = await fresh.install();
+  assert.equal(fresh.bootMode, 'install'); assert.notEqual(fresh.persistentInstanceId, owner.persistentInstanceId);
+  assert.notEqual(reopened.active.directory, active.directory); assert.equal(g.counts().created, 1);
+  assert.equal((await fresh.dispose()).cleanCheckpoint, true);
+});
+
+for (const [mutation, code] of [['assets', 'ERR_OHOS_LINUX_ASSET_GENERATION'], ['dirty', 'ERR_OHOS_LINUX_RECOVERY_REQUIRED'], ['multiple', 'ERR_OHOS_LINUX_RETAINED_INSTANCE']]) {
+  test('discard clears a retained root refused as ' + code + ' and the next open is a fresh install', async t => {
+    const { f, owner, active } = await installed(t); await owner.dispose();
+    const value = await read(active);
+    if (mutation === 'assets') { value.assetIdentity = '0'.repeat(64); await fs.writeFile(record(active), JSON.stringify(value) + '\n'); }
+    if (mutation === 'dirty') { value.state = 'booting'; await fs.writeFile(record(active), JSON.stringify(value) + '\n'); }
+    if (mutation === 'multiple') { await fs.mkdir(join(f.data, '.installation-unrelated')); await fs.writeFile(join(f.data, '.installation-unrelated', 'note'), 'x'); }
+    const { owner: refused, g } = await next(t, f);
+    await assert.rejects(refused.install(), { code }); assert.equal(g.counts().created, 0);
+    assert.equal((await refused.dispose()).dataRetained, true);
+    assert.deepEqual(await discard(f), { removed: mutation === 'multiple' ? 2 : 1 });
+    assert.deepEqual(await entries(f), ['.lock']);
+    assert.equal(await opensFresh(f), false);
+  });
+}
+
+test('discard is refused while a live owner holds the real flock, and deletes nothing', async t => {
+  const { f, active } = await installed(t), before = await fs.readFile(active.target);
+  await assert.rejects(discard(f), { code: 'ERR_OHOS_LINUX_BUSY' });
+  assert.deepEqual(await fs.readFile(active.target), before); assert.equal((await read(active)).state, 'active');
+  assert.equal((await entries(f)).length, 2);
+});
+
+test('a discard interrupted between rename and delete leaves garbage the next open deletes and never resumes', async t => {
+  const { f, owner, active } = await installed(t); await owner.dispose();
+  // The instance is clean and of this asset generation: resumable, were it not renamed.
+  const fault = { fs: { ...fs, async rm() { throw Object.assign(new Error('explicit interruption after rename'), { code: 'EIO' }); } } };
+  await assert.rejects(discard(f, fault), { code: 'EIO' });
+  const [left] = (await entries(f)).filter(name => name !== '.lock');
+  assert.match(left, /^\.discard-[a-f0-9]{32}$/); await fs.access(join(f.data, left, 'target.ext4'));
+  const g = await ownerFixture(t), fresh = g.createOwner({ directory: f.data }); await fresh.install();
+  assert.equal(fresh.bootMode, 'install'); assert.notEqual(fresh.persistentInstanceId, owner.persistentInstanceId);
+  const names = await entries(f);
+  assert.equal(names.length, 2); assert.equal(names.some(name => name.startsWith('.discard-')), false);
+  assert.notEqual(join(f.data, names.find(name => name.startsWith('.installation-'))), active.directory);
+});
+
+test('a second discard finishes the garbage of an interrupted one', async t => {
+  const { f, owner } = await installed(t); await owner.dispose();
+  await assert.rejects(discard(f, { fs: { ...fs, async rm() { throw Object.assign(new Error('interrupted'), { code: 'EIO' }); } } }), { code: 'EIO' });
+  assert.deepEqual(await discard(f), { removed: 1 });
+  assert.deepEqual(await entries(f), ['.lock']);
+  assert.deepEqual(await discard(f), { removed: 0 });
 });

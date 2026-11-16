@@ -8,6 +8,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:dsh_client/dsh_client.dart';
+import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -19,12 +20,13 @@ import '../../runtime/runtime_bridge.dart' show RuntimePhase;
 import '../../runtime/runtime_state.dart' show localRuntimeProvider;
 import '../../speech/read_aloud.dart';
 import '../../speech/voice_cloud.dart';
+import '../../state/android_features.dart';
 import '../../state/account_state.dart';
 import '../speech/voice_call_page.dart';
-import '../../state/streaming_asr_model_state.dart';
 import '../../state/streaming_asr_state.dart';
 import '../../state/streaming_pcm_state.dart';
 import '../../voice/live_words.dart';
+import '../../voice/live_words_model.dart';
 import '../../voice/streaming_pcm.dart';
 import '../../state/agents_state.dart' show subagentParentProvider;
 import '../../state/attachments.dart';
@@ -115,6 +117,7 @@ import 'widgets/permission_pill.dart';
 import 'widgets/plus_panel.dart';
 import 'widgets/quote_chip.dart';
 import 'widgets/read_only_bar.dart';
+import 'widgets/unknown_results_banner.dart';
 
 /// 聊天页:玻璃顶栏 + 消息列表 + 玻璃输入条。
 ///
@@ -134,6 +137,8 @@ class ChatScreen extends ConsumerStatefulWidget {
 }
 
 class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObserver {
+  final _toTop = defaultTargetPlatform == TargetPlatform.iOS ? StatusBarTop() : null;
+
   void Function()? _endInteraction;
   bool _routeCurrent = true;
   ModalRoute<Object?>? _interactionRoute;
@@ -369,6 +374,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
         final mode = await ref.read(voiceSettingsProvider.notifier).ready();
         return mounted && ref.read(harmonyLocalVoiceProvider) ? voiceModeOnHarmonyLocal(mode) : mode;
       },
+      harmony: () => ref.read(operatingSystemProvider) == 'ohos',
       cloud: (mode) => ref.read(voiceCloudProvider)(mode),
       cloudLikely: () => ref.read(voiceCloudLikelyProvider)(),
       harmony: () => ref.read(operatingSystemProvider) == 'ohos',
@@ -377,10 +383,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
         final pcm = ref.read(streamingPcmCaptureProvider);
         final asr = ref.read(streamingAsrProvider);
         try {
-          final models = await ref.read(streamingAsrModelStoreProvider.future);
-          final model = await models.installed();
-          if (model == null || !mounted) return null;
-          final live = LiveWords(pcm, asr, model, StreamingPcmSource.dictation, onWords, trial: models.trial);
+          final chosen = await liveWordsModel(ref);
+          if (chosen == null || !mounted) return null;
+          final live = LiveWords(pcm, asr, chosen.model, StreamingPcmSource.dictation, onWords, trial: chosen.trial);
           await live.start();
           return live;
         } on Object {
@@ -529,6 +534,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
 
   @override
   void dispose() {
+    _toTop?.dispose();
     _dropPreparedPhoneSkill();
     WidgetsBinding.instance.removeObserver(this);
     _endInteraction?.call();
@@ -1793,7 +1799,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
     );
     final headerHeight = typing ? MediaQuery.paddingOf(context).top + AppSpace.sm : ChatHeader.heightOf(context);
 
-    Widget backdrop(Widget child) => widget.backdrop ? WallpaperBackdrop(child: child) : child;
+    Widget backdrop(Widget child) {
+      final framed = widget.backdrop ? WallpaperBackdrop(child: child) : child;
+      return _toTop == null ? framed : PrimaryScrollController(controller: _toTop, child: framed);
+    }
+
     final screen = AnnotatedRegion<SystemUiOverlayStyle>(
       value: dshSystemOverlay(Theme.of(context).brightness),
       child: backdrop(
@@ -1880,6 +1890,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
                                 child: ChatList(
                                   key: ValueKey(sessionId),
                                   sessionId: sessionId,
+                                  toTop: _toTop,
                                   topInset: headerHeight,
                                   bottomInset: _ChatLayout.overlap,
                                   scrolledUnder: _scrolledUnder,
@@ -2098,6 +2109,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
                                   kind: PerchKind.banner,
                                   child: SafeModeBanner(padding: EdgeInsets.only(bottom: 8)),
                                 ),
+                                if (connected && sessionId != null)
+                                  PetPerch(
+                                    kind: PerchKind.banner,
+                                    child: UnknownResultsBanner(
+                                      sessionId: sessionId,
+                                      padding: const EdgeInsets.only(bottom: 8),
+                                    ),
+                                  ),
                                 SmoothSize(
                                   duration: AppMotion.of(context, AppMotion.standard),
                                   curve: AppMotion.std,

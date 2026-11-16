@@ -16,6 +16,20 @@ import { OhosFrameRateKeeper } from './OhosFrameRate';
 
 class LinkArrival { event?: Map<string, Any>; }
 
+import type { BusinessError } from '@ohos.base';
+import type { scanBarcode } from '@kit.ScanKit';
+import type { ScanKit } from './HmsKits';
+
+class LinkArrival { event?: Map<string, Any>; }
+
+// Scan Kit's documented code for "the user closed the scan page" (5.0.0(12)+).
+const SCAN_CANCELED = 1000500002;
+
+class ScanFailure extends Error {
+  code: string;
+  constructor(code: string, message: string) { super(message); this.code = code; }
+}
+
 export default class AppLinksPlugin implements FlutterPlugin, AbilityAware, MethodCallHandler, NewWantListener {
   private static launches: WeakSet<UIAbility> = new WeakSet<UIAbility>();
   private static pending: LinkArrival[] = [];
@@ -23,6 +37,7 @@ export default class AppLinksPlugin implements FlutterPlugin, AbilityAware, Meth
   private static copying: number = 0;
   private static foreground: WeakSet<UIAbility> = new WeakSet<UIAbility>();
   private static attached: Set<AppLinksPlugin> = new Set<AppLinksPlugin>();
+  private static scanning: boolean = false;
   private app?: MethodChannel;
   private links?: MethodChannel;
   private ability?: AbilityPluginBinding;
@@ -228,6 +243,48 @@ export default class AppLinksPlugin implements FlutterPlugin, AbilityAware, Meth
     }
   }
 
+  // 扫码配对电脑: the system scan page (Scan Kit default view) owns the camera and its
+  // album entry, so the app needs no camera permission. Cancel answers null.
+  private scanQrCode(result: MethodResult): void {
+    const ability = this.ability?.getAbility();
+    if (!ability || !AppLinksPlugin.foreground.has(ability)) {
+      result.error('no_ability', '应用窗口当前不可用。', null);
+      return;
+    }
+    if (AppLinksPlugin.scanning) { result.error('busy', '扫码页面已经打开。', null); return; }
+    AppLinksPlugin.scanning = true;
+    AppLinksPlugin.scan(ability.context).then((text: string | null): void => {
+      AppLinksPlugin.scanning = false;
+      try { result.success(text); } catch (_error) { /* The engine left while the scan page was open. */ }
+    }).catch((error: Error): void => {
+      AppLinksPlugin.scanning = false;
+      const failure = error instanceof ScanFailure ? error : new ScanFailure('failed', '系统扫码没有完成。');
+      try { result.error(failure.code, failure.message, null); } catch (_error) { /* Engine left. */ }
+    });
+  }
+
+  // Scan Kit loads on the first scan only: a device without it answers 'unavailable'
+  // and nothing else on dsh/app depends on it.
+  private static async scan(context: common.UIAbilityContext): Promise<string | null> {
+    if (!canIUse('SystemCapability.Multimedia.Scan.ScanBarcode')) throw new ScanFailure('unavailable', '这台设备没有系统扫码。');
+    let kit: ScanKit;
+    try {
+      kit = await import('./HmsKits').then((kits: ESObject): Promise<ScanKit> => kits.loadScanKit());
+    } catch (_error) {
+      throw new ScanFailure('unavailable', '这台设备没有系统扫码。');
+    }
+    let scanned: scanBarcode.ScanResult;
+    try {
+      scanned = await kit.startScan(context, { scanTypes: [kit.qrCode], enableMultiMode: false, enableAlbum: true });
+    } catch (error) {
+      if ((error as BusinessError).code === SCAN_CANCELED) return null;
+      throw new ScanFailure('failed', '系统扫码没有完成。');
+    }
+    const text = scanned.originalValue;
+    if (typeof text !== 'string' || text.length === 0) throw new ScanFailure('failed', '没有读到二维码内容。');
+    return text;
+  }
+
   onMethodCall(call: MethodCall, result: MethodResult): void {
     switch (call.method) {
       case 'getTimeZoneId':
@@ -257,6 +314,9 @@ export default class AppLinksPlugin implements FlutterPlugin, AbilityAware, Meth
         result.success(null);
         return;
       }
+      case 'scanQrCode':
+        this.scanQrCode(result);
+        return;
       case 'setFrameActive': {
         const active: Any = call.argument('active');
         if (typeof active === 'boolean') this.frames?.setActive(active);

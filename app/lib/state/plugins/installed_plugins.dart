@@ -21,6 +21,13 @@ class PluginHost {
         safeMode: safeMode,
         installRefused: installRefused,
       );
+  factory PluginHost.of(HostConnection connection, {bool safeMode = false, bool installRefused = false}) => PluginHost(
+    client: connection.client,
+    label: connection.label,
+    kind: connection.kind,
+    safeMode: safeMode,
+    installRefused: installRefused,
+  );
 
   final DshClient client;
   final String label;

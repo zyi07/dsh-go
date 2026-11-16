@@ -9,6 +9,7 @@
 首次安装仍使用固定 URL、长度和 SHA256 下载归档，宿主只展开普通 gzip 镜像、拷贝归档并补齐512字节边界，不执行 tar/mke2fs/fork，不创建归档内链接。四个盘为只读 bootstrap、只读归档、可写 target、只读工具包；guest 解包、首次初始化私有 `/workspace` 的 UID/GID 60081 与0700权限，随后 pivot_root、卸载 oldroot、启动 agent。
 
 931 将可写盘固定为实例内 `target.ext4`。恢复只接受当前固定 `instance.json` 的 v2 clean 记录；旧930的 v1/retired 描述符没有 guest 同步事实，绝不自动升级。已有记录损坏、丢失、脏状态、多实例、资产代际不符、路径/链接/磁盘身份不符时，明确拒绝，既不另装一套来掩盖错误，也不覆盖或清理旧盘。
+931 将可写盘固定为实例内 `target.ext4`。恢复只接受当前固定 `instance.json` 的 v2 clean 记录；旧930的 v1/retired 描述符没有 guest 同步事实，绝不自动升级。已有记录损坏、丢失、脏状态、多实例、资产代际不符、路径/链接/磁盘身份不符时，明确拒绝，既不另装一套来掩盖错误，也不覆盖或清理旧盘。唯一的删除是用户确认后的 `discardLinuxInstallation`（`instance.mjs` 的 `discardLinuxInstance`）：同一把锁与根身份核对，先把根内各项改名为 `.discard-*` 并同步，再不跟随链接地删除；`openLinuxInstance` 把残留的 `.discard-*` 当垃圾删掉，从不恢复。
 
 恢复建立独立 `resume.cfg`：同一个 target 是唯一可写 `drive0`，kernel `root=/dev/vda rw init=/sbin/dsh-init`。它跳过下载、镜像准备、解包和首次工作区权限初始化。持久 `persistentInstanceId` 不变；每个新 owner 产生新的32随机字节 epoch，经 kernel cmdline 传入新 guest。配置不从持久记录接受任意绝对路径。不可变 bios/kernel/tools 副本重新核实际字节；用户可变 target 核固定角色、dev/ino、普通文件、nlink=1、私有权限和固定尺寸，不拿空模板 SHA 校验用户数据。
 

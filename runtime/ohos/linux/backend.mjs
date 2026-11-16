@@ -149,6 +149,7 @@ export class LinuxRuntimeBackend {
       }catch(error){failureDuringClose=error;}
       this.#session.requestStop();let native;
       try{native=await this.#session.join();if(!native.joined||native.retirementError!==false||![-3,-4].includes(native.apiResult))throw failure('ERR_OHOS_LINUX_NATIVE_RELEASE','Native thread/drive retirement did not confirm shutdown');}
+      try{native=await this.#session.join();if(!native.joined||native.retirementError!==false||![-3,-4].includes(native.apiResult)||(native.fdRetirement!==undefined&&native.fdRetirement?.retired!==true))throw failure('ERR_OHOS_LINUX_NATIVE_RELEASE','Native thread/drive/FD retirement did not confirm shutdown');}
       catch(error){failureDuringClose??=error;}
       this.#session.socket.destroy();
       failureDuringClose??=this.#failure;

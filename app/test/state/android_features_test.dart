@@ -60,6 +60,14 @@ import '../safe_mode/support.dart' show FakeBridge, failedAt;
 import '../shell/golden_harness.dart';
 
 const _pages = {'page:phone', 'page:phoneAppRules', 'page:phoneDnd', 'page:phoneUnlocks'};
+const _pages = {
+  'page:phone',
+  'page:phoneAppRules',
+  'page:phoneAlwaysAllow',
+  'page:phoneAndroidShell',
+  'page:phoneDnd',
+  'page:phoneUnlocks',
+};
 const _rows = {
   'phone-a11y-restore',
   'phone-confirm',
@@ -71,6 +79,10 @@ const _rows = {
   'icon-shortcut',
   'pet-outside-app',
   'pet-display-when',
+  'pet-outside-app',
+  'pet-display-when',
+  'pet-overlay-shows',
+  'pet-overlay-framing',
   'auto-safe',
 };
 
@@ -79,6 +91,8 @@ final _en = lookupL10n(AppLocale.en);
 
 List<Override> _on({required bool android, RuntimeStatus status = runningStatus}) => [
   operatingSystemProvider.overrideWithValue(android ? 'android' : 'ohos'),
+List<Override> _on({required bool android, String? os, RuntimeStatus status = runningStatus}) => [
+  operatingSystemProvider.overrideWithValue(os ?? (android ? 'android' : 'ohos')),
   activeHostProvider.overrideWith(() => FixedActiveHost(HostRef.local)),
   hostsProvider.overrideWith(FixedHosts.new),
   localRuntimeProvider.overrideWith(() => FakeRuntime(LocalRuntimeState(loaded: true, status: status))),
@@ -90,6 +104,7 @@ Future<void> _pump(
   WidgetTester tester,
   Widget home, {
   required bool android,
+  String? os,
   List<Override> overrides = const [],
 }) async {
   tester.view.devicePixelRatio = 2;
@@ -101,6 +116,7 @@ Future<void> _pump(
       brightness: Brightness.light,
       overrides: [
         ..._on(android: android),
+        ..._on(android: android, os: os),
         ...overrides,
       ],
     ),
@@ -117,6 +133,7 @@ void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
   test('everything but ohos counts as Android, so tests run on the Android path', () {
+  test('everything but ohos and ios counts as Android, so tests run on the Android path', () {
     final container = ProviderContainer();
     addTearDown(container.dispose);
     expect(container.read(androidSystemFeaturesProvider), isTrue);
@@ -143,12 +160,14 @@ void main() {
     });
 
     test('HarmonyOS\'s own is 系统操作 alone', () {
+    test('HarmonyOS\'s own are 系统操作 and Linux 环境', () {
       expect(
         {
           for (final spot in SettingsIndex.spots)
             if (spot.ohosOnly) spot.id,
         },
         {'page:systemActions'},
+        {'page:systemActions', 'page:linuxEnvironment'},
       );
       expect(SettingsIndex.ohosOnlyLink('system-actions'), isTrue);
       expect(SettingsIndex.ohosOnlyLink('phone'), isFalse);
@@ -342,6 +361,8 @@ void main() {
   group('links', () {
     Widget? resolve(String id, {required bool android}) {
       final container = ProviderContainer(overrides: [androidSystemFeaturesProvider.overrideWithValue(android)]);
+      final os = android ? 'android' : 'ohos';
+      final container = ProviderContainer(overrides: [operatingSystemProvider.overrideWithValue(os)]);
       addTearDown(container.dispose);
       return container.read(pageLinkResolverProvider)(id, null);
     }
@@ -442,6 +463,11 @@ void main() {
       expect(find.text(_zh.botsPetSize), findsOneWidget);
       expect(find.text(_zh.botsPetQuiet), findsOneWidget);
     });
+
+    testWidgets('on iOS: the optional out-of-app pet section remains available', (tester) async {
+      await _pump(tester, const PetSettingsPage(), android: false, os: 'ios', overrides: pets());
+      expect(find.byType(PetOverlaySettingsSection), findsOneWidget);
+    });
   });
 
   group('主题', () {
@@ -457,11 +483,72 @@ void main() {
       expect(find.byType(AppIconPicker), findsOneWidget);
       expect(find.text(_zh.pluginsAppIcon), findsOneWidget);
       expect(find.byType(IconShortcutTile), findsNothing);
+    testWidgets('on HarmonyOS: the launcher icon, picture shortcut and launch screen, the rest of the page stays', (
+      tester,
+    ) async {
+      await _pump(tester, const AppearancePage(), android: false);
+      expect(find.byType(AppIconPicker), findsOneWidget);
+      expect(find.text(_zh.pluginsAppIcon), findsOneWidget);
+      expect(find.byType(IconShortcutTile), findsOneWidget);
       expect(find.byType(LaunchScreenSection), findsOneWidget);
       expect(find.text(_zh.launchScreenTitle), findsOneWidget);
       expect(find.byType(ThemeModePicker), findsOneWidget);
       expect(find.byType(WallpaperSection), findsOneWidget);
     });
+  });
+
+  group('主题 on iOS', () {
+    Future<void> pump(WidgetTester tester) async {
+      tester.view.devicePixelRatio = 2;
+      tester.view.physicalSize = const Size(390 * 2, 3600 * 2);
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        goldenApp(
+          home: const AppearancePage(),
+          brightness: Brightness.light,
+          overrides: _on(android: false, os: 'ios'),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('its own launch screen: Flutter draws it. No picture shortcut: nothing can pin one', (tester) async {
+      await pump(tester);
+      expect(find.byType(AppIconPicker), findsOneWidget);
+      expect(find.byType(LaunchScreenSection), findsOneWidget);
+      expect(find.byType(IconShortcutTile), findsNothing);
+      expect(find.byType(WallpaperSection), findsOneWidget);
+    });
+
+    testWidgets('no 跟随壁纸: no wallpaper colour to follow', (tester) async {
+      await pump(tester);
+      expect(find.text(_zh.pluginsFollowWallpaper), findsNothing);
+    });
+
+    test(
+      'iOS: the launch screen and engine reset are searchable, the picture shortcut isn\'t; HarmonyOS has all three',
+      () {
+        List<String> ids(String q, {required bool ios}) => [
+          for (final h in searchSettings(
+            q,
+            spots: SettingsIndex.spots,
+            features: featureSections,
+            zh: _zh,
+            en: _en,
+            androidFeatures: false,
+            ios: ios,
+          ))
+            h.spot?.id ?? 'feature:${h.feature!.id}',
+        ];
+        expect(ids(_zh.launchScreenTitle, ios: true), contains('launch-screen'));
+        expect(ids(_zh.iconShortcutRow, ios: true), isNot(contains('icon-shortcut')));
+        expect(ids(_zh.phoneEngineReset, ios: true), contains('engine-reset'));
+        expect(ids(_zh.localEnvUninstall, ios: true), contains('engine-uninstall'));
+        expect(ids(_zh.launchScreenTitle, ios: false), contains('launch-screen'));
+        expect(ids(_zh.iconShortcutRow, ios: false), contains('icon-shortcut'));
+        expect(ids(_zh.phoneEngineReset, ios: false), contains('engine-reset'));
+      },
+    );
   });
 
   group('性能', () {
@@ -650,6 +737,11 @@ void main() {
         overrides: [
           secretStoreProvider.overrideWithValue(MemorySecretStore()),
           androidSystemFeaturesProvider.overrideWithValue(android),
+    DshRemoteRelayBackend backend({required bool webRtc}) {
+      final container = ProviderContainer(
+        overrides: [
+          secretStoreProvider.overrideWithValue(MemorySecretStore()),
+          webRtcAvailableProvider.overrideWithValue(webRtc),
         ],
       );
       addTearDown(container.dispose);
@@ -658,14 +750,28 @@ void main() {
 
     test('on Android: direct first', () {
       final relay = backend(android: true);
+      final relay = backend(webRtc: true);
       expect(relay.peerConnector, flutterPeerConnector);
       expect(relay.account.peerConnector, flutterPeerConnector);
     });
 
     test('on HarmonyOS: straight to the relay', () {
       final relay = backend(android: false);
+      final relay = backend(webRtc: false);
       expect(relay.peerConnector, isNull);
       expect(relay.account.peerConnector, isNull);
     });
+  });
+
+  test("Android's own system features stay off HarmonyOS and iOS", () {
+    expect(androidSystemFeaturesOn('android'), isTrue);
+    expect(androidSystemFeaturesOn('ohos'), isFalse);
+    expect(androidSystemFeaturesOn('ios'), isFalse);
+  });
+
+  test('turning those off on iOS leaves its WebRTC path alone', () {
+    expect(webRtcOn('android'), isTrue);
+    expect(webRtcOn('ios'), isTrue);
+    expect(webRtcOn('ohos'), isFalse);
   });
 }

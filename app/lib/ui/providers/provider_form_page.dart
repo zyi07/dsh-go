@@ -17,6 +17,7 @@ import '../common/app_dialog.dart';
 import '../common/app_sheet.dart';
 import '../common/discard_guard.dart';
 import '../common/expand_reveal.dart';
+import '../common/field_paste.dart';
 import '../common/sheet_title_bar.dart';
 import '../common/smooth_size.dart';
 import '../settings/settings_widgets.dart';

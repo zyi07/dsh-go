@@ -98,6 +98,11 @@ abstract final class EngineControl {
     final safeRunning = status.inSafeMode && status.phase == RuntimePhase.running;
     final mustStop = busy && (!safeRunning || container.read(operatingSystemProvider) == 'ohos');
     if (mustStop && !await _stopAndWait(container)) {
+    final safeRunning =
+        status.inSafeMode &&
+        status.phase == RuntimePhase.running &&
+        container.read(operatingSystemProvider) != 'ohos';
+    if (busy && !safeRunning && !await _stopAndWait(container)) {
       throw PlatformException(code: 'runtime_not_stopped');
     }
     final changed = await container.read(runtimeBridgeProvider).restoreLastKnownGood();

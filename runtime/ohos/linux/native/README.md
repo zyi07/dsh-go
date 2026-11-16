@@ -14,6 +14,18 @@ join 结果有 `joined`（仅 OS 线程已 join）、`apiResult`、`fatalReason`
 
 RW 写入检查 seek 和完整 fwrite；失败返回给既有 virtio IOERR，并按盘保留错误。退休仍只 flush/close 一次，同时检查先前 ferror，后续调用不会把失败改成成功。stdio 缓冲中的写失败可能到退休时才可见，因此 guest 的 syncfs/closed 不能替代成功的 native 退休结果；这里没有新增逐写 fsync，也不承诺宿主掉电耐久。
 
+## 1203：最终受控停机并 join 后丢弃主 RAM 的驻留页
+
+普通 Linux 开关关闭不触发本优化。安装完成后，`LinuxControl#setEnabled(false)` 只关闭准入并等待当前 job 收尾，保留同一运行 VM，以便再次启用；该分支没有 dispose/requestStop/join。最终 `shutdown()`，或安装尚未完成时的取消处置，才沿 owner.dispose → backend/native requestStop → join 到达本节边界。不可将“开关已关闭”当成页回收确认，也不改变一进程一个 VM 的复用合同。
+
+0017 仅登记 `riscv_machine_init` 中单独分配的主 RAM；低地址 RAM、CPU/TLB、设备、9P/slirp、owner 与配置对象仍保留。正常 controlled 返回 -3/-4 且没有 fatal 才允许处理，真正成功的 `pthread_join` 建立机器线程完成屏障后，join worker 才调用 `embed-ram.c`。启动失败、输入/输出/盘错误、fatal、join 失败或未执行的取消工作均不丢弃页。固定构建中的 CPU、设备、网络 select 和同步块设备/9P 回调都由同一 VM 线程驱动；没有可在 join 后继续触碰主 RAM 的已登记任务。
+
+只对 malloc payload 内从向上页对齐的起点到向下页对齐的终点执行一次 `madvise(MADV_DONTNEED)`。两端不完整页保持原样，因此不覆盖 malloc 元数据或相邻分配。虚拟地址、phys_mem 映射、TLB 地址和设备对象保持有效隔离，既不 free/munmap，也不恢复 guest 执行。第二次 create 仍拒绝，重复 join 仍复用同一 Promise；GC/cleanup 仍只请求 stop，不执行未确认的回收。
+
+成功 join 的结果增加可选观测 `ramRetirement`：`eligible` 表示正常停止且登记了主 RAM；`attempted` 表示对非空完整页区间发起了建议；`trackedBytes` 是登记的主 RAM 分配范围；`eligibleBytes` 是选中完整页区间；`advisedBytes` 仅在系统调用成功时等于该区间；`errorCode` 为 0 或保留的 errno。`advisedBytes` 不是设备实际回收字节数，也不是 PSS 差值。未知 join 的该字段为 null，不读取机器线程字段。页大小/范围错误或 madvise 失败单独报告，失败不填成功字节数，不改变 `apiResult`、盘 `retirementError` 或 clean checkpoint 三字段。
+
+`tooling/ohos/research/tinyemu-ram-retire/run.py` 在正式门中以 `tinyemu-ram-retirement` 登记。它重编真实生产对象，用单独链接的测试 observer 在 VM 线程的 mallocz 后主动触页，真实测 mincore 前后值，并经产品 Node async join 路径验证 9 个场景的 plain/jitless 两种执行。触页来自宿主夹具，不能称为客体负载。主 RAM 之外的分配未处理；完整 VM 内存寿命和 `nativeMemoryRelease:'process-exit'` 合同不变。OH SDK 编译、HAP 和设备的回收行为仍须实测。
+
 ## 已处理的宿主终止边界
 
 0001–0011 是此前已冻结的嵌入、CPU/CLINT、初始化错误、HTIF返回、非阻塞控制socket、只读盘及盘FILE退役源差。0012 在 controlled C 入口设线程局部 setjmp，仅对这个库链接的 exit/abort/__assert_fail 引用作 GNU/LLD --wrap；不改全局信号 handler、不 interpose 整个 App、不 monkeypatch Node。显式 fatal 以 -9 返回，fatalReason 1/2/3 分别为 exit/abort/assert。已登记的自有盘会退役；发生退役错误以 -8 优先，仍保存 fatalReason。此边界只穿过 TinyEMU 的 C 调用栈；生产 callbacks 为 NULL/只读原子，不允许从外部 C++/JS 回调跨 longjmp。
@@ -62,3 +74,46 @@ cmake --build /build/linux-oh
 ## 许可
 
 固定 TinyEMU 核心 MIT；实际编入的 slirp 包含 MIT/BSD 类声明及原作者通知，逐文件首部原文收入 THIRD-PARTY-NOTICES.txt 并随 runtime ZIP 分发。这里没有新增 HAP 用户态工具包；Alpine/BusyBox、Bellard Linux内核及903 APK工具的对应源码/许可证闭包仍属镜像分发，不能以本 native notices 替代。Node N-API 为已固定 Node 依赖。
+## 1208：CLINT 的无符号未来截止时间
+
+0018 修复 `riscv_machine_get_sleep_duration` 先计算 unsigned 差再存入 int64_t 的错误。`mtimecmp` 为 UINT64_MAX 或其它相差超过 INT64_MAX 的未来值时，旧实现误置 MTIP、唤醒真实 WFI 并把 sleep delay 变成 0。RISC-V 的比较是 unsigned mtime >= mtimecmp；现在先按这个关系判断到期，只有确定在未来才计算 uint64_t 剩余量并按原毫秒取整/上限截断。等于截止或邻近过去、低32位回卷、已 pending MTIP、CPU 非休眠与原 10 ms 上限保持既有行为。极远过去值也被纠正：例如 mtime=UINT64_MAX、mtimecmp=0 时，旧差值回卷成1而漏置MTIP，新实现按unsigned关系正确置位。
+
+针对入口 `tinyemu-clint-deadline` 重编实际宿主对象，覆盖 RV32/RV64 各7个边界、既有13个clock用例和低字写1项，另由真实 Node/TinyEMU 执行设置 UINT64_MAX、启用 MTIE 再 WFI 的小客体 BIOS，在 plain/jitless 两模式计数零等待 select 和 VM线程CPU时钟。clock 注入只用于边界C夹具；Node BIOS 用实际时钟。该错误能使特定裸 BIOS 忙转，尚无实际 Linux 内核空闲路径或设备CPU占比归因证据。没有扩大 MAX_SLEEP_TIME；普通 WFI 的约100Hz轮询与 slirp/停止唤醒调度另行处理。详见 `tooling/ohos/research/tinyemu-clint-deadline/README.zh.md`。
+
+## 1217：embedded RISC-V 微秒等待
+
+0019 在实际 embedded RISC-V 的 select 最后边界使用微秒下取整，避免未来不足1ms的CLINT截止时间被毫秒取整成零而反复忙转。先保留slirp/fs的毫秒预算，再用CPU微秒预算截断；仍保留10ms最大请求、不足1µs可零等待、旧毫秒接口及其他class语义。它包括0018前置，不改停止唤醒或slirp调度。真实旧毫秒API与非embed兼容边界、RV32/RV64实际WFI/select及原clock回归由 `tinyemu-sleep-micros` 门验证；目标设备和完整Linux网络/9p语义不由边界夹具代证。详见 `tooling/ohos/research/tinyemu-sleep-micros/README.zh.md`。
+
+## 0020：嵌入 slirp 的 UDP 到期身份（1220）
+
+上游 `curtime` 与 `so_expire` 是 32 位毫秒。新 UDP 在 `UINT32_MAX-1000` 创建时，四分钟后的截止值回卷成一个更小的非零数，既有 `so_expire <= curtime` 会在下一次 fill 立即关闭真实 FD；截止值恰为零又会和“永久 listener”哨兵混淆。该边界是受控时钟注入的宿主复现，没有手机已经遇到的证据。
+
+0020 只在 `TEMU_EMBED` 为私有 socket 保留 64 位最近续期起点和 32 位 duration，以 duration 0 表示未启用超时。`slirp_select_poll` 仍只读取一次 `CLOCK_MONOTONIC`，宽值供 UDP 使用，其低 32 位仍写回原 `curtime`；DNS 一秒缓存、TCP fast/slow timer 的字段与判断没有改变。固定 duration 仍为 240000/10000 ms，并在编译期检查为正且小于 `2^31`。不能仅凭 duration 小于半周期，就假定宿主停止调度的间隔也小于半周期；因此没有只改成 32 位 signed 差比较。
+
+对可表示的单调时间区间，UDP 在 `now-start >= duration` 时到期；所有 attach/listen/send/recv 续期以及清零调用统一走该状态。低 32 位 `so_expire` 保留给原诊断显示，不再兼任 OH 的永久哨兵。成功发送才续期；普通接收续四分钟、DNS foreign-port 为 53 的分支续十秒；永久 listener 收发仍永久。非嵌入构建继续使用原字段、原零哨兵和原比较，没有把修复扩散到 Android 或独立上游模拟器。
+
+首次 poll 的合同来自实际调用顺序：`slirp_open`/`slirp_init` 只初始化空 UDP 链；`virt_machine_run` 先完成 net select/poll，随后才 dispatch CPU。客体 virtio TX 经 `slirp_input` 到 UDP/ICMP 创建临时 socket，RA 临时 listener 也只在 TCP 流量处理中创建。可早期调用的公开 host-forward listener 使用永久标志；固定 OH 启动链没有调用这个 API。产品网络回调在唯一 VM 线程同步执行，未新增线程或全局信号。任意外部调用者在首次 poll 前直接调用内部 `udp_attach` 不属于该 OH 调用合同。
+
+私有 socket 布局在嵌入构建改变，必须完整重编所有 slirp 对象，不能把新旧布局的对象混链。当前 Linux x86_64 宿主实测 socket 168→184 字节、Slirp 1088→1120 字节；这不是目标 SDK ABI 检查。非嵌入两边布局相同。库名、N-API 导出、Node 与 Dart 接口不变。
+
+定向门 `slirp-udp-expiry` 从固定归档新鲜构建完整生产链；在研究副本依次逆掉依赖层 0024、0023，得到公共历史层，再仅逆 0020 构造旧实现。后两者只有 0020 的六个文件不同；同一 31 用例旧实现 11 个缺陷断言失败、公共历史层和完整当前 OH 候选分别 31/31；非嵌入两边 31 行真实行为记录完全相同，刻意保留其 11 个旧缺陷。另用实际 `temu.c` 私有 slirp 适配器与真实 loopback UDP 检查首 poll 在首包前更新时钟；CPU 批次是显式测试包生产者，并非客体指令。所有 `fcntl`/`EBADF`、socket 收发及 slirp list 操作真实执行。没有将旧缺陷复现算成 31 项通过。
+
+此补丁不扩大 10 ms 等待预算、不增加 waker、不修 TCP fasttimo 的零哨兵，也不消除 1211 的其它阻点。到期仍在原 fill/poll 顺序按已采样时间判定，不承诺宿主墙钟精确四分钟或有界线程调度。宽计时的证明限于单调、有效且可表示的毫秒区间；没有新加对既有 clock_gettime 失败的兜底。SDK/设备尚未运行。
+
+## 许可
+
+固定 TinyEMU 核心 MIT；实际编入的 slirp 包含 MIT/BSD 类声明及原作者通知，逐文件首部原文收入 THIRD-PARTY-NOTICES.txt 并随 runtime ZIP 分发。这里没有新增 HAP 用户态工具包；Alpine/BusyBox、Bellard Linux内核及903 APK工具的对应源码/许可证闭包仍属镜像分发，不能以本 native notices 替代。Node N-API 为已固定 Node 依赖。
+
+## 1228：TCP delayed ACK 的零时基
+
+0021 仅在 TEMU_EMBED 下把 fasttimo 的挂起状态与32位时间戳分开。真实 TCP 输入置 TF_DELACK 后，fill 首次登记当前时间并置 pending；poll 到达原有2ms条件时执行 tcp_fasttimo 并清 pending。curtime 在32位回卷恰为0也可登记，不会被误当成无定时器而推迟到下一次 fill。不会改变2ms条件、499ms slow timer、select等待上限、UDP或停止唤醒；非嵌入预处理结果保持相同。32位模时间的旧有限范围仍在，未扩成跨完整32位周期暂停的期限保证。
+
+针对门 slirp-fasttimo fresh 构建固定源码，以真实 slirp/TCP/loopback 与明确的 guest Ethernet/单调clock边界验证13场景；原7绿6红、候选13绿，另核重复登记、第二数据段、连接关闭及select错误路径。该门没有执行guest指令，也不测手机或墙钟ACK时限。SDK/设备需本机验证；不是1211长等待方案。
+
+## 1267：历史对照的依赖闭包
+
+`--host-test --host-baseline` 仅用于 fatal/SIGPIPE 反例，排除 0012、0013、0017 及依赖它们的 0023、0024。当前 NAPI binding 仍使用唤醒入口，因此此模式另外编译研究目录 `tinyemu-native/baseline-entry.c`：它只把新入口转到真实旧 controlled ABI，并提供零值 wait-error TLS，不模拟事件等待。构建收据记录全部跳过项与桥源码摘要。原 oversized、exit/abort/assert、SIGPIPE 反例之前，新增真实 Node 加载、客体输出、stop/join 阳性控制，防止未解析符号被误算成预期进程退出。正常宿主/正式 OH 构建不编译此桥，仍应用完整生产补丁链。
+
+UDP 与 TCP 研究门均在完整生成源码的副本上用 `--fuzz=0` 逆掉 0024→0023，再分别仅逆 0020 或 0021。两层间六/一个 C/H 文件差及原 11/6 个失败集合独立检查；完整当前生产链另以 `candidate-embed` 执行同样 31/13 场景，不能用历史层通过代替它。UDP 两侧非嵌入行/布局、TCP 两侧非嵌入行/预处理结果与首 poll 原合同仍保留。历史层是目标修复的受控反例，不是当前生产版本。
+
+正式 `tinyemu-native` 登记还要求独立四盘工具 guest 配置；没有该输入时，仅运行无 `--guest-config` 的宿主部分不能把整登记标为通过，也不能用小 BIOS 或 demo Linux 替代工具 guest。

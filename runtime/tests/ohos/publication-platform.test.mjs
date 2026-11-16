@@ -55,6 +55,44 @@ for (const platform of ['linux', 'android']) {
   });
 }
 
+// Off OpenHarmony a refused link takes the common chain's rename under the
+// migration lease (jsonl-migration-link-fallback.diff); it is never a copy.
+for (const platform of ['linux', 'android']) {
+  test(`${platform} migration never converts EACCES into a copy`, async () => {
+    const failure = Object.assign(new Error('link denied'), { code: 'EACCES' });
+    const renamed = [];
+    const published = await session.publishCurrentExclusive('source', 'dir/target', {
+      platform,
+      fs: {
+        link: async () => { throw failure; },
+        lstat: async () => { throw Object.assign(new Error('absent'), { code: 'ENOENT' }); },
+        rename: async (from, to) => { renamed.push([from, to]); },
+        open: async (path, flags) => {
+          assert.deepEqual([path, flags], ['dir', 'r'], 'only the directory sync opens anything');
+          return { sync: async () => {}, close: async () => {} };
+        },
+      },
+    });
+    assert.equal(published, true);
+    assert.deepEqual(renamed, [['source', 'dir/target']]);
+  });
+}
+
+test('OpenHarmony migration keeps a refused publication as the error', async (t) => {
+  const failure = Object.assign(new Error('publication denied'), { code: 'EACCES' });
+  const key = Symbol.for('dsh.go.ohos.publication');
+  const previous = globalThis[key];
+  globalThis[key] = { protocolVersion: 1, publish: async () => { throw failure; } };
+  t.after(() => { globalThis[key] = previous; });
+  await assert.rejects(session.publishCurrentExclusive('source', 'dir/target', {
+    platform: 'openharmony',
+    fs: {
+      lstat: async () => { assert.fail('OpenHarmony never falls back to rename'); },
+      rename: async () => { assert.fail('OpenHarmony never falls back to rename'); },
+    },
+  }), (error) => error === failure);
+});
+
 test('Linux session materialization still publishes its synced staging inode', async () => {
   const storage = Object.create(session.JsonlSessionPersistence.prototype);
   storage.root = join(directory, 'sessions');

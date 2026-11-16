@@ -243,6 +243,11 @@ class _ArtifactTileState extends ConsumerState<ArtifactTile> {
       _Busy.opening => appL10n.chatOpening,
       _Busy.saving =>
         ref.watch(operatingSystemProvider) == 'ohos' ? appL10n.harmonySaving : appL10n.chatSavingToDownloads,
+        ref.watch(operatingSystemProvider) == 'ohos'
+            ? appL10n.harmonySaving
+            : wordsForIos
+            ? appL10n.iosSavingToFiles
+            : appL10n.chatSavingToDownloads,
       null =>
         _note ??
             artifact.description ??
@@ -434,12 +439,24 @@ enum ArtifactAction {
     ArtifactAction.openWith => appL10n.commonOpenWith,
     ArtifactAction.share => appL10n.commonShare,
     ArtifactAction.save => harmony ? appL10n.harmonySaveToFile : appL10n.chatSaveToDownloads,
+    ArtifactAction.save =>
+      harmony
+          ? appL10n.harmonySaveToFile
+          : wordsForIos
+          ? appL10n.iosSaveToFiles
+          : appL10n.chatSaveToDownloads,
     ArtifactAction.copyPath => appL10n.chatCopyPath,
   };
 
   String? hintOn({required bool harmony}) => switch (this) {
     ArtifactAction.open => appL10n.chatOpenInDefaultApp,
     ArtifactAction.save => harmony ? appL10n.harmonySaveChooseLocation : appL10n.chatDownloadsFolderHint,
+    ArtifactAction.save =>
+      harmony
+          ? appL10n.harmonySaveChooseLocation
+          : wordsForIos
+          ? appL10n.iosFilesFolderHint
+          : appL10n.chatDownloadsFolderHint,
     _ => null,
   };
 }

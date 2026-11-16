@@ -12,12 +12,17 @@ const privateFile = info => info.isFile() && info.nlink === 1n && (info.mode & 0
 const exact = (value, keys) => value && typeof value === 'object' && !Array.isArray(value) &&
   Object.keys(value).length === keys.length && keys.every(key => Object.hasOwn(value, key));
 const hex = value => typeof value === 'string' && /^[a-f0-9]{64}$/.test(value);
+// Names an explicit discard gives entries it has taken out of the instance
+// namespace. Such an entry is garbage: never an instance, never resumed.
+const discarded = /^\.discard-[A-Za-z0-9_-]+$/;
 
 export function cleanGuestClose(value, epoch) {
   return exact(value, ['epoch', 'rootfsSync', 'syncMethod', 'syncScope']) && value.epoch === epoch &&
     value.rootfsSync === true && value.syncMethod === 'syncfs' && value.syncScope === 'rootfs';
 }
 const cleanNative = value => value?.joined === true && value.retirementError === false && [-3, -4].includes(value.apiResult);
+const cleanNative = value => value?.joined === true && value.retirementError === false && [-3, -4].includes(value.apiResult) &&
+  (value.fdRetirement === undefined || value.fdRetirement?.retired === true);
 
 function assetIdentity(manifest) {
   const roles = {};
@@ -53,6 +58,59 @@ function decode(text, expected) {
   return value;
 }
 
+function checkRoot(directory, lockExclusive) {
+  if (typeof directory !== 'string' || !isAbsolute(directory) || directory === '/' || directory.includes('\0') || resolve(directory) !== directory) throw new TypeError('A canonical private Linux root is required');
+  if (typeof lockExclusive !== 'function') throw fail('ERR_OHOS_LINUX_LOCK_UNAVAILABLE', 'The trusted native Linux installation lock is unavailable');
+}
+async function directoryIdentity(fs, name, handle, saved) {
+  const [named, held, canonical] = await Promise.all([fs.lstat(name, { bigint: true }), handle.stat({ bigint: true }), fs.realpath(name)]);
+  if (!named.isDirectory() || !held.isDirectory() || canonical !== name || !same(named, held) || (saved && !same(held, saved))) throw fail('ERR_OHOS_LINUX_DIRECTORY_IDENTITY', 'Linux private directory identity changed');
+  return held;
+}
+// Opens the fixed private root, tightens only that verified inode to 0700 and
+// takes the real native flock on its fixed `.lock`. On failure every
+// descriptor opened here is closed again, which also releases the flock.
+async function lockRoot(fs, directory, lockExclusive) {
+  const lockPath = join(directory, '.lock');
+  let root, lock;
+  try {
+    await fs.mkdir(directory, { mode: 0o700 }).catch(cause => { if (cause.code !== 'EEXIST') throw cause; });
+    root = await fs.open(directory, constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW);
+    const rootInfo = await directoryIdentity(fs, directory, root);
+    await root.chmod(0o700);
+    lock = await fs.open(lockPath, constants.O_RDWR | constants.O_CREAT | constants.O_NOFOLLOW, 0o600);
+    const lockInfo = await lock.stat({ bigint: true });
+    if (!privateFile(lockInfo)) throw fail('ERR_OHOS_LINUX_LOCK_IDENTITY', 'Linux lock must be a private single-link ordinary file');
+    try { if (lockExclusive(lock.fd) !== undefined) throw new TypeError('lockExclusive must return undefined synchronously'); }
+    catch (cause) {
+      if (['EAGAIN', 'EWOULDBLOCK'].includes(cause.code)) throw fail('ERR_OHOS_LINUX_BUSY', 'Another live owner holds this Linux environment', cause);
+      throw cause;
+    }
+    const namedLock = await fs.lstat(lockPath, { bigint: true });
+    if (!privateFile(namedLock) || !same(namedLock, lockInfo)) throw fail('ERR_OHOS_LINUX_LOCK_IDENTITY', 'Linux lock path changed during acquisition');
+    async function verifyRoot() {
+      await directoryIdentity(fs, directory, root, rootInfo);
+      const named = await fs.lstat(lockPath, { bigint: true });
+      if (!privateFile(named) || !same(named, lockInfo) || !same(await lock.stat({ bigint: true }), lockInfo)) throw fail('ERR_OHOS_LINUX_LOCK_IDENTITY', 'Linux lock inode changed');
+    }
+    return { root, lock, rootInfo, verifyRoot };
+  } catch (cause) {
+    for (const handle of [root, lock].filter(Boolean)) await handle.close().catch(closeError => { cause.linuxCloseError ??= closeError; });
+    throw cause;
+  }
+}
+// A directory goes recursively (fs.rm never follows a link inside it). Any
+// other entry, a planted symlink included, is unlinked by name: never opened,
+// never followed, so nothing outside the root can be touched.
+async function removeEntry(fs, path) {
+  if ((await fs.lstat(path)).isDirectory()) await fs.rm(path, { recursive: true, force: true });
+  else await fs.unlink(path);
+}
+async function removeDiscarded(fs, directory, names, verifyRoot, root) {
+  for (const name of names) { await verifyRoot(); await removeEntry(fs, join(directory, name)); }
+  if (names.length) await root.sync();
+}
+
 // All paths are fixed below the host-captured private root. The real native
 // flock is held until retirement AND metadata handling finish; its inode is
 // never replaced. fs is injectable only for precise persistence fault tests.
@@ -73,6 +131,13 @@ export async function openLinuxInstance({ directory, manifest, lockExclusive }, 
     const namedLock = await fs.lstat(lockPath, { bigint: true });
     if (!privateFile(namedLock) || !same(namedLock, lockInfo) || !same(await lock.stat({ bigint: true }), lockInfo)) throw fail('ERR_OHOS_LINUX_LOCK_IDENTITY', 'Linux lock inode changed');
     await directoryIdentity(path, instance, instanceInfo);
+  checkRoot(directory, lockExclusive);
+  const expected = assetIdentity(manifest);
+  let root, lock, instance, target, rootInfo, instanceInfo, targetInfo, record, path, verifyRoot, existing = false;
+  const handles = () => [target, instance, root, lock].filter(Boolean);
+  async function verify() {
+    await verifyRoot();
+    await directoryIdentity(fs, path, instance, instanceInfo);
     if (target) {
       const named = await fs.lstat(join(path, 'target.ext4'), { bigint: true }), held = await target.stat({ bigint: true });
       if (!privateFile(named) || !privateFile(held) || !same(named, targetInfo) || !same(held, targetInfo) || held.size !== BigInt(manifest.empty.expandedBytes)) throw fail('ERR_OHOS_LINUX_TARGET_IDENTITY', 'Retained Linux target identity or size changed');
@@ -117,11 +182,21 @@ export async function openLinuxInstance({ directory, manifest, lockExclusive }, 
     const names = (await fs.readdir(directory)).filter(name => name !== '.lock');
     if (names.length) {
       existing = true;
+    ({ root, lock, rootInfo, verifyRoot } = await lockRoot(fs, directory, lockExclusive));
+    const listed = (await fs.readdir(directory)).filter(name => name !== '.lock');
+    // Conservative until a discard interrupted by a crash is finished: its
+    // leftovers are deleted under this lock before anything counts as data.
+    existing = listed.length > 0;
+    await removeDiscarded(fs, directory, listed.filter(name => discarded.test(name)), verifyRoot, root);
+    const names = listed.filter(name => !discarded.test(name));
+    existing = names.length > 0;
+    if (existing) {
       if (names.length !== 1 || !/^\.installation-[A-Za-z0-9_-]+$/.test(names[0])) throw fail('ERR_OHOS_LINUX_RETAINED_INSTANCE', 'Ambiguous retained Linux data requires explicit recovery');
       path = join(directory, names[0]);
     } else path = await fs.mkdtemp(join(directory, '.installation-'));
     instance = await fs.open(path, constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW);
     instanceInfo = await directoryIdentity(path, instance);
+    instanceInfo = await directoryIdentity(fs, path, instance);
     if ((instanceInfo.mode & 0o077n) !== 0n) throw fail('ERR_OHOS_LINUX_DIRECTORY_IDENTITY', 'Linux instance directory is not private');
     if (existing) {
       let file;
@@ -198,4 +273,35 @@ export async function openLinuxInstance({ directory, manifest, lockExclusive }, 
       if (failures.length) throw new AggregateError(failures, 'Linux instance descriptor release failed');
     },
   });
+}
+
+// The explicit, user-confirmed way out of a retained instance that cannot be
+// resumed. Under the same real flock and root/lock identity checks as
+// openLinuxInstance, every entry but `.lock` is first renamed to `.discard-*`
+// (root fsync), so a crash can never leave half an instance that might be
+// resumed; then each is removed without following links (root fsync again).
+// The root and the `.lock` inode stay. The next open installs afresh.
+export async function discardLinuxInstance({ directory, lockExclusive }, { fs = promises } = {}) {
+  checkRoot(directory, lockExclusive);
+  const { root, lock, verifyRoot } = await lockRoot(fs, directory, lockExclusive);
+  let failed = false;
+  try {
+    await verifyRoot();
+    const names = (await fs.readdir(directory)).filter(name => name !== '.lock'), doomed = [];
+    for (const name of names) {
+      if (discarded.test(name)) { doomed.push(name); continue; }
+      const renamed = '.discard-' + randomBytes(16).toString('hex');
+      await verifyRoot(); await fs.rename(join(directory, name), join(directory, renamed));
+      doomed.push(renamed);
+    }
+    if (doomed.length) await root.sync();
+    await removeDiscarded(fs, directory, doomed, verifyRoot, root);
+    return { removed: names.length };
+  } catch (cause) { failed = true; throw cause; }
+  finally {
+    // Closing the lock descriptor releases flock.
+    const failures = [];
+    for (const handle of [lock, root]) try { await handle.close(); } catch (cause) { failures.push(cause); }
+    if (failures.length && !failed) throw new AggregateError(failures, 'Linux root descriptor release failed');
+  }
 }
