@@ -240,7 +240,6 @@
       "0.2.2-rc.1": {
         "node_modules/@deepseek-ai/dsh-mcp-client/lib/index.js": {
           "after": "04fb41ee85ceabc11948fade57eb70f66c6dd9182102cd188da0b92d78df1fff",
-          "before": "00e0f6f5fed9adaeb78000cd0f00ae37037c48a88d441586be936b142178d343"
           "before": "1b279593ef19f7ca2c7b46893bd897424b1fc8a5c0e0644140dbba0e488f9f99"
         },
         "node_modules/@modelcontextprotocol/client/dist/stdio.cjs": {
@@ -416,7 +415,6 @@
     "ohos-workspace-edit.diff": {
       "0.2.2-rc.1": {
         "node_modules/@deepseek-ai/dsh-fs-local/lib/index.js": {
-          "after": "559f937a231f6162c9d48415dd5cd9c1221012e85b425c4a3a590dedbf290439",
           "after": "fe8d6fa69462b0a76d73db9d857edbc9b82f8d7f8a793168e04e3e817d6ba2ba",
           "before": "492128833d24c6a3762d5844e1101649bc3aec52e8e55cde2bc5d48cf66bcf5a"
         },
@@ -1167,7 +1165,6 @@
     "zzzzzzz-ohos-session-publication.diff": {
       "0.2.2-rc.1": {
         "node_modules/@deepseek-ai/dsh-session-persistence-jsonl/lib/index.js": {
-          "after": "41b0838554d45032c4b2cb664fb2c46817859519728068b8950e162076ad7265",
           "after": "a2fccd3b699d7d327246f684a2a3eb6b7e26f50d4ed57ec34c9eb750fa0cd199",
           "before": "267a53ae30ee0e6d33097f7c78fb94c25f905bbffb4896c258d856f1973bc4d3"
         }
@@ -1412,8 +1409,6 @@
           "before": "80933656125dec9d255a4b6a71514736bfc4f80b6cca67d2bfd09d062db3690b"
         },
         "node_modules/@deepseek-ai/dsh-session-persistence-jsonl/lib/index.js": {
-          "after": "1c9be620b160f7e0d71f6ed0e9b027dab1d9dd2bb5078ca930c003ecbd817830",
-          "before": "41b0838554d45032c4b2cb664fb2c46817859519728068b8950e162076ad7265"
           "after": "ad21b818c567beb6f42e1091a37e622e3172d19e81952118e877b74195952fc1",
           "before": "a2fccd3b699d7d327246f684a2a3eb6b7e26f50d4ed57ec34c9eb750fa0cd199"
         }
@@ -1790,8 +1785,6 @@
     "zzzzzzzzzzzz-ohos-runtime-capabilities.diff": {
       "0.2.2-rc.1": {
         "node_modules/@deepseek-ai/dsh-session-persistence-jsonl/lib/index.js": {
-          "after": "8b1e82367fccc92377d341a04ffd110a423bc70d30f873dc4b52eac3f75fbb23",
-          "before": "1c9be620b160f7e0d71f6ed0e9b027dab1d9dd2bb5078ca930c003ecbd817830"
           "after": "31fb1a973e40c7886ebe6987344434bb5e33f6288850fcd861fb95f43cab27c9",
           "before": "ad21b818c567beb6f42e1091a37e622e3172d19e81952118e877b74195952fc1"
         }

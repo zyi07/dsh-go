@@ -35,18 +35,6 @@
  /** Default timeout for individual MCP tool calls and resource requests (ms). */
  const DEFAULT_TOOL_CALL_TIMEOUT_MS = 6e4;
  /** Valid `serverName`, kept below the public tool-name budget. */
-@@ -808,6 +809,11 @@
- * @returns startup readiness after connection and initial tool discovery settle.
- */
- async function apply(ctx, config) {
-+	if (process.platform === "openharmony" && config.transport === "stdio" && !ctx.subprocess?.pluginProcess) {
-+		throw Object.assign(new Error(`mcp-client(${config.serverName}): [ERR_OHOS_NO_SPAWN] App 内命令服务尚未就绪；请启用 Node Worker/Linux 命令后端，或改用 streamable-http MCP。`), {
-+			code: "ERR_OHOS_NO_SPAWN"
-+		});
-+	}
- 	const reconnect = resolveReconnectPolicy(config.reconnect, `mcp-client(${config.serverName}): reconnect`);
- 	ctx.effect(() => {
- 		const owner = scopeOf(ctx) ?? ctx.root;
 @@ -808,8 +809,8 @@
  * @returns startup readiness after connection and initial tool discovery settle.
  */
