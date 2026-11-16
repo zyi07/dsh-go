@@ -52,7 +52,6 @@ export default class VoicePlugin implements FlutterPlugin, AbilityAware {
   static onBackground(ability: UIAbility): void {
     VoicePlugin.foregroundAbilities.delete(ability);
     const owner = VoicePlugin.owner;
-    if (owner?.ability?.getAbility() === ability) owner.cancel().catch((): void => {});
     if (owner?.ability?.getAbility() === ability) { owner.clearPcm(); owner.cancel().catch((): void => {}); }
   }
 
@@ -63,7 +62,6 @@ export default class VoicePlugin implements FlutterPlugin, AbilityAware {
     this.methods = new MethodChannel(messenger, 'dsh/voice');
     this.events = new EventChannel(messenger, 'dsh/voice/events');
     this.methods.setMethodCallHandler({ onMethodCall: (call: MethodCall, result: MethodResult): void => {
-      if (!['capabilities', 'permission', 'requestPermission', 'openSettings', 'startRecognizer', 'startRecorder', 'stop', 'cancel'].includes(call.method)) {
       if (!['capabilities', 'permission', 'requestPermission', 'openSettings', 'startRecognizer', 'startRecorder', 'streamingPcm', 'stop', 'cancel'].includes(call.method)) {
         try { result.notImplemented(); } catch (_) {} return;
       }
@@ -71,7 +69,6 @@ export default class VoicePlugin implements FlutterPlugin, AbilityAware {
         try { result.success(value); } catch (_) { /* retired transport; never send a second reply */ }
       }).catch((error: Error): void => {
         const failure = error instanceof VoiceFailure ? error : new VoiceFailure('audio', '语音操作未完成，请重试。', 100);
-        const details: Map<string, Any> = new Map<string, Any>([['code', failure.voiceCode]]);
         const details: Map<string, Any> | null = failure.code === 'pcm-source' ? null : new Map<string, Any>([['code', failure.voiceCode]]);
         try { result.error(failure.code, failure.message, details); } catch (_) {}
       });
@@ -81,7 +78,6 @@ export default class VoicePlugin implements FlutterPlugin, AbilityAware {
         if (this.binding === binding && VoicePlugin.owner === this) this.sink = sink;
       },
       onCancel: (_args: Any): void => {
-        if (this.binding === binding) { this.sink = undefined; this.cancel().catch((): void => {}); }
         if (this.binding === binding) { this.clearPcm(); this.sink = undefined; this.cancel().catch((): void => {}); }
       }
     });
@@ -96,20 +92,11 @@ export default class VoicePlugin implements FlutterPlugin, AbilityAware {
   }
 
   onAttachedToAbility(binding: AbilityPluginBinding): void {
-    if (this.ability && this.ability !== binding) this.cancel().catch((): void => {});
     if (this.ability && this.ability !== binding) { this.clearPcm(); this.cancel().catch((): void => {}); }
     this.ability = binding;
   }
 
   onDetachedFromAbility(): void {
-    this.ability = undefined; this.cancel().catch((): void => {});
-  }
-
-  private retire(): void {
-    this.sink = undefined; this.ability = undefined;
-    this.cancel().then((): Promise<void> => HmsVoiceRecognizer.releaseIdle()).catch((): void => {});
-  }
-
     this.clearPcm(); this.ability = undefined; this.cancel().catch((): void => {});
   }
 

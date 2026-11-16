@@ -33,7 +33,6 @@ std::string Directory(const std::string& path, const char* code = "ERR_OHOS_HOST
 
 std::string NativeDirectory(const std::string& path) {
   const auto root = Directory(path, "ERR_OHOS_NATIVE_LIBRARY_PATH");
-  for (const char* name : {"libdsh_flock.so", "libdsh_require_builtin.so"}) {
 #if defined(DSH_IOS_HOST)
   for (const char* name : {"DshFlock.framework/DshFlock", "DshRequireBuiltin.framework/DshRequireBuiltin"}) {
 #else
@@ -133,10 +132,6 @@ bool ForeignLine(const std::string& line) {
 
 // File descriptors 1/2 are process-wide. Capture is deliberately scoped to the
 // single engine lifetime; no raw bytes are forwarded to hilog or Ark.
-class Capture {
- public:
-  Capture(std::function<void(const std::string&, std::string)> line, std::function<void()> check_stop)
-      : line_(std::move(line)), check_stop_(std::move(check_stop)) {
 void WakeCapture(int fd) {
   if (fd < 0) return;
   const char byte = 1;
@@ -186,9 +181,6 @@ class Capture {
       if (pipes_[i][1] >= 0) { close(pipes_[i][1]); pipes_[i][1] = -1; }
     }
     ending_ = true;
-    for (int i = 0; i != 2; ++i) {
-      if (readers_[i].joinable()) readers_[i].join();
-      if (pipes_[i][0] >= 0) { close(pipes_[i][0]); pipes_[i][0] = -1; }
     for (int i = 0; i != 2; ++i) WakeCapture(wakes_[i][1]);
     for (int i = 0; i != 2; ++i) {
       if (readers_[i].joinable()) readers_[i].join();
@@ -215,7 +207,6 @@ class Capture {
     bool overflow = false;
     char bytes[4096];
     for (;;) {
-      if (index == 0) check_stop_();
       // Only an unacknowledged cancellation needs a timed retry: the runner
       // cannot accept stop until it has set its active flag. Normal idle waits
       // are event-driven, including stderr, and Close has its own wake source.
@@ -235,8 +226,6 @@ class Capture {
       else if (errno == EINTR) continue;
       else if (errno == EAGAIN) {
         if (ending_) break;
-        pollfd fd{pipes_[index][0], POLLIN, 0};
-        poll(&fd, 1, 50);
         pollfd fds[2]{{pipes_[index][0], POLLIN, 0}, {wakes_[index][0], POLLIN, 0}};
         const int result = poll(fds, 2, retry_stop ? 50 : -1);
         if (result < 0 && errno != EINTR) break;
@@ -258,7 +247,6 @@ class Capture {
   std::thread readers_[2];
   std::atomic<bool> ending_{false};
   std::function<void(const std::string&, std::string)> line_;
-  std::function<void()> check_stop_;
   std::function<bool()> check_stop_;
   std::function<void(int)> set_stop_wake_;
 };
@@ -307,8 +295,6 @@ void Host::Start(HostOptions options, StartNode start_node, StopNode stop_node) 
   File(options.runtime_root, "node_modules/@deepseek-ai/dsh/lib/bin.js");
   File(options.runtime_root, "runtime/ohos/process/index.mjs");
   File(options.runtime_root, "runtime/ohos/process/sandbox.mjs");
-  File(options.runtime_root, "runtime/ohos/lifecycle/index.mjs");
-  File(options.runtime_root, "runtime/ohos/phone/index.mjs");
 #if !defined(DSH_IOS_HOST)
   File(options.runtime_root, "runtime/ohos/lifecycle/index.mjs");
   File(options.runtime_root, "runtime/ohos/phone/index.mjs");
@@ -374,8 +360,6 @@ void Host::Run(HostOptions options, StartNode start_node) {
         "{\"insert\":[{\"id\":\"ohos-subprocess\",\"name\":" + Json(File(options.runtime_root, "runtime/ohos/process/index.mjs")) +
         ",\"config\":{\"workspaceRoots\":[" + roots + "],\"temporaryRoot\":" + Json(temporary) + "}},"
         "{\"id\":\"ohos-sandbox\",\"name\":" + Json(File(options.runtime_root, "runtime/ohos/process/sandbox.mjs")) + "},"
-        "{\"id\":\"ohos-lifecycle\",\"name\":" + Json(File(options.runtime_root, "runtime/ohos/lifecycle/index.mjs")) + "},"
-        "{\"id\":\"ohos-phone\",\"name\":" + Json(File(options.runtime_root, "runtime/ohos/phone/index.mjs")) + "},"
         + ohos_lifecycle_patch + ohos_phone_patch +
         "{\"id\":\"ohos-capabilities\",\"name\":" + Json(File(options.runtime_root, "runtime/ohos/capabilities/index.mjs")) + "},"
         "{\"id\":\"dsh-go-bridge\",\"name\":" + Json(File(options.runtime_root, "runtime/bridge/dsh-go-bridge/lib/index.js")) + "}]}]\n");
@@ -407,9 +391,6 @@ void Host::Run(HostOptions options, StartNode start_node) {
       {
         Capture capture([this](const std::string& stream, std::string line) { Line(stream, std::move(line)); }, [this] {
           // Covers stop between the cancellation check and dsh_node_start's
-          // active flag. The existing stdout reader retries without another thread.
-          std::lock_guard<std::mutex> lock(mutex_);
-          if (stop_requested_) stop_node_();
           // active flag. Once accepted, the runner remembers the request.
           std::lock_guard<std::mutex> lock(mutex_);
           if (stop_requested_ && !stop_delivered_) stop_delivered_ = stop_node_() != 0;
@@ -450,7 +431,6 @@ void Host::Stop() {
   if (state_.phase != "starting" && state_.phase != "running" && state_.phase != "stopping") return;
   stop_requested_ = true;
   state_.phase = "stopping";
-  stop_node_();
   if (!stop_delivered_) stop_delivered_ = stop_node_() != 0;
   WakeCapture(capture_wake_);
 }

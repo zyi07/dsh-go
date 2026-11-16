@@ -13,9 +13,6 @@ import {
   MethodCall, MethodCallHandler, MethodChannel, MethodResult, NewWantListener
 } from '@ohos/flutter_ohos';
 import { OhosFrameRateKeeper } from './OhosFrameRate';
-
-class LinkArrival { event?: Map<string, Any>; }
-
 import type { BusinessError } from '@ohos.base';
 import type { scanBarcode } from '@kit.ScanKit';
 import type { ScanKit } from './HmsKits';

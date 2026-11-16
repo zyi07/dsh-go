@@ -447,7 +447,6 @@ class WorkspaceLease {
  void Access(bool write){state_->CheckActive(write);if(task_&&!task_->active)throw GrantError("ERR_WORKSPACE_TASK_RETIRED");if(write&&!write_)throw GrantError("ERR_WORKSPACE_READ_ONLY");}
  public:
  WorkspaceLease(const WorkspaceLease&)=delete;WorkspaceLease& operator=(const WorkspaceLease&)=delete;
- ~WorkspaceLease(){std::lock_guard<std::mutex> lock(state_->mutex);edit_input_.reset();edit_output_.reset();--state_->leases;if(task_)task_->live=false;}
  ~WorkspaceLease(){std::lock_guard<std::mutex> lock(state_->mutex);edit_input_.reset();edit_output_.reset();whole_output_.reset();--state_->leases;if(task_)task_->live=false;}
  std::shared_ptr<grant_detail::TaskScope> Task(){std::lock_guard<std::mutex> lock(state_->mutex);
   if(!task_)task_=std::make_shared<grant_detail::TaskScope>(grant_detail::TaskScope{state_,true,true});
@@ -489,7 +488,6 @@ class WorkspaceLease {
  }
  uint64_t OpenEditInput(const std::string& path){
   auto parts=grant_detail::Parts(path);std::lock_guard<std::mutex> lock(state_->mutex);Access(false);
-  if(edit_input_||edit_output_)throw GrantError("ERR_WORKSPACE_EDIT_STATE");
   if(edit_input_||edit_output_||whole_output_)throw GrantError("ERR_WORKSPACE_EDIT_STATE");
   grant_detail::EditFd parent(*state_,grant_detail::EditParent(*state_,parts));
   // Allocate the owning slot before openat: allocation failure cannot strand
@@ -515,7 +513,6 @@ class WorkspaceLease {
  void BeginEdit(const std::string& path,uint32_t prior_mode){
   if(prior_mode>0777)throw GrantError("ERR_WORKSPACE_MODE");
   auto parts=grant_detail::Parts(path);std::lock_guard<std::mutex> lock(state_->mutex);Access(true);
-  if(edit_input_||edit_output_)throw GrantError("ERR_WORKSPACE_EDIT_STATE");
   if(edit_input_||edit_output_||whole_output_)throw GrantError("ERR_WORKSPACE_EDIT_STATE");
   auto output=std::make_unique<grant_detail::EditOutput>(*state_,parts.back(),static_cast<mode_t>(prior_mode));
   try{output->parent.fd=grant_detail::EditParent(*state_,parts);output->Create();}
@@ -530,7 +527,6 @@ class WorkspaceLease {
  void BeginMoveOutput(const std::string& path,uint32_t source_mode,bool create_if_absent){
   if(source_mode>0777)throw GrantError("ERR_WORKSPACE_MODE");
   auto parts=grant_detail::Parts(path);std::lock_guard<std::mutex> lock(state_->mutex);Access(true);
-  if(edit_input_||edit_output_)throw GrantError("ERR_WORKSPACE_EDIT_STATE");
   if(edit_input_||edit_output_||whole_output_)throw GrantError("ERR_WORKSPACE_EDIT_STATE");
   auto output=std::make_unique<grant_detail::EditOutput>(*state_,parts.back(),static_cast<mode_t>(source_mode));
   output->move_output=true;output->create_if_absent=create_if_absent;

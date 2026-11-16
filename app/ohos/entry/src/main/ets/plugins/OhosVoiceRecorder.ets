@@ -2,9 +2,6 @@
 import audio from '@ohos.multimedia.audio';
 import { VoiceFailure, VoiceNotice, VoiceResource, retiredVoice } from './VoiceTypes';
 import { VoicePcm } from './VoicePcm';
-
-export class OhosVoiceRecorder implements VoiceResource {
-  private pcm: VoicePcm;
 import { VoicePcmFrames } from './VoicePcmTap';
 
 export class OhosVoiceRecorder implements VoiceResource {
@@ -89,7 +86,6 @@ export class OhosVoiceRecorder implements VoiceResource {
 
   private receive(buffer: ArrayBuffer): void {
     if (!this.accepting || this.discarded || !this.current()) return;
-    try { this.pcm.append(buffer); } catch (_) { this.fault = true; }
     try {
       const before: number = this.pcm.length;
       this.pcm.append(buffer);
@@ -129,7 +125,6 @@ export class OhosVoiceRecorder implements VoiceResource {
   }
 
   private close(): Promise<void> {
-    this.closeRequested = true; this.accepting = false;
     this.closeRequested = true; this.accepting = false; this.tap.reset();
     if (!this.closing) {
       this.closing = this.closeNative().catch((error: Error): void => {

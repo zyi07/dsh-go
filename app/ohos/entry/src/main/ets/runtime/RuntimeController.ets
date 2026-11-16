@@ -4,7 +4,6 @@ import common from '@ohos.app.ability.common';
 import util from '@ohos.util';
 import connection from '@ohos.net.connection';
 import UIAbility from '@ohos.app.ability.UIAbility';
-import type { HostState, HostEvent, HostOptions } from 'libdsh_host.so';
 import type { HostState, HostEvent, HostOptions, HostLifecycleSnapshot } from 'libdsh_host.so';
 import { loadNativeHost, peekNativeHost, nativeHostState, nativeHostTouched, configureNativeRecovery, NativeRecoveryGate } from './NativeHost';
 import { RuntimeChannelError, RuntimeManifest, RuntimeFile, RuntimeInstaller, RuntimeLogs, RuntimeLogEntry,
@@ -74,10 +73,6 @@ export class RuntimeController {
   private persistedLogs: PersistedRuntimeLog;
   private lifecycle: RuntimeLifecycle;
   private taskOwner: TransientTaskOwner | null = null;
-  private retiredOwners: TransientTaskOwner[] = [];
-  private ownerAbility: UIAbility | null = null;
-  private lifecycleTicks: number = 0;
-  private idleDiagnosticsEnabled: boolean = false;
   private ownerlessIdle: HostLifecycleSnapshot | null = null;
   private retiredOwners: TransientTaskOwner[] = [];
   private ownerAbility: UIAbility | null = null;
@@ -154,7 +149,6 @@ export class RuntimeController {
     this.lifecycle = new RuntimeLifecycle(new OhosLifecycleTransport(),
       (): string => backgroundComputePermission(context.applicationInfo.accessTokenId),
       (): void => this.lifecycleChanged(),
-      (ack: HostLifecycleAck): void => this.taskOwner?.acknowledge(ack));
       (ack: HostLifecycleAck): void => {
         this.ownerlessIdle = this.taskOwner === null && !ack.busy ? ack.nativeHost : null;
         this.taskOwner?.acknowledge(ack);
@@ -413,14 +407,6 @@ export class RuntimeController {
     this.emit(new Map<string, Object | null>([['type', 'status'], ['status', this.snapshot()]]));
   }
 
-  private startPolling(): void {
-    const state = nativeHostState();
-    if (this.timer === null && ['starting', 'running', 'stopping'].includes(state.phase)) {
-      this.timer = setInterval(() => {
-        if (this.idleDiagnosticsEnabled && this.idleDiagnosticsWindow !== null) this.idleDiagnosticsWindow.pollTicks++;
-        this.collect();
-      }, 100);
-    }
   private canPausePolling(): boolean {
     if (RuntimeController.foreground || this.requestedStop || this.pending !== null || !this.lifecycle.synchronized() ||
         this.retiredOwners.some((owner: TransientTaskOwner): boolean => owner.cleanupPending())) return false;
@@ -500,8 +486,6 @@ export class RuntimeController {
     }
     this.noteHealthy(state);
     this.noteLastGood(state);
-    if (++this.lifecycleTicks >= 10) {
-      this.lifecycleTicks = 0;
     if (this.lifecycleElapsedMs >= 1000) {
       this.lifecycleElapsedMs = 0;
       if (this.idleDiagnosticsEnabled && this.idleDiagnosticsWindow !== null) this.idleDiagnosticsWindow.lifecycleRefreshRequests++;
@@ -533,10 +517,6 @@ export class RuntimeController {
       if (state.phase === 'error' || (state.phase === 'exited' && !this.requestedStop)) this.failureLines = this.recentLogs(300);
       this.lastNative = state;
       this.emitStatus();
-    }
-    if (!['starting', 'running', 'stopping'].includes(state.phase) && this.timer !== null) {
-      clearInterval(this.timer);
-      this.timer = null;
     }
     this.startPolling(state);
   }
@@ -586,7 +566,6 @@ export class RuntimeController {
     if (initialized === null || this.lkgRecovering || this.lastGood.blocked() || this.resetRequested || this.recovery.status().resetPending) {
       throw new RuntimeChannelError('ohos_lkg_pending', '启动或配置恢复尚未完成，未预览半套配置。');
     }
-    this.pending = 'restore';
     this.pending = 'restore'; this.startPolling();
     try {
       // Read-only preview never initiates initialization or intent replay.
@@ -595,21 +574,18 @@ export class RuntimeController {
       if (!(this.runMode === 'safe' && state.phase === 'running' && !this.requestedStop)) this.assertLkgStopped();
       await this.lkgPin;
       return await this.lastGood.preview();
-    } finally { this.pending = null; }
     } finally { this.pending = null; this.startPolling(); }
   }
 
   async restoreLastKnownGood(): Promise<Map<string, Object | null>> {
     if (this.pending !== null) throw new RuntimeChannelError('ohos_lkg_busy', '运行时操作尚未完成。');
     if (this.resetRequested || this.recovery.status().resetPending) throw new RuntimeChannelError('ohos_restart_required', '重置尚未完成，请重新打开应用。');
-    this.pending = 'restore';
     this.pending = 'restore'; this.startPolling();
     try {
       await this.initialize(); this.assertLkgStopped(); await this.lkgPin;
       const result = await this.lastGood.restore();
       this.logNote('主配置已恢复。');
       return result;
-    } finally { this.pending = null; this.emitStatus(); }
     } finally { this.pending = null; this.startPolling(); this.emitStatus(); }
   }
 

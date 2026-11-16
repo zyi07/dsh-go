@@ -33,9 +33,6 @@ export default class DiagnosticsPlugin implements FlutterPlugin, AbilityAware {
   onAttachedToEngine(binding: FlutterPluginBinding): void {
     if (this.binding !== null) this.onDetachedFromEngine(this.binding);
     this.binding = binding; this.ability = null;
-    this.methods = new MethodChannel(binding.getBinaryMessenger(), 'dsh/diagnostics');
-    this.methods.setMethodCallHandler({ onMethodCall: (call: MethodCall, result: MethodResult): void => {
-      if (this.binding !== binding) { this.error(result, 'detached'); return; }
     try {
       this.evidence = OhosDiagnosticEvidence.get(binding.getApplicationContext().filesDir);
       this.faults = new OhosFaultEvents(this.evidence); this.faults.start();
@@ -88,7 +85,6 @@ export default class DiagnosticsPlugin implements FlutterPlugin, AbilityAware {
     try { result.error(code, code === 'busy' ? '诊断读取尚未完成。' : '无法完成设备诊断读取。', null); } catch (_) {}
   }
 
-  private async info(context: common.Context, logs: PersistedRuntimeLog): Promise<Map<string, Any>> {
   private record(binding: FlutterPluginBinding, call: MethodCall, result: MethodResult): void {
     const evidence: OhosDiagnosticEvidence | null = this.evidence;
     if (evidence === null) { this.error(result, 'evidence_unavailable'); return; }
@@ -133,7 +129,6 @@ export default class DiagnosticsPlugin implements FlutterPlugin, AbilityAware {
     app.set('engineLog', logs.facts());
     const value: Map<string, Any> = new Map<string, Any>();
     value.set('app', app); value.set('device', device); value.set('manifest', manifest);
-    value.set('voice', new Map<string, Any>()); return value;
     value.set('voice', new Map<string, Any>());
     if (evidence !== null) {
       await faults?.drain();

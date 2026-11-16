@@ -1,4 +1,3 @@
-// UNCOMPILED_HMS: public Kit names follow hms-contracts.md; device loading remains unverified.
 // UNCOMPILED_HMS: public Kit names follow hms-contracts.md (Scan Kit: Huawei's Scan Kit
 // reference); device loading remains unverified.
 // Type imports do not load a Kit. Each feature loads only at its first actual use.
@@ -48,9 +47,6 @@ export class SpeechKit {
   }
 }
 
-let pdfLoading: Promise<PdfKit> | null = null;
-let shareLoading: Promise<ShareKit> | null = null;
-let speechLoading: Promise<SpeechKit> | null = null;
 // The system's own scan page (Scan Kit default view): camera, torch and its album entry.
 export class ScanKit {
   startScan: (context: common.Context, options: scanBarcode.ScanOptions) => Promise<scanBarcode.ScanResult>;

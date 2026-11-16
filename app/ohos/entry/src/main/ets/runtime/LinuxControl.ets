@@ -147,14 +147,12 @@ export class LinuxControl {
     try { return await session.login; } finally { session.login = null; }
   }
 
-  private async exchange(baseUrl: string, token: string, body: string | null): Promise<string> {
   private async exchange(baseUrl: string, token: string, body: string | null, readTimeout: number = 5000): Promise<string> {
     const session = this.host(baseUrl, token);
     const cookie = await this.login(session);
     const options: http.HttpRequestOptions = {
       method: body === null ? http.RequestMethod.GET : http.RequestMethod.POST,
       expectDataType: http.HttpDataType.STRING, header: { 'cookie': cookie, 'content-type': 'application/json' },
-      usingCache: false, usingProxy: false, connectTimeout: 1000, readTimeout: 5000, maxLimit: 65536
       usingCache: false, usingProxy: false, connectTimeout: 1000, readTimeout: readTimeout, maxLimit: 65536
     };
     if (body !== null) options.extraData = body;

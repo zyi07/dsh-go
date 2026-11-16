@@ -3,11 +3,6 @@
 #include <limits>
 #include <mutex>
 #include <time.h>
-#include "../../../../../../runtime/ohos/host/lifecycle_snapshot.h"
-
-namespace dsh {
-// BOOTTIME includes suspend. Failure never falls back to wall/active/process time.
-inline int64_t LifecycleBootTimeMs() noexcept {
 #if defined(__APPLE__)
 #include <mach/mach_time.h>
 #endif

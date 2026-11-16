@@ -24,9 +24,6 @@ import HmsSharePlugin from '../plugins/HmsSharePlugin';
 import { HmsShareInbox } from '../plugins/HmsShareInbox';
 import ShortcutsPlugin from '../plugins/ShortcutsPlugin';
 import LauncherIconPlugin from '../plugins/LauncherIconPlugin';
-import LaunchPlugin from '../plugins/LaunchPlugin';
-import LaunchClipPlugin from '../plugins/LaunchClipPlugin';
-import VoicePlugin from '../plugins/VoicePlugin';
 import PictureShortcutPlugin from '../plugins/PictureShortcutPlugin';
 import LaunchPlugin from '../plugins/LaunchPlugin';
 import LaunchClipPlugin from '../plugins/LaunchClipPlugin';
@@ -72,9 +69,6 @@ export default class EntryAbility extends FlutterAbility {
     AppLinksPlugin.onForeground(this);
     RuntimeController.onForeground(this);
     VoicePlugin.onForeground(this);
-    NativeFilesPlugin.onForeground(this);
-    AuthorizedWorkspacesPlugin.onForeground(this);
-    NativeMediaPlugin.onForeground(this);
     SpeechPlugin.onForeground(this);
     CompanionVoicePlugin.onForeground(this);
     StreamingAsrPlugin.onForeground(this);
@@ -92,9 +86,6 @@ export default class EntryAbility extends FlutterAbility {
     AppLinksPlugin.onBackground(this);
     RuntimeController.onBackground(this);
     VoicePlugin.onBackground(this);
-    NativeFilesPlugin.onBackground(this);
-    AuthorizedWorkspacesPlugin.onBackground(this);
-    NativeMediaPlugin.onBackground(this);
     SpeechPlugin.onBackground(this);
     CompanionVoicePlugin.onBackground(this);
     StreamingAsrPlugin.onBackground(this);
@@ -139,16 +130,11 @@ export default class EntryAbility extends FlutterAbility {
       return host.openUserFile(root, relative);
     }, new NativeVoiceStopControl(this.context)))
     flutterEngine.getPlugins()?.add(new PerformancePlugin())
-    flutterEngine.getPlugins()?.add(new DiagnosticsPlugin())
     flutterEngine.getPlugins()?.add(new DiagnosticsPlugin(this.keyboardLog))
     flutterEngine.getPlugins()?.add(new UsagePlugin())
     flutterEngine.getPlugins()?.add(new PastePlugin())
     flutterEngine.getPlugins()?.add(new HmsSharePlugin())
     flutterEngine.getPlugins()?.add(new VoicePlugin())
-    flutterEngine.getPlugins()?.add(new ShortcutsPlugin())
-    flutterEngine.getPlugins()?.add(new LauncherIconPlugin())
-    flutterEngine.getPlugins()?.add(new LaunchPlugin())
-    flutterEngine.getPlugins()?.add(new LaunchClipPlugin())
     flutterEngine.getPlugins()?.add(new SpeechPlugin())
     flutterEngine.getPlugins()?.add(new CompanionVoicePlugin())
     flutterEngine.getPlugins()?.add(new StreamingAsrPlugin())

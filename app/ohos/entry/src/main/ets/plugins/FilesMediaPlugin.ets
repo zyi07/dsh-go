@@ -53,7 +53,6 @@ export default class FilesMediaPlugin implements FlutterPlugin, AbilityAware {
     } });
     this.media.setMethodCallHandler({ onMethodCall: (call: MethodCall, result: MethodResult): void => {
       if (this.engineBinding !== binding) { result.error('cancelled', '窗口已关闭，操作已取消。', null); return; }
-      if (!['saveImage', 'openSettings'].includes(call.method)) { result.notImplemented(); return; }
       if (!['saveImage', 'saveVideoFile', 'openSettings'].includes(call.method)) { result.notImplemented(); return; }
       this.reply(this.mediaCall(call), result);
     } });

@@ -53,7 +53,6 @@ export class TransientTaskOwner {
     const before = this.host.lifecycleSnapshot();
     const freshBusy = this.activityBusy && this.activityRevision === before.revision &&
       before.available === 1 && before.nowMs >= this.activityAt && before.nowMs - this.activityAt <= ACTIVITY_WINDOW_MS;
-    this.foreground = foreground;
     this.foreground = foreground; this.idleAccepted = false;
     // Synchronous shared native state changes before any OS cancellation.
     this.host.lifecycleUpdate('foreground', this.owner, 0, foreground ? 1 : 0);
@@ -137,7 +136,6 @@ export class TransientTaskOwner {
 
   retire(): void {
     if (this.retired) return;
-    this.retired = true; this.awaitingActivity = false;
     this.retired = true; this.awaitingActivity = false; this.idleAccepted = false;
     try { this.host.lifecycleUpdate('retire', this.owner, 0, 0); }
     catch (_) { this.failure = 'ohos_transient_native_failed'; }
